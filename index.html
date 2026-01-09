@@ -53,6 +53,7 @@
         pointer-events: none; z-index: -1;
     }
 
+    /* --- UI ELEMENTS --- */
     button { border: none; background: none; cursor: pointer; color: inherit; font-family: inherit; }
 
     /* --- SIDEBAR --- */
@@ -115,12 +116,14 @@
     .wc-city { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); }
     .wc-time { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 500; }
 
+    /* Grid Layout for Cards */
     .grid-layout { display: grid; grid-template-columns: 2.2fr 1fr; gap: 20px; flex: 1; min-height: 0; }
     
     .card { background: var(--surface-hover); border: 1px solid var(--border); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; overflow: hidden; }
     .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-shrink: 0; }
     .card-title { font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
 
+    /* Calendar */
     .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; overflow-y: auto; align-content: start; }
     .day-name { text-align: center; font-size: 11px; font-weight: 600; color: var(--text-secondary); padding-bottom: 8px; }
     .day-cell { border-radius: 8px; min-height: 60px; background: rgba(125,125,125,0.03); border: 1px solid transparent; padding: 6px; color: var(--text-secondary); font-size: 12px; font-weight: 500; cursor: pointer; transition: 0.2s; }
@@ -133,7 +136,7 @@
     .agenda-feed { 
         display: flex; flex-direction: column; gap: 8px; 
         overflow-y: auto; flex: 1; padding-right: 4px; 
-        min-height: 0;
+        min-height: 0; /* Important for flex child scrolling */
     }
     .agenda-item { 
         display: flex; gap: 12px; padding: 10px 12px; border-radius: 12px; 
@@ -167,6 +170,7 @@
     .input-field:focus { border-color: #fff; }
     .date-row { display: flex; gap: 12px; }
 
+    /* Link & Dial Pad */
     .call-link-box { background: #1a1a1a; padding: 4px; border-radius: 12px; display: flex; align-items: center; border: 1px solid rgba(255,255,255,0.1); margin: 16px 0; }
     .link-text { flex: 1; padding: 10px; font-size: 12px; color: #888; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .copy-btn { padding: 8px; color: #fff; border-radius: 8px; }
@@ -214,7 +218,7 @@
         .grid-layout { grid-template-columns: 1fr; display: flex; flex-direction: column; overflow-y: auto; padding-bottom: 80px; }
         .dashboard-content { padding: 16px; padding-top: 60px; gap: 16px; }
         
-        /* FIX FOR HIDDEN AGENDA */
+        /* FIX FOR HIDDEN AGENDA & SCROLL */
         .card { height: auto; overflow: visible; flex-shrink: 0; }
         .agenda-feed { max-height: 400px; min-height: 100px; flex: none; height: auto; }
         
@@ -304,7 +308,7 @@
                 <div class="card">
                     <div class="card-header">
                         <div class="card-title"><i class="ph-duotone ph-list-checks"></i> Agenda</div>
-                        <div style="font-size:10px; background:rgba(16,185,129,0.1); color:#10b981; padding:2px 6px; border-radius:4px; font-weight:600;">Live</div>
+                        <div style="font-size:10px; background:rgba(16,185,129,0.1); color:#10b981; padding:2px 6px; border-radius:4px; font-weight:600;">Today</div>
                     </div>
                     <div class="agenda-feed" id="agendaList"></div>
                     <button class="btn-primary" onclick="openScheduleModal()">
@@ -523,9 +527,19 @@
 
 <script>
     // --- APP STATE ---
+    // Helper to get Today's Date String consistently
+    const getTodayString = () => {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    // Events State - Initialized with today's date so they always appear
     let events = JSON.parse(localStorage.getItem('kairosEvents')) || [
-        { id: 1, title: "Design Review", start: "2026-01-09", startTime: "09:00", end: "2026-01-09", endTime: "10:00", type: "Zoom", color: "#3b82f6" },
-        { id: 2, title: "Client Sync", start: "2026-01-09", startTime: "13:30", end: "2026-01-09", endTime: "14:30", type: "Google Meet", color: "#8b5cf6" }
+        { id: 1, title: "Design Review", start: getTodayString(), startTime: "09:00", end: getTodayString(), endTime: "10:00", type: "Zoom", color: "#3b82f6" },
+        { id: 2, title: "Client Sync", start: getTodayString(), startTime: "13:30", end: getTodayString(), endTime: "14:30", type: "Google Meet", color: "#8b5cf6" }
     ];
 
     let currentUser = { name: "Benedict", email: "benedict@kairos.ai", role: "Lead" };
@@ -570,7 +584,8 @@
             const modal = document.getElementById('scheduleModal');
             const title = document.getElementById('schedModalTitle');
             const btn = document.getElementById('schedBtnText');
-            const now = "2026-01-09"; 
+            // Default to REAL today
+            const now = getTodayString();
             
             document.getElementById('schedStartDate').value = now;
             document.getElementById('schedEndDate').value = now;
@@ -680,12 +695,16 @@
     function renderAgenda() {
         const list = document.getElementById('agendaList');
         list.innerHTML = '';
-        const sorted = [...events].sort((a,b) => a.startTime.localeCompare(b.startTime));
-        if(sorted.length === 0) {
+        const today = getTodayString();
+        // Dynamic Filter: Shows only REAL TODAY'S events
+        const todaysEvents = events.filter(e => e.start === today).sort((a,b) => a.startTime.localeCompare(b.startTime));
+        
+        if(todaysEvents.length === 0) {
             list.innerHTML = `<div style="text-align:center; color:var(--text-secondary); margin-top:20px; font-size:12px;">No events today</div>`;
             return;
         }
-        sorted.forEach(ev => {
+        
+        todaysEvents.forEach(ev => {
             const el = document.createElement('div');
             el.className = 'agenda-item';
             el.onclick = () => openScheduleModal(ev.id);
@@ -703,16 +722,23 @@
         ['S', 'M', 'T', 'W', 'T', 'F', 'S'].forEach(d => {
             const el = document.createElement('div'); el.className='day-name'; el.innerText=d; grid.appendChild(el);
         });
-        const daysInMonth = new Date(2026, currentMonth + 1, 0).getDate();
-        const startDay = new Date(2026, currentMonth, 1).getDay();
+        
+        // DYNAMIC YEAR CALCULATION
+        const currentYear = new Date().getFullYear();
+        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+        const startDay = new Date(currentYear, currentMonth, 1).getDay();
         
         for(let i=0; i<startDay; i++) { const el = document.createElement('div'); el.className='day-cell faded'; grid.appendChild(el); }
         for(let i=1; i<=daysInMonth; i++) {
             const el = document.createElement('div');
-            // Mock Date for 2026
-            el.className = `day-cell ${i === 9 && currentMonth === 0 ? 'today' : ''}`; // Highlighting Jan 9 as Today
+            // DYNAMIC TODAY HIGHLIGHT
+            const isToday = (i === new Date().getDate() && currentMonth === new Date().getMonth() && currentYear === new Date().getFullYear());
+            el.className = `day-cell ${isToday ? 'today' : ''}`;
             el.innerHTML = `<div>${i}</div>`;
-            events.filter(e => new Date(e.start).getDate() === i).forEach(ev => {
+            
+            // Render Dots for events matching this specific day
+            const dayString = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+            events.filter(e => e.start === dayString).forEach(ev => {
                 const chip = document.createElement('div');
                 chip.className = 'event-chip';
                 chip.style.backgroundColor = ev.color + '33'; chip.style.color = ev.color;
