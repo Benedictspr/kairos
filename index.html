@@ -33,7 +33,7 @@
         --shadow: 0 20px 40px -10px rgba(0,0,0,0.1);
     }
 
-    /* --- RESET & SCROLL HIDE --- */
+    /* --- RESET --- */
     * { box-sizing: border-box; margin: 0; padding: 0; outline: none; -webkit-tap-highlight-color: transparent; }
     html, body { overflow: hidden; height: 100%; width: 100%; }
     ::-webkit-scrollbar { display: none; }
@@ -53,15 +53,14 @@
         pointer-events: none; z-index: -1;
     }
 
-    /* --- UI ELEMENTS --- */
     button { border: none; background: none; cursor: pointer; color: inherit; font-family: inherit; }
 
     /* --- SIDEBAR --- */
     #sidebar {
         width: 240px; background: var(--bg-panel); border: 1px solid var(--border);
         border-radius: 20px; padding: 20px; display: flex; flex-direction: column;
-        flex-shrink: 0; z-index: 50; box-shadow: var(--shadow);
-        transition: transform 0.3s ease;
+        flex-shrink: 0; z-index: 100; box-shadow: var(--shadow); /* Increased Z-Index */
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .brand-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
@@ -116,7 +115,7 @@
     .wc-city { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); }
     .wc-time { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 500; }
 
-    /* Grid Layout for Cards */
+    /* Grid Layout */
     .grid-layout { display: grid; grid-template-columns: 2.2fr 1fr; gap: 20px; flex: 1; min-height: 0; }
     
     .card { background: var(--surface-hover); border: 1px solid var(--border); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; overflow: hidden; }
@@ -136,7 +135,7 @@
     .agenda-feed { 
         display: flex; flex-direction: column; gap: 8px; 
         overflow-y: auto; flex: 1; padding-right: 4px; 
-        min-height: 0; /* Important for flex child scrolling */
+        min-height: 0;
     }
     .agenda-item { 
         display: flex; gap: 12px; padding: 10px 12px; border-radius: 12px; 
@@ -163,14 +162,13 @@
     .meeting-icon { width: 60px; height: 60px; border-radius: 20px; background: #1a1a1a; display: flex; align-items: center; justify-content: center; font-size: 28px; color: #fff; border: 1px solid rgba(255,255,255,0.1); }
     .meeting-label { font-size: 13px; font-weight: 600; color: #fff; }
 
-    /* Forms */
+    /* Forms & Inputs */
     .form-group { margin-bottom: 16px; }
     .form-label { font-size: 12px; color: #888; margin-bottom: 8px; display: block; }
     .input-field { width: 100%; background: #1a1a1a; border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 12px; color: #fff; font-family: 'Inter', sans-serif; font-size: 14px; }
     .input-field:focus { border-color: #fff; }
     .date-row { display: flex; gap: 12px; }
 
-    /* Link & Dial Pad */
     .call-link-box { background: #1a1a1a; padding: 4px; border-radius: 12px; display: flex; align-items: center; border: 1px solid rgba(255,255,255,0.1); margin: 16px 0; }
     .link-text { flex: 1; padding: 10px; font-size: 12px; color: #888; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .copy-btn { padding: 8px; color: #fff; border-radius: 8px; }
@@ -208,19 +206,38 @@
     #toast { position: fixed; top: 24px; left: 50%; transform: translateX(-50%) translateY(-100px); background: var(--text-primary); color: var(--bg-main); padding: 10px 20px; border-radius: 50px; font-weight: 600; font-size: 12px; opacity: 0; transition: 0.5s; z-index: 2000; display: flex; align-items: center; gap: 8px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
     #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
+    /* --- MOBILE RESPONSIVE FIXES --- */
     @media (max-width: 768px) {
         body { padding: 0; display: block; overflow: hidden; }
-        #sidebar { position: fixed; top: 0; left: 0; height: 100%; width: 100%; transform: translateX(-100%); border-radius: 0; border: none; padding-top: 60px; }
+        
+        /* Mobile Sidebar */
+        #sidebar { position: fixed; top: 0; left: 0; height: 100%; width: 100%; transform: translateX(-100%); border-radius: 0; border: none; padding-top: 60px; z-index: 999; }
         #sidebar.active { transform: translateX(0); }
+        
         #main { border-radius: 0; border: none; height: 100%; }
         
-        /* MOBILE FIXES */
-        .grid-layout { grid-template-columns: 1fr; display: flex; flex-direction: column; overflow-y: auto; padding-bottom: 80px; }
-        .dashboard-content { padding: 16px; padding-top: 60px; gap: 16px; }
+        /* KEY MOBILE SCROLL FIX:
+           Allow .dashboard-content to scroll vertically. 
+           Set flex-direction column for grid content.
+        */
+        .dashboard-content { 
+            padding: 16px; padding-top: 60px; gap: 16px; 
+            overflow-y: auto; -webkit-overflow-scrolling: touch; 
+        }
         
-        /* FIX FOR HIDDEN AGENDA & SCROLL */
-        .card { height: auto; overflow: visible; flex-shrink: 0; }
-        .agenda-feed { max-height: 400px; min-height: 100px; flex: none; height: auto; }
+        .grid-layout { 
+            grid-template-columns: 1fr; 
+            display: flex; flex-direction: column; 
+            overflow: visible; height: auto; padding-bottom: 100px; /* Space for FAB */
+        }
+        
+        /* Agenda Expansion Fix */
+        .card { height: auto; flex-shrink: 0; overflow: visible; }
+        .agenda-feed { 
+            max-height: 400px; /* Cap height but allow scroll */
+            min-height: 150px; /* Ensure visibility */
+            flex: none; height: auto; 
+        }
         
         .main-clock { font-size: 32px; }
         .time-header { flex-direction: row; align-items: flex-end; }
@@ -526,8 +543,8 @@
 </div>
 
 <script>
-    // --- APP STATE ---
-    // Helper to get Today's Date String consistently
+    // --- DATE & TIMEZONE UTILS (ROBUST STRING COMPARISON) ---
+    // Returns "YYYY-MM-DD" based on local time, ignoring timezone offsets
     const getTodayString = () => {
         const d = new Date();
         const year = d.getFullYear();
@@ -616,6 +633,7 @@
 
     function saveEvent() {
         const name = document.getElementById('schedName').value || "New Meeting";
+        // Directly grab string values: "YYYY-MM-DD"
         const startD = document.getElementById('schedStartDate').value;
         const startT = document.getElementById('schedStartTime').value;
         const endD = document.getElementById('schedEndDate').value;
@@ -736,7 +754,7 @@
             el.className = `day-cell ${isToday ? 'today' : ''}`;
             el.innerHTML = `<div>${i}</div>`;
             
-            // Render Dots for events matching this specific day
+            // Render Dots for events matching this specific day string
             const dayString = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
             events.filter(e => e.start === dayString).forEach(ev => {
                 const chip = document.createElement('div');
@@ -819,13 +837,13 @@
         "fontSize": 14,
         "renderHTML": true,
         "botMessage": {
-          "backgroundColor": "#262626",
+          "backgroundColor": "#262626", /* Soft Charcoal for better readability */
           "textColor": "#e5e7eb",
           "showAvatar": true,
           "avatarSrc": "https://www.svgrepo.com/show/499664/sparkle.svg"
         },
         "userMessage": {
-          "backgroundColor": "#ffffff",
+          "backgroundColor": "#ffffff", /* Crisp White for standard look */
           "textColor": "#000000",
           "showAvatar": false
         },
