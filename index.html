@@ -59,7 +59,7 @@
     #sidebar {
         width: 240px; background: var(--bg-panel); border: 1px solid var(--border);
         border-radius: 20px; padding: 20px; display: flex; flex-direction: column;
-        flex-shrink: 0; z-index: 100; box-shadow: var(--shadow); /* Increased Z-Index */
+        flex-shrink: 0; z-index: 100; box-shadow: var(--shadow);
         transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
@@ -131,7 +131,7 @@
     .day-cell.faded { opacity: 0.2; }
     .event-chip { margin-top: 4px; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
 
-    /* Agenda Feed */
+    /* Agenda Feed & Action Center */
     .agenda-feed { 
         display: flex; flex-direction: column; gap: 8px; 
         overflow-y: auto; flex: 1; padding-right: 4px; 
@@ -254,10 +254,23 @@
 
 <nav id="sidebar">
     <div class="brand-row">
-        <div class="brand">
+        <div class="brand" style="cursor: pointer; position: relative;" onclick="toggleContextDropdown()">
             <div class="brand-icon"><i class="ph-bold ph-sparkle"></i></div>
-            KAIROS
+            <div>
+                <div style="font-size:16px; line-height:1;">KAIROS</div>
+                <div style="font-size:10px; color:var(--text-secondary); font-weight:500; margin-top:2px;" id="currentContext">Personal Workspace</div>
+            </div>
+            <i class="ph-bold ph-caret-down" style="font-size:12px; margin-left:8px; color:var(--text-secondary);"></i>
+            
+            <div id="contextDropdown" style="display:none; position:absolute; top:40px; left:0; width:200px; background:var(--bg-panel); border:1px solid var(--border); border-radius:12px; padding:8px; box-shadow:var(--shadow); z-index:999;">
+                <div class="nav-btn active" onclick="setContext('Personal Workspace')">Personal</div>
+                <div class="nav-btn" onclick="setContext('Design Team')">Design Team</div>
+                <div class="nav-btn" onclick="setContext('Engineering')">Engineering</div>
+                <div style="height:1px; background:var(--border); margin:8px 0;"></div>
+                <div class="nav-btn" style="color:#10b981;"><i class="ph-bold ph-plus"></i> New Team</div>
+            </div>
         </div>
+
         <button class="theme-toggle" onclick="toggleTheme()">
             <i class="ph-bold ph-moon" id="themeIcon"></i>
         </button>
@@ -322,15 +335,32 @@
                     <div class="cal-grid" id="calendarGrid"></div>
                 </div>
 
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title"><i class="ph-duotone ph-list-checks"></i> Agenda</div>
-                        <div style="font-size:10px; background:rgba(16,185,129,0.1); color:#10b981; padding:2px 6px; border-radius:4px; font-weight:600;">Today</div>
+                <div class="card" style="padding:0; gap:0;">
+                    <div style="padding:20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+                        <div class="card-title"><i class="ph-duotone ph-lightning"></i> Action Center</div>
+                        <div style="font-size:10px; background:rgba(255,255,255,0.1); padding:2px 8px; border-radius:12px;">2 Pending</div>
                     </div>
-                    <div class="agenda-feed" id="agendaList"></div>
-                    <button class="btn-primary" onclick="openScheduleModal()">
-                        <i class="ph-bold ph-plus"></i> New Event
-                    </button>
+
+                    <div style="padding:16px; background:rgba(16, 185, 129, 0.03); border-bottom:1px solid var(--border);">
+                        <div style="font-size:10px; font-weight:700; text-transform:uppercase; color:#10b981; margin-bottom:8px;">AI Draft • Needs Approval</div>
+                        
+                        <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom:8px;">
+                            <div style="font-size:12px; font-weight:600; margin-bottom:4px;">Email to Sparky Solutions</div>
+                            <p style="font-size:11px; color:var(--text-secondary); margin-bottom:8px;">"Requesting quote for office wiring based on Tues meeting..."</p>
+                            <div style="display:flex; gap:8px;">
+                                <button style="flex:1; background:#10b981; color:#000; font-size:10px; font-weight:700; padding:6px; border-radius:6px;" onclick="showToast('Email Sent')">Approve</button>
+                                <button style="flex:1; background:var(--surface-hover); color:var(--text-primary); font-size:10px; font-weight:600; padding:6px; border-radius:6px;">Edit</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="agenda-feed" id="agendaList" style="padding:16px;"></div>
+                    
+                    <div style="padding:16px; border-top:1px solid var(--border);">
+                        <button class="btn-primary" onclick="openScheduleModal()" style="margin:0;">
+                            <i class="ph-bold ph-plus"></i> New Event
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -359,6 +389,22 @@
 
 <div id="meetingHub" class="modal-overlay">
     <div class="modal-card">
+        <div style="background:var(--bg-main); padding:12px; border-radius:12px; display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border:1px solid var(--border);">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div style="width:32px; height:32px; background:rgba(16,185,129,0.1); color:#10b981; border-radius:8px; display:flex; align-items:center; justify-content:center;"><i class="ph-bold ph-brain"></i></div>
+                <div>
+                    <div style="font-size:13px; font-weight:600;">Org Memory</div>
+                    <div style="font-size:10px; color:var(--text-secondary);">Record & extract decisions</div>
+                </div>
+            </div>
+            <label style="position: relative; display: inline-block; width: 40px; height: 20px;">
+                <input type="checkbox" checked style="opacity: 0; width: 0; height: 0;">
+                <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 34px;" onclick="this.style.backgroundColor = this.style.backgroundColor === 'rgb(16, 185, 129)' ? '#333' : '#10b981'">
+                    <span style="position: absolute; content: ''; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; transform: translateX(18px);"></span>
+                </span>
+            </label>
+        </div>
+
         <div class="meeting-grid">
             <button class="meeting-opt" onclick="openStartCallModal()">
                 <div class="meeting-icon"><i class="ph-fill ph-video-camera"></i></div>
@@ -582,6 +628,39 @@
         if(window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('active');
     }
 
+    // --- CONTEXT SWITCHER LOGIC ---
+    function toggleContextDropdown() {
+        const dd = document.getElementById('contextDropdown');
+        dd.style.display = dd.style.display === 'block' ? 'none' : 'block';
+    }
+
+    function setContext(name) {
+        document.getElementById('currentContext').innerText = name;
+        document.getElementById('contextDropdown').style.display = 'none';
+        
+        // Simulating data refresh based on context
+        const toastMsg = name === 'Personal Workspace' ? 'Switched to Personal' : `Joined ${name} Space`;
+        showToast(toastMsg);
+        
+        // Visual cue for context change
+        const actionIcon = document.querySelector('.card-title .ph-lightning');
+        if(actionIcon) {
+            if(name !== 'Personal Workspace') {
+                actionIcon.style.color = '#10b981'; 
+            } else {
+                actionIcon.style.color = 'inherit';
+            }
+        }
+    }
+
+    // Close dropdown if clicking outside
+    window.onclick = function(event) {
+        if (!event.target.closest('.brand')) {
+            const dd = document.getElementById('contextDropdown');
+            if (dd) dd.style.display = 'none';
+        }
+    }
+
     // --- MODAL CONTROLLERS ---
     function openMeetingHub() { document.getElementById('meetingHub').classList.add('active'); }
     function closeModals() { 
@@ -712,6 +791,8 @@
     // --- RENDERING ---
     function renderAgenda() {
         const list = document.getElementById('agendaList');
+        if(!list) return; // Guard clause in case element is missing
+        
         list.innerHTML = '';
         const today = getTodayString();
         // Dynamic Filter: Shows only REAL TODAY'S events
