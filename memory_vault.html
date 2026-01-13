@@ -16,7 +16,7 @@
 </script>
 
 <style>
-    /* --- SHARED THEME VARIABLES --- */
+    /* --- SHARED VARIABLES --- */
     :root[data-theme="dark"] {
         --bg-main: #050505;
         --bg-panel: #0a0a0a;
@@ -41,7 +41,6 @@
         --shadow: 0 20px 40px -10px rgba(0,0,0,0.1);
     }
 
-    /* --- RESET & BASE --- */
     * { box-sizing: border-box; margin: 0; padding: 0; outline: none; -webkit-tap-highlight-color: transparent; }
     html, body { overflow: hidden; height: 100%; width: 100%; }
     
@@ -56,8 +55,16 @@
     button { border: none; background: none; cursor: pointer; color: inherit; font-family: inherit; }
 
     /* --- TOAST --- */
-    #toast { position: fixed; top: 24px; left: 50%; transform: translateX(-50%) translateY(-100px); background: var(--text-primary); color: var(--bg-main); padding: 10px 20px; border-radius: 50px; font-weight: 600; font-size: 12px; opacity: 0; transition: 0.5s; z-index: 2000; display: flex; align-items: center; gap: 8px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); pointer-events: none; }
+    #toast { position: fixed; top: 24px; left: 50%; transform: translateX(-50%) translateY(-100px); background: var(--text-primary); color: var(--bg-main); padding: 10px 20px; border-radius: 50px; font-weight: 600; font-size: 12px; opacity: 0; transition: 0.5s; z-index: 3000; display: flex; align-items: center; gap: 8px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); pointer-events: none; }
     #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+    /* --- MOBILE MENU BTN --- */
+    .mobile-menu-btn { 
+        display: none; 
+        position: absolute; top: 16px; left: 16px; z-index: 2000; 
+        background: var(--bg-panel); border: 1px solid var(--border); 
+        padding: 8px; border-radius: 8px; color: var(--text-primary); font-size: 20px; 
+    }
 
     /* --- SIDEBAR --- */
     #sidebar {
@@ -68,8 +75,18 @@
     }
 
     .brand-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
-    .brand { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 10px; cursor: pointer; position: relative; }
-    .brand-icon { width: 28px; height: 28px; background: var(--text-primary); color: var(--bg-main); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    .brand-select {
+        cursor: pointer; position: relative; display: flex; align-items: center; gap: 10px; flex: 1;
+    }
+    .brand-icon {
+        width: 28px; height: 28px; background: var(--text-primary); color: var(--bg-main);
+        border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 16px;
+    }
+    .brand-dropdown {
+        display:none; position:absolute; top:40px; left:0; width:200px; 
+        background:var(--bg-panel); border:1px solid var(--border); 
+        border-radius:12px; padding:8px; box-shadow:var(--shadow); z-index:999;
+    }
     
     .theme-toggle { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-primary); }
     .theme-toggle:hover { background: var(--surface-hover); }
@@ -79,7 +96,7 @@
     .nav-btn.active { background: var(--text-primary); color: var(--bg-main); font-weight: 600; }
     .nav-divider { height: 1px; background: var(--border); margin: 20px 0; }
     .nav-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 10px; padding-left: 10px; }
-
+    
     .bottom-dock { margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 12px; transition: 0.2s; cursor: pointer; }
     .bottom-dock:hover { background: var(--surface-hover); }
     .user-avatar { width: 32px; height: 32px; background: #e5e7eb; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #111; font-size: 12px; overflow: hidden; }
@@ -140,6 +157,7 @@
     .attention-bar { height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; margin-top: 4px; }
     .attention-fill { height: 100%; border-radius: 2px; }
 
+    /* ARTIFACTS */
     .summary-card { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 24px; }
     .section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
     
@@ -153,8 +171,8 @@
     .speaker-label { min-width: 60px; color: var(--text-secondary); font-size: 11px; font-family: 'JetBrains Mono', monospace; text-align: right; }
     .highlight-text { background: rgba(16,185,129,0.2); color: #fff; padding: 0 4px; border-radius: 2px; }
 
-    /* --- MODALS (Reused) --- */
-    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); z-index: 1000; opacity: 0; pointer-events: none; transition: 0.3s; display: flex; align-items: center; justify-content: center; }
+    /* --- MODALS (Full Set) --- */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); z-index: 2500; opacity: 0; pointer-events: none; transition: 0.3s; display: flex; align-items: center; justify-content: center; }
     .modal-overlay.active { opacity: 1; pointer-events: all; }
     .modal-card { background: #111; color: #fff; width: 100%; max-width: 400px; border-radius: 24px; padding: 24px; border: 1px solid rgba(255,255,255,0.1); transform: scale(0.95); transition: 0.3s; box-shadow: 0 30px 60px rgba(0,0,0,0.5); display: flex; flex-direction: column; max-height: 90vh; overflow-y: auto; }
     .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
@@ -163,11 +181,13 @@
     .form-label { font-size: 12px; color: #888; margin-bottom: 8px; display: block; }
     .input-field { width: 100%; background: #1a1a1a; border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 12px; color: #fff; font-family: 'Inter', sans-serif; font-size: 14px; }
     .btn-primary { width: 100%; padding: 12px; border-radius: 10px; background: var(--text-primary); color: var(--bg-main); font-weight: 600; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 12px; }
+    
     .meeting-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px; }
     .meeting-opt { background: transparent; border: none; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 24px 10px; border-radius: 20px; cursor: pointer; transition: 0.2s; }
     .meeting-opt:hover { background: rgba(255,255,255,0.08); }
     .meeting-icon { width: 60px; height: 60px; border-radius: 20px; background: #1a1a1a; display: flex; align-items: center; justify-content: center; font-size: 28px; color: #fff; border: 1px solid rgba(255,255,255,0.1); }
-    
+    .meeting-label { font-size: 13px; font-weight: 600; color: #fff; }
+
     .dial-display { font-size: 24px; text-align: center; margin-bottom: 24px; font-family: 'Space Grotesk'; letter-spacing: 2px; }
     .dial-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; justify-items: center; }
     .dial-key { width: 50px; height: 50px; border-radius: 50%; background: #1a1a1a; color: #fff; font-size: 18px; font-weight: 600; display: flex; align-items: center; justify-content: center; cursor: pointer; }
@@ -175,17 +195,34 @@
 
     .mobile-back-btn { display: none; margin-bottom: 16px; font-size: 13px; font-weight: 600; color: var(--text-secondary); cursor: pointer; align-items: center; gap: 6px; }
 
+    /* --- MOBILE RESPONSIVE --- */
     @media (max-width: 768px) {
         body { display: block; padding: 0; }
-        #sidebar { display: none; }
+        
+        .mobile-menu-btn { display: block; }
+        
+        #sidebar { 
+            position: fixed; top: 0; left: 0; height: 100%; width: 260px; 
+            border-radius: 0; border: none; padding-top: 60px; z-index: 1000;
+            transform: translateX(-100%);
+        }
+        #sidebar.active { transform: translateX(0); }
+        
         #vault-main { border-radius: 0; border: none; height: 100vh; display: block; position: relative; }
+        
         .vault-sidebar { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 10; transition: transform 0.3s ease; }
-        .vault-content { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 20; transform: translateX(100%); padding: 20px; }
+        
+        .vault-content { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            z-index: 20; transform: translateX(100%); padding: 20px;
+            overflow-y: auto; -webkit-overflow-scrolling: touch;
+        }
         .vault-content.active { transform: translateX(0); }
+        
         .artifacts-grid { grid-template-columns: 1fr; }
         .mobile-back-btn { display: flex; }
-        .search-header { padding-top: 60px; }
-        .mobile-menu-btn { display: block; position: absolute; top: 16px; right: 16px; z-index: 110; background: var(--surface-hover); border: none; padding: 8px; border-radius: 8px; color: var(--text-primary); font-size: 20px; }
+        .search-header { padding-top: 70px; padding-left: 20px; }
+        .modal-card { width: 90%; }
     }
 </style>
 </head>
@@ -193,19 +230,21 @@
 
 <div id="toast"><i class="ph-bold ph-check-circle"></i> <span id="toastMsg">Action Complete</span></div>
 
-<button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('active')"><i class="ph-bold ph-list"></i></button>
+<button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('active')">
+    <i class="ph-bold ph-list"></i>
+</button>
 
 <nav id="sidebar">
     <div class="brand-row">
-        <div class="brand" onclick="toggleContext()">
+        <div class="brand-select" onclick="toggleContext()">
             <div class="brand-icon"><i class="ph-bold ph-sparkle"></i></div>
             <div>
-                <div style="font-size:16px; line-height:1;">KAIROS</div>
+                <div style="font-size:16px; line-height:1; font-weight:700; font-family:'Space Grotesk';">KAIROS</div>
                 <div style="font-size:10px; color:var(--text-secondary); font-weight:500;" id="currentContext">Design Team</div>
             </div>
-            <i class="ph-bold ph-caret-down" style="font-size:12px; margin-left:8px; color:var(--text-secondary);"></i>
+            <i class="ph-bold ph-caret-down" style="font-size:12px; margin-left:auto; color:var(--text-secondary);"></i>
             
-            <div id="ctxDropdown" style="display:none; position:absolute; top:40px; left:0; width:200px; background:var(--bg-panel); border:1px solid var(--border); border-radius:12px; padding:8px; box-shadow:var(--shadow); z-index:999;">
+            <div class="brand-dropdown" id="ctxDropdown">
                 <div class="nav-btn" onclick="setContext('Personal')">Personal</div>
                 <div class="nav-btn active" onclick="setContext('Design Team')">Design Team</div>
                 <div class="nav-btn" onclick="setContext('Engineering')">Engineering</div>
@@ -223,7 +262,7 @@
     <div class="nav-label">External</div>
     
     <div class="nav-btn" onclick="showToast('Google Calendar Synced')"><i class="ph-bold ph-google-logo"></i> Google Calendar</div>
-    <div class="nav-btn active"><i class="ph-bold ph-brain"></i> Memory Vault</div>
+    <a href="#" class="nav-btn active"><i class="ph-bold ph-brain"></i> Memory Vault</a>
     <div class="nav-btn" onclick="openMeetingHub()"><i class="ph-bold ph-video-camera"></i> Meetings</div>
 
     <div class="bottom-dock" onclick="openProfileModal()">
@@ -244,7 +283,7 @@
             </div>
             <div class="search-box">
                 <i class="ph-bold ph-magnifying-glass"></i>
-                <input type="text" placeholder="Search decisions, transcripts..." onkeyup="filterMeetings(this.value)">
+                <input type="text" placeholder="Search decisions..." onkeyup="filterMeetings(this.value)">
             </div>
         </div>
         <div class="meeting-list" id="meetingList"></div>
@@ -266,7 +305,6 @@
 <div id="meetingHub" class="modal-overlay">
     <div class="modal-card">
         <div class="modal-header"><h3>Meeting Hub</h3><div class="close-btn" onclick="closeModals()"><i class="ph-bold ph-x"></i></div></div>
-        
         <div style="background:var(--bg-main); padding:12px; border-radius:12px; display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border:1px solid var(--border);">
             <div style="display:flex; align-items:center; gap:10px;">
                 <div style="width:32px; height:32px; background:rgba(16,185,129,0.1); color:#10b981; border-radius:8px; display:flex; align-items:center; justify-content:center;"><i class="ph-bold ph-brain"></i></div>
@@ -274,12 +312,9 @@
             </div>
             <label style="position: relative; display: inline-block; width: 40px; height: 20px;">
                 <input type="checkbox" checked style="opacity: 0; width: 0; height: 0;">
-                <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 34px;" onclick="this.style.backgroundColor = this.style.backgroundColor === 'rgb(16, 185, 129)' ? '#333' : '#10b981'">
-                    <span style="position: absolute; content: ''; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; transform: translateX(18px);"></span>
-                </span>
+                <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 34px;" onclick="this.style.backgroundColor = this.style.backgroundColor === 'rgb(16, 185, 129)' ? '#333' : '#10b981'"><span style="position: absolute; content: ''; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; transform: translateX(18px);"></span></span>
             </label>
         </div>
-
         <div class="meeting-grid">
             <button class="meeting-opt" onclick="openStartCallModal()"><div class="meeting-icon"><i class="ph-fill ph-video-camera"></i></div><span class="meeting-label">Start</span></button>
             <button class="meeting-opt" onclick="closeModals(); showToast('Link Copied')"><div class="meeting-icon"><i class="ph-bold ph-link"></i></div><span class="meeting-label">Link</span></button>
@@ -355,9 +390,10 @@
         localStorage.setItem('kairosTheme', newTheme);
         document.getElementById('themeIcon').className = newTheme === 'dark' ? 'ph-bold ph-moon' : 'ph-bold ph-sun';
     }
-    document.getElementById('themeIcon').className = savedTheme === 'dark' ? 'ph-bold ph-moon' : 'ph-bold ph-sun';
+    const themeIcon = document.getElementById('themeIcon');
+    if(themeIcon) themeIcon.className = savedTheme === 'dark' ? 'ph-bold ph-moon' : 'ph-bold ph-sun';
 
-    // --- MODAL LOGIC ---
+    // --- MODAL CONTROLLERS (RESTORED) ---
     function closeModals() { document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active')); }
     function openMeetingHub() { document.getElementById('meetingHub').classList.add('active'); }
     function openStartCallModal() { closeModals(); setTimeout(()=>document.getElementById('startCallModal').classList.add('active'), 100); }
@@ -467,10 +503,14 @@
                 <i class="ph-duotone ph-brain" style="font-size:48px; margin-bottom:16px;"></i>
                 <p>Switched to ${ctx}</p>
             </div>`;
+        
+        if(window.innerWidth <= 768) {
+            document.getElementById('ctxDropdown').style.display = 'none';
+        }
     }
 
     window.onclick = function(event) {
-        if (!event.target.closest('.brand')) {
+        if (!event.target.closest('.brand-select')) {
             document.getElementById('ctxDropdown').style.display = 'none';
         }
     }
@@ -501,7 +541,11 @@
     function loadMeeting(id) {
         activeMeetingId = id;
         renderList(); 
-        if(window.innerWidth <= 768) document.getElementById('vaultContentPanel').classList.add('active');
+        
+        if(window.innerWidth <= 768) {
+            document.getElementById('vaultContentPanel').classList.add('active');
+            document.getElementById('sidebar').classList.remove('active');
+        }
 
         const m = database[currentCtx].find(x => x.id === id);
         const container = document.getElementById('vaultDetailContainer');
