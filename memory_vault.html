@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>KAIROS | Memory Vault</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+<script>
+    // --- IMMEDIATE THEME CHECK ---
+    const savedTheme = localStorage.getItem('kairosTheme') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+</script>
+
+<style>
+    /* --- SHARED THEME VARIABLES --- */
+    :root[data-theme="dark"] {
+        --bg-main: #050505;
+        --bg-panel: #0a0a0a;
+        --border: rgba(255, 255, 255, 0.08);
+        --text-primary: #ffffff;
+        --text-secondary: #888888;
+        --surface-hover: rgba(255, 255, 255, 0.05);
+        --accent: #10b981;
+        --danger: #ef4444;
+        --shadow: 0 20px 40px -10px rgba(0,0,0,0.5);
+    }
+
+    :root[data-theme="light"] {
+        --bg-main: #f0f2f5;
+        --bg-panel: #ffffff;
+        --border: rgba(0, 0, 0, 0.08);
+        --text-primary: #111827;
+        --text-secondary: #6b7280;
+        --surface-hover: rgba(0, 0, 0, 0.04);
+        --accent: #059669;
+        --danger: #dc2626;
+        --shadow: 0 20px 40px -10px rgba(0,0,0,0.1);
+    }
+
+    /* --- RESET & BASE --- */
+    * { box-sizing: border-box; margin: 0; padding: 0; outline: none; -webkit-tap-highlight-color: transparent; }
+    html, body { overflow: hidden; height: 100%; width: 100%; }
+    
+    body {
+        background-color: var(--bg-main);
+        color: var(--text-primary);
+        font-family: 'Inter', sans-serif;
+        display: flex; padding: 12px; gap: 12px;
+        transition: background-color 0.4s ease, color 0.4s ease;
+    }
+
+    button { border: none; background: none; cursor: pointer; color: inherit; font-family: inherit; }
+
+    /* --- TOAST --- */
+    #toast { position: fixed; top: 24px; left: 50%; transform: translateX(-50%) translateY(-100px); background: var(--text-primary); color: var(--bg-main); padding: 10px 20px; border-radius: 50px; font-weight: 600; font-size: 12px; opacity: 0; transition: 0.5s; z-index: 2000; display: flex; align-items: center; gap: 8px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); pointer-events: none; }
+    #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+    /* --- SIDEBAR --- */
+    #sidebar {
+        width: 240px; background: var(--bg-panel); border: 1px solid var(--border);
+        border-radius: 20px; padding: 20px; display: flex; flex-direction: column;
+        flex-shrink: 0; z-index: 100; box-shadow: var(--shadow);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .brand-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
+    .brand { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 10px; cursor: pointer; position: relative; }
+    .brand-icon { width: 28px; height: 28px; background: var(--text-primary); color: var(--bg-main); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    
+    .theme-toggle { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-primary); }
+    .theme-toggle:hover { background: var(--surface-hover); }
+
+    .nav-btn { padding: 10px 12px; border-radius: 10px; color: var(--text-secondary); cursor: pointer; font-weight: 500; font-size: 13px; display: flex; align-items: center; gap: 10px; transition: 0.2s; text-decoration: none; margin-bottom: 4px; }
+    .nav-btn:hover { background: var(--surface-hover); color: var(--text-primary); }
+    .nav-btn.active { background: var(--text-primary); color: var(--bg-main); font-weight: 600; }
+    .nav-divider { height: 1px; background: var(--border); margin: 20px 0; }
+    .nav-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 10px; padding-left: 10px; }
+
+    .bottom-dock { margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 12px; transition: 0.2s; cursor: pointer; }
+    .bottom-dock:hover { background: var(--surface-hover); }
+    .user-avatar { width: 32px; height: 32px; background: #e5e7eb; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #111; font-size: 12px; overflow: hidden; }
+
+    /* --- VAULT LAYOUT --- */
+    #vault-main { flex: 1; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 20px; position: relative; overflow: hidden; display: flex; box-shadow: var(--shadow); }
+
+    .vault-sidebar { width: 320px; border-right: 1px solid var(--border); display: flex; flex-direction: column; background: var(--bg-panel); flex-shrink: 0; }
+    .search-header { padding: 20px; border-bottom: 1px solid var(--border); }
+    .search-box { position: relative; }
+    .search-box input { width: 100%; background: var(--bg-main); border: 1px solid var(--border); padding: 10px 10px 10px 36px; border-radius: 10px; color: var(--text-primary); font-family: 'Inter', sans-serif; font-size: 12px; outline: none; }
+    .search-box i { position: absolute; left: 12px; top: 11px; color: var(--text-secondary); }
+
+    .meeting-list { flex: 1; overflow-y: auto; padding: 10px; }
+    .meeting-item { padding: 12px; border-radius: 12px; cursor: pointer; margin-bottom: 4px; border: 1px solid transparent; transition: 0.2s; }
+    .meeting-item:hover { background: var(--surface-hover); }
+    .meeting-item.active { background: rgba(16,185,129,0.05); border-color: var(--accent); }
+    .tag-row { display: flex; gap: 4px; margin-top: 6px; }
+    .tag { font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+    .tag-decision { background: rgba(255,255,255,0.1); color: var(--text-secondary); }
+    .tag-conflict { background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.2); }
+
+    .vault-content { flex: 1; overflow-y: auto; padding: 30px; background: var(--bg-main); transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+    
+    .content-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+    .meeting-title { font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+    .meeting-meta { font-size: 12px; color: var(--text-secondary); display: flex; gap: 8px; align-items: center; }
+    .ai-badge { color: var(--accent); background: rgba(16,185,129,0.1); padding: 2px 6px; border-radius: 4px; font-weight: 600; font-size: 10px; }
+
+    /* MEDIA PLAYER */
+    .media-player-box {
+        background: #000; border-radius: 12px; margin-bottom: 24px; overflow: hidden;
+        border: 1px solid var(--border); display: flex; flex-direction: column;
+    }
+    .video-placeholder {
+        height: 200px; background: radial-gradient(circle at center, #222 0%, #000 100%);
+        display: flex; align-items: center; justify-content: center; color: #555; font-size: 40px;
+        position: relative;
+    }
+    .audio-controls {
+        padding: 12px; background: var(--bg-panel); display: flex; align-items: center; gap: 12px; border-top: 1px solid var(--border);
+    }
+    .play-btn { 
+        width: 32px; height: 32px; background: var(--text-primary); color: var(--bg-main); 
+        border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;
+    }
+    .progress-bar { flex: 1; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; position: relative; }
+    .progress-fill { width: 30%; height: 100%; background: var(--accent); border-radius: 2px; }
+
+    /* ATTENDEE ANALYTICS */
+    .attendee-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 24px; }
+    .attendee-card { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+    .attendee-header { display: flex; align-items: center; gap: 10px; }
+    .att-avatar { width: 28px; height: 28px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; }
+    .att-info h4 { font-size: 12px; font-weight: 600; }
+    .att-info p { font-size: 10px; color: var(--text-secondary); }
+    .att-time { font-family: 'JetBrains Mono'; font-size: 10px; color: var(--text-secondary); display: flex; justify-content: space-between; }
+    .attention-bar { height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; margin-top: 4px; }
+    .attention-fill { height: 100%; border-radius: 2px; }
+
+    .summary-card { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 24px; }
+    .section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+    
+    .artifacts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .decision-card { background: rgba(16,185,129,0.03); border: 1px solid rgba(16,185,129,0.2); border-radius: 12px; padding: 14px; margin-bottom: 10px; }
+    .decision-rejected { background: rgba(239,68,68,0.03); border-color: rgba(239,68,68,0.2); opacity: 0.8; }
+    .action-row { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; }
+    
+    .transcript-box { margin-top: 24px; border-top: 1px solid var(--border); padding-top: 24px; }
+    .transcript-line { display: flex; gap: 12px; margin-bottom: 12px; font-size: 13px; line-height: 1.5; }
+    .speaker-label { min-width: 60px; color: var(--text-secondary); font-size: 11px; font-family: 'JetBrains Mono', monospace; text-align: right; }
+    .highlight-text { background: rgba(16,185,129,0.2); color: #fff; padding: 0 4px; border-radius: 2px; }
+
+    /* --- MODALS (Reused) --- */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); z-index: 1000; opacity: 0; pointer-events: none; transition: 0.3s; display: flex; align-items: center; justify-content: center; }
+    .modal-overlay.active { opacity: 1; pointer-events: all; }
+    .modal-card { background: #111; color: #fff; width: 100%; max-width: 400px; border-radius: 24px; padding: 24px; border: 1px solid rgba(255,255,255,0.1); transform: scale(0.95); transition: 0.3s; box-shadow: 0 30px 60px rgba(0,0,0,0.5); display: flex; flex-direction: column; max-height: 90vh; overflow-y: auto; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .close-btn { font-size: 20px; color: #888; cursor: pointer; }
+    .form-group { margin-bottom: 16px; }
+    .form-label { font-size: 12px; color: #888; margin-bottom: 8px; display: block; }
+    .input-field { width: 100%; background: #1a1a1a; border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 12px; color: #fff; font-family: 'Inter', sans-serif; font-size: 14px; }
+    .btn-primary { width: 100%; padding: 12px; border-radius: 10px; background: var(--text-primary); color: var(--bg-main); font-weight: 600; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 12px; }
+    .meeting-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px; }
+    .meeting-opt { background: transparent; border: none; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 24px 10px; border-radius: 20px; cursor: pointer; transition: 0.2s; }
+    .meeting-opt:hover { background: rgba(255,255,255,0.08); }
+    .meeting-icon { width: 60px; height: 60px; border-radius: 20px; background: #1a1a1a; display: flex; align-items: center; justify-content: center; font-size: 28px; color: #fff; border: 1px solid rgba(255,255,255,0.1); }
+    
+    .dial-display { font-size: 24px; text-align: center; margin-bottom: 24px; font-family: 'Space Grotesk'; letter-spacing: 2px; }
+    .dial-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; justify-items: center; }
+    .dial-key { width: 50px; height: 50px; border-radius: 50%; background: #1a1a1a; color: #fff; font-size: 18px; font-weight: 600; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    .dial-action { background: #10b981; color: #000; font-size: 20px; margin-top: 10px; }
+
+    .mobile-back-btn { display: none; margin-bottom: 16px; font-size: 13px; font-weight: 600; color: var(--text-secondary); cursor: pointer; align-items: center; gap: 6px; }
+
+    @media (max-width: 768px) {
+        body { display: block; padding: 0; }
+        #sidebar { display: none; }
+        #vault-main { border-radius: 0; border: none; height: 100vh; display: block; position: relative; }
+        .vault-sidebar { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 10; transition: transform 0.3s ease; }
+        .vault-content { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 20; transform: translateX(100%); padding: 20px; }
+        .vault-content.active { transform: translateX(0); }
+        .artifacts-grid { grid-template-columns: 1fr; }
+        .mobile-back-btn { display: flex; }
+        .search-header { padding-top: 60px; }
+        .mobile-menu-btn { display: block; position: absolute; top: 16px; right: 16px; z-index: 110; background: var(--surface-hover); border: none; padding: 8px; border-radius: 8px; color: var(--text-primary); font-size: 20px; }
+    }
+</style>
+</head>
+<body>
+
+<div id="toast"><i class="ph-bold ph-check-circle"></i> <span id="toastMsg">Action Complete</span></div>
+
+<button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('active')"><i class="ph-bold ph-list"></i></button>
+
+<nav id="sidebar">
+    <div class="brand-row">
+        <div class="brand" onclick="toggleContext()">
+            <div class="brand-icon"><i class="ph-bold ph-sparkle"></i></div>
+            <div>
+                <div style="font-size:16px; line-height:1;">KAIROS</div>
+                <div style="font-size:10px; color:var(--text-secondary); font-weight:500;" id="currentContext">Design Team</div>
+            </div>
+            <i class="ph-bold ph-caret-down" style="font-size:12px; margin-left:8px; color:var(--text-secondary);"></i>
+            
+            <div id="ctxDropdown" style="display:none; position:absolute; top:40px; left:0; width:200px; background:var(--bg-panel); border:1px solid var(--border); border-radius:12px; padding:8px; box-shadow:var(--shadow); z-index:999;">
+                <div class="nav-btn" onclick="setContext('Personal')">Personal</div>
+                <div class="nav-btn active" onclick="setContext('Design Team')">Design Team</div>
+                <div class="nav-btn" onclick="setContext('Engineering')">Engineering</div>
+            </div>
+        </div>
+        <button class="theme-toggle" onclick="toggleTheme()">
+            <i class="ph-bold ph-moon" id="themeIcon"></i>
+        </button>
+    </div>
+    
+    <a href="index.html" class="nav-btn"><i class="ph-duotone ph-squares-four"></i> Dashboard</a>
+    <div class="nav-btn" onclick="openTeamModal()"><i class="ph-duotone ph-users"></i> Team Sync</div>
+    
+    <div class="nav-divider"></div>
+    <div class="nav-label">External</div>
+    
+    <div class="nav-btn" onclick="showToast('Google Calendar Synced')"><i class="ph-bold ph-google-logo"></i> Google Calendar</div>
+    <div class="nav-btn active"><i class="ph-bold ph-brain"></i> Memory Vault</div>
+    <div class="nav-btn" onclick="openMeetingHub()"><i class="ph-bold ph-video-camera"></i> Meetings</div>
+
+    <div class="bottom-dock" onclick="openProfileModal()">
+        <div class="user-avatar"><span>B</span></div>
+        <div>
+            <div style="font-size:12px; font-weight:600; color:var(--text-primary)">Benedict</div>
+            <div style="font-size:10px; color:var(--text-secondary)">Edit Profile</div>
+        </div>
+    </div>
+</nav>
+
+<main id="vault-main">
+    <div class="vault-sidebar" id="timelinePanel">
+        <div class="search-header">
+            <div style="font-family:'Space Grotesk'; font-weight:700; font-size:18px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+                <span id="mobileTitle">Memory Vault</span>
+                <button onclick="toggleContext()" style="font-size:12px; background:var(--surface-hover); padding:4px 8px; border-radius:6px; display:none;" id="mobileCtxBtn">Design</button>
+            </div>
+            <div class="search-box">
+                <i class="ph-bold ph-magnifying-glass"></i>
+                <input type="text" placeholder="Search decisions, transcripts..." onkeyup="filterMeetings(this.value)">
+            </div>
+        </div>
+        <div class="meeting-list" id="meetingList"></div>
+    </div>
+
+    <div class="vault-content" id="vaultContentPanel">
+        <div class="mobile-back-btn" onclick="closeDetailView()">
+            <i class="ph-bold ph-arrow-left"></i> Back to timeline
+        </div>
+        <div id="vaultDetailContainer">
+            <div style="height:60vh; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--text-secondary); opacity:0.5;">
+                <i class="ph-duotone ph-brain" style="font-size:48px; margin-bottom:16px;"></i>
+                <p>Select a meeting to view artifacts</p>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div id="meetingHub" class="modal-overlay">
+    <div class="modal-card">
+        <div class="modal-header"><h3>Meeting Hub</h3><div class="close-btn" onclick="closeModals()"><i class="ph-bold ph-x"></i></div></div>
+        
+        <div style="background:var(--bg-main); padding:12px; border-radius:12px; display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border:1px solid var(--border);">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div style="width:32px; height:32px; background:rgba(16,185,129,0.1); color:#10b981; border-radius:8px; display:flex; align-items:center; justify-content:center;"><i class="ph-bold ph-brain"></i></div>
+                <div><div style="font-size:13px; font-weight:600;">Org Memory</div><div style="font-size:10px; color:var(--text-secondary);">Record decisions</div></div>
+            </div>
+            <label style="position: relative; display: inline-block; width: 40px; height: 20px;">
+                <input type="checkbox" checked style="opacity: 0; width: 0; height: 0;">
+                <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 34px;" onclick="this.style.backgroundColor = this.style.backgroundColor === 'rgb(16, 185, 129)' ? '#333' : '#10b981'">
+                    <span style="position: absolute; content: ''; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; transform: translateX(18px);"></span>
+                </span>
+            </label>
+        </div>
+
+        <div class="meeting-grid">
+            <button class="meeting-opt" onclick="openStartCallModal()"><div class="meeting-icon"><i class="ph-fill ph-video-camera"></i></div><span class="meeting-label">Start</span></button>
+            <button class="meeting-opt" onclick="closeModals(); showToast('Link Copied')"><div class="meeting-icon"><i class="ph-bold ph-link"></i></div><span class="meeting-label">Link</span></button>
+            <button class="meeting-opt" onclick="openDialPad()"><div class="meeting-icon"><i class="ph-bold ph-phone"></i></div><span class="meeting-label">Phone</span></button>
+            <button class="meeting-opt" onclick="openScheduleModal()"><div class="meeting-icon"><i class="ph-bold ph-calendar-plus"></i></div><span class="meeting-label">Schedule</span></button>
+        </div>
+    </div>
+</div>
+
+<div id="startCallModal" class="modal-overlay">
+    <div class="modal-card" style="text-align:center;">
+        <div class="modal-header"><h3>Start Meeting</h3><div class="close-btn" onclick="closeModals()"><i class="ph-bold ph-x"></i></div></div>
+        <p style="color:#888; font-size:13px; margin-bottom:20px;">Choose meeting type</p>
+        <div style="display:flex; gap:16px; justify-content:center;">
+            <div class="meeting-opt" style="background:#1a1a1a; width:100px;" onclick="showToast('Audio Call Started')"><i class="ph-fill ph-phone" style="font-size:32px; color:#10b981;"></i><span>Audio</span></div>
+            <div class="meeting-opt" style="background:#1a1a1a; width:100px;" onclick="showToast('Video Call Started')"><i class="ph-fill ph-video-camera" style="font-size:32px; color:#10b981;"></i><span>Video</span></div>
+        </div>
+    </div>
+</div>
+
+<div id="scheduleModal" class="modal-overlay">
+    <div class="modal-card">
+        <div class="modal-header"><h3>Schedule</h3><div class="close-btn" onclick="closeModals()"><i class="ph-bold ph-x"></i></div></div>
+        <div class="form-group"><label class="form-label">Name</label><input type="text" class="input-field" value="Meeting"></div>
+        <div class="form-group"><label class="form-label">Date</label><input type="date" class="input-field"></div>
+        <button class="btn-primary" onclick="closeModals(); showToast('Event Scheduled')">Schedule</button>
+    </div>
+</div>
+
+<div id="dialPadModal" class="modal-overlay">
+    <div class="modal-card" style="width:320px;">
+        <div class="modal-header"><h3>Phone</h3><div class="close-btn" onclick="closeModals()"><i class="ph-bold ph-x"></i></div></div>
+        <div class="dial-display"></div>
+        <div class="dial-grid">
+            <div class="dial-key">1</div><div class="dial-key">2</div><div class="dial-key">3</div>
+            <div class="dial-key">4</div><div class="dial-key">5</div><div class="dial-key">6</div>
+            <div class="dial-key">7</div><div class="dial-key">8</div><div class="dial-key">9</div>
+            <div class="dial-key">*</div><div class="dial-key">0</div><div class="dial-key">#</div>
+            <div></div><div class="dial-key dial-action" onclick="showToast('Calling...')"><i class="ph-fill ph-phone-call"></i></div><div></div>
+        </div>
+    </div>
+</div>
+
+<div id="teamModal" class="modal-overlay">
+    <div class="modal-card">
+        <div class="modal-header"><h3>Team Sync</h3><div class="close-btn" onclick="closeModals()"><i class="ph-bold ph-x"></i></div></div>
+        <div class="form-group"><input type="text" class="input-field" placeholder="Add email..."></div>
+        <button class="btn-primary" onclick="showToast('Invite Sent')">Add Member</button>
+    </div>
+</div>
+
+<div id="profileModal" class="modal-overlay">
+    <div class="modal-card">
+        <div class="modal-header"><h3>Edit Profile</h3><div class="close-btn" onclick="closeModals()"><i class="ph-bold ph-x"></i></div></div>
+        <div class="form-group"><label class="form-label">Name</label><input type="text" class="input-field" value="Benedict"></div>
+        <button class="btn-primary" onclick="closeModals(); showToast('Profile Saved')">Save</button>
+    </div>
+</div>
+
+<script>
+    // --- UTILS ---
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        document.getElementById('toastMsg').innerText = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    function toggleTheme() {
+        const current = document.documentElement.getAttribute('data-theme');
+        const newTheme = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('kairosTheme', newTheme);
+        document.getElementById('themeIcon').className = newTheme === 'dark' ? 'ph-bold ph-moon' : 'ph-bold ph-sun';
+    }
+    document.getElementById('themeIcon').className = savedTheme === 'dark' ? 'ph-bold ph-moon' : 'ph-bold ph-sun';
+
+    // --- MODAL LOGIC ---
+    function closeModals() { document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active')); }
+    function openMeetingHub() { document.getElementById('meetingHub').classList.add('active'); }
+    function openStartCallModal() { closeModals(); setTimeout(()=>document.getElementById('startCallModal').classList.add('active'), 100); }
+    function openScheduleModal() { closeModals(); setTimeout(()=>document.getElementById('scheduleModal').classList.add('active'), 100); }
+    function openDialPad() { closeModals(); setTimeout(()=>document.getElementById('dialPadModal').classList.add('active'), 100); }
+    function openTeamModal() { closeModals(); setTimeout(()=>document.getElementById('teamModal').classList.add('active'), 100); }
+    function openProfileModal() { closeModals(); setTimeout(()=>document.getElementById('profileModal').classList.add('active'), 100); }
+
+    // --- DATA ---
+    const database = {
+        "Design Team": [
+            {
+                id: 201, title: "Q1 Design Review", date: "Jan 07", duration: "45 min", type: "Video",
+                decisions: 2, conflict: false, 
+                summary: "The team agreed to migrate the frontend to Next.js 14 to leverage server actions. Budget approval for the Sparky Solutions contract was deferred pending a revised quote.",
+                attendees: [
+                    { name: "Benedict", role: "Lead", join: "09:00", leave: "09:45", attention: 95 },
+                    { name: "Alice", role: "Designer", join: "09:02", leave: "09:45", attention: 88 },
+                    { name: "John", role: "Dev", join: "09:05", leave: "09:45", attention: 75 }
+                ],
+                artifacts: { 
+                    decisions: [
+                        { title: "Tech Stack Upgrade", desc: "Adopt Next.js 14 for all new modules.", status: "ratified" },
+                        { title: "Budget Increase", desc: "Proposal to increase AWS budget by 20% rejected.", status: "rejected" }
+                    ], 
+                    actions: [
+                        {owner:"Alice", task:"Finalize mobile breakpoints", due:"Jan 10"}, 
+                        {owner:"Ben", task:"Email Sparky Solutions", due:"Jan 08", status:"ai_drafted"}
+                    ], 
+                    transcript: [
+                        {speaker:"Alice", text:"We really need to settle on the framework today."}, 
+                        {speaker:"Ben", text:"I agree. <span class='highlight-text'>Let's go with Next.js 14</span>. It solves our server state issues."},
+                        {speaker:"John", text:"Are you sure? Vue might be faster to ship."},
+                        {speaker:"Ben", text:"No, the ecosystem support dictates React right now. Decision made."}
+                    ] 
+                }
+            },
+            {
+                id: 202, title: "Client Sync: Apex", date: "Jan 06", duration: "12 min", type: "Audio",
+                decisions: 0, conflict: true, 
+                summary: "Short sync regarding timeline. Client expressed frustration over delay. No formal decisions made, but tension detected regarding deadline adherence.",
+                attendees: [
+                    { name: "Benedict", role: "Lead", join: "14:00", leave: "14:12", attention: 100 },
+                    { name: "Apex Client", role: "External", join: "14:01", leave: "14:12", attention: 90 }
+                ],
+                artifacts: { 
+                    decisions: [], 
+                    actions: [{owner:"Ben", task:"Send updated Gantt chart", due:"Jan 06"}], 
+                    transcript: [
+                        {speaker:"Client", text:"I thought we agreed on Friday?"},
+                        {speaker:"Ben", text:"We did, but the scope changed."},
+                        {speaker:"Client", text:"<span class='highlight-text'>This is unacceptable</span> based on our contract."}
+                    ] 
+                }
+            },
+            {
+                id: 203, title: "Marketing Weekly", date: "Jan 05", duration: "30 min", type: "Video",
+                decisions: 1, conflict: false, 
+                summary: "Routine sync. Campaign scheduled for Feb 1st launch.",
+                attendees: [
+                    { name: "Benedict", role: "Lead", join: "10:00", leave: "10:30", attention: 80 },
+                    { name: "Sarah", role: "Marketing", join: "10:00", leave: "10:30", attention: 95 }
+                ],
+                artifacts: { 
+                    decisions: [{title:"Launch Date", desc:"Feb 1st confirmed for global launch.", status:"ratified"}], 
+                    actions: [], 
+                    transcript: [] 
+                }
+            }
+        ],
+        "Personal": [
+            {
+                id: 101, title: "Career Mentor Chat", date: "Jan 10", duration: "45 min", type: "Audio",
+                decisions: 0, conflict: false, 
+                summary: "Discussed Q1 goals. Focus on leadership skills.",
+                attendees: [{ name: "Benedict", role: "Me", join: "18:00", leave: "18:45", attention: 100 }],
+                artifacts: { decisions: [], actions: [{owner:"Me", task:"Read 'Radical Candor'", due:"Feb 1"}], transcript: [{speaker:"Mentor", text:"Focus on delegation."}] }
+            }
+        ],
+        "Engineering": [
+            {
+                id: 301, title: "API Architecture", date: "Jan 05", duration: "60 min", type: "Video",
+                decisions: 2, conflict: false, 
+                summary: "REST vs GraphQL debate settled.",
+                attendees: [{ name: "Dev Team", role: "All", join: "11:00", leave: "12:00", attention: 85 }],
+                artifacts: { decisions: [{title:"Protocol", desc:"Stick to REST for v2", status:"ratified"}], actions: [], transcript: [] }
+            }
+        ]
+    };
+
+    let currentCtx = "Design Team";
+    let activeMeetingId = null;
+
+    function toggleContext() {
+        const dd = document.getElementById('ctxDropdown');
+        dd.style.display = dd.style.display === 'block' ? 'none' : 'block';
+    }
+
+    function setContext(ctx) {
+        currentCtx = ctx;
+        document.getElementById('currentContext').innerText = ctx;
+        document.getElementById('mobileCtxBtn').innerText = ctx.split(' ')[0];
+        document.getElementById('ctxDropdown').style.display = 'none';
+        renderList();
+        document.getElementById('vaultDetailContainer').innerHTML = `
+            <div style="height:60vh; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--text-secondary); opacity:0.5;">
+                <i class="ph-duotone ph-brain" style="font-size:48px; margin-bottom:16px;"></i>
+                <p>Switched to ${ctx}</p>
+            </div>`;
+    }
+
+    window.onclick = function(event) {
+        if (!event.target.closest('.brand')) {
+            document.getElementById('ctxDropdown').style.display = 'none';
+        }
+    }
+
+    function renderList(filterTerm = "") {
+        const list = document.getElementById('meetingList');
+        list.innerHTML = '';
+        const data = database[currentCtx] || [];
+        const filtered = data.filter(m => JSON.stringify(m).toLowerCase().includes(filterTerm.toLowerCase()));
+
+        filtered.forEach(m => {
+            const el = document.createElement('div');
+            el.className = `meeting-item ${m.id === activeMeetingId ? 'active' : ''}`;
+            el.onclick = () => loadMeeting(m.id);
+            let tags = `<span class="tag tag-decision">${m.artifacts.decisions.length} Decisions</span>`;
+            if(m.conflict) tags += `<span class="tag tag-conflict">Conflict</span>`;
+            el.innerHTML = `
+                <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                    <span style="font-size:12px; font-weight:600; color:${m.id===activeMeetingId?'#fff':'var(--text-secondary)'};">${m.title}</span>
+                    <span style="font-size:10px; color:${m.conflict ? 'var(--danger)' : 'var(--accent)'};">${m.type}</span>
+                </div>
+                <div style="font-size:10px; color:var(--text-secondary); margin-bottom:6px;">${m.date} • ${m.duration}</div>
+                <div class="tag-row">${tags}</div>`;
+            list.appendChild(el);
+        });
+    }
+
+    function loadMeeting(id) {
+        activeMeetingId = id;
+        renderList(); 
+        if(window.innerWidth <= 768) document.getElementById('vaultContentPanel').classList.add('active');
+
+        const m = database[currentCtx].find(x => x.id === id);
+        const container = document.getElementById('vaultDetailContainer');
+
+        const mediaHTML = m.type === "Video" 
+            ? `<div class="video-placeholder"><i class="ph-fill ph-play-circle"></i></div>`
+            : `<div class="video-placeholder" style="height:120px; background:#111;"><i class="ph-fill ph-wave-audio" style="font-size:60px; color:#333;"></i></div>`;
+
+        const attendeesHTML = m.attendees ? m.attendees.map(a => {
+            const color = a.attention > 80 ? 'var(--accent)' : (a.attention > 50 ? '#fbbf24' : 'var(--danger)');
+            return `
+            <div class="attendee-card">
+                <div class="attendee-header">
+                    <div class="att-avatar">${a.name.charAt(0)}</div>
+                    <div class="att-info">
+                        <h4>${a.name}</h4>
+                        <p>${a.role}</p>
+                    </div>
+                </div>
+                <div class="att-time">
+                    <span>In: ${a.join}</span>
+                    <span>Out: ${a.leave}</span>
+                </div>
+                <div>
+                    <div style="font-size:9px; color:var(--text-secondary); display:flex; justify-content:space-between;">
+                        <span>Attention Span</span>
+                        <span style="color:${color}">${a.attention}%</span>
+                    </div>
+                    <div class="attention-bar"><div class="attention-fill" style="width:${a.attention}%; background:${color}"></div></div>
+                </div>
+            </div>`;
+        }).join('') : '<div style="font-size:11px; color:#666;">No attendee data.</div>';
+
+        container.innerHTML = `
+            <div class="content-header">
+                <div>
+                    <h2 class="meeting-title">${m.title}</h2>
+                    <div class="meeting-meta">
+                        <span class="ai-badge"><i class="ph-bold ph-brain"></i> Processed</span>
+                        <span>${m.date}</span> • <span>${m.duration}</span>
+                    </div>
+                </div>
+                <button onclick="showToast('Exporting PDF...')" style="font-size:12px; background:var(--bg-panel); color:var(--text-primary); border:1px solid var(--border); padding:8px 16px; border-radius:8px; cursor:pointer;">Export</button>
+            </div>
+            
+            <div class="media-player-box">
+                ${mediaHTML}
+                <div class="audio-controls">
+                    <div class="play-btn"><i class="ph-fill ph-play"></i></div>
+                    <div class="progress-bar"><div class="progress-fill" style="width:45%"></div></div>
+                    <div style="font-size:10px; font-family:'JetBrains Mono'; color:#888;">12:30 / ${m.duration.replace(' min',':00')}</div>
+                </div>
+            </div>
+
+            <div class="summary-card">
+                <div class="section-label"><i class="ph-fill ph-sparkle"></i> Executive Summary</div>
+                <p style="font-size:13px; line-height:1.6; color:#ddd;">${m.summary}</p>
+            </div>
+
+            <div style="margin-bottom:24px;">
+                <div class="section-label"><i class="ph-bold ph-users"></i> Attendees & Engagement</div>
+                <div class="attendee-grid">${attendeesHTML}</div>
+            </div>
+
+            <div class="artifacts-grid">
+                <div>
+                    <div class="section-label">Ratified Decisions</div>
+                    ${m.artifacts.decisions.map(d => `
+                        <div class="decision-card ${d.status === 'rejected' ? 'decision-rejected' : ''}">
+                            <div style="font-size:12px; font-weight:700; margin-bottom:4px; color:var(--text-primary);"><i class="ph-fill ${d.status==='rejected'?'ph-x-circle':'ph-gavel'}" style="color:${d.status==='rejected'?'var(--danger)':'var(--accent)'}"></i> ${d.title}</div>
+                            <p style="font-size:11px; color:var(--text-secondary);">${d.desc}</p>
+                        </div>
+                    `).join('') || '<div style="font-size:11px; color:#666;">No formal decisions.</div>'}
+                </div>
+                <div>
+                    <div class="section-label">Action Items</div>
+                    ${m.artifacts.actions.map(a => `
+                        <div class="action-row">
+                            <div class="avatar-sm">${a.owner.charAt(0)}</div>
+                            <div style="flex:1;">
+                                <div style="font-size:12px; font-weight:500;">${a.task}</div>
+                                <div style="font-size:10px; color:${a.status==='ai_drafted'?'var(--accent)':'#888'}">${a.status==='ai_drafted'?'AI Drafted':'Due '+a.due}</div>
+                            </div>
+                        </div>
+                    `).join('') || '<div style="font-size:11px; color:#666;">No action items.</div>'}
+                </div>
+            </div>
+            <div class="transcript-box">
+                <div class="section-label">Relevant Transcript Segments</div>
+                ${m.artifacts.transcript.map(t => `
+                    <div class="transcript-line">
+                        <div class="speaker-label">${t.speaker}</div>
+                        <div style="color:var(--text-primary); flex:1;">${t.text}</div>
+                    </div>
+                `).join('') || '<div style="font-size:11px; color:#666;">Transcript not available...</div>'}
+            </div>
+        `;
+    }
+
+    function closeDetailView() {
+        document.getElementById('vaultContentPanel').classList.remove('active');
+        activeMeetingId = null;
+        renderList(); 
+    }
+
+    if(window.innerWidth <= 768) {
+        document.getElementById('mobileCtxBtn').style.display = 'block';
+    }
+    renderList();
+    if(window.innerWidth > 768) loadMeeting(201); 
+
+</script>
+</body>
+</html>
