@@ -9,6 +9,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
+<script>
+    const savedTheme = localStorage.getItem('kairosTheme') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+</script>
+
 <style>
     /* --- THEME VARIABLES --- */
     :root[data-theme="dark"] {
@@ -285,9 +290,11 @@
     <div onclick="initCalendarAuth()" class="nav-btn">
         <i class="ph-bold ph-google-logo"></i> Google Calendar
     </div>
-    <div onclick="switchView('history')" class="nav-btn">
-        <i class="ph-bold ph-clock-counter-clockwise"></i> Meeting History
-    </div>
+    
+    <a href="memory_vault.html" class="nav-btn" style="text-decoration:none;">
+        <i class="ph-bold ph-brain"></i> Memory Vault
+    </a>
+    
     <div onclick="openMeetingHub()" class="nav-btn">
         <i class="ph-bold ph-video-camera"></i> Meetings
     </div>
@@ -362,26 +369,6 @@
                         </button>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="view-history" class="view-section">
-        <div class="dashboard-content">
-             <div class="card" style="height:100%;">
-                <div class="card-header">
-                    <div class="card-title"><i class="ph-bold ph-clock-counter-clockwise"></i> Meeting History</div>
-                </div>
-                <table class="history-table">
-                    <thead>
-                        <tr><th>Date</th><th>Meeting</th><th>Type</th><th>Status</th></tr>
-                    </thead>
-                    <tbody>
-                        <tr><td>Jan 07, 2:00 PM</td><td>Team Sync</td><td>Video</td><td><span class="status-badge status-done">Completed</span></td></tr>
-                        <tr><td>Jan 06, 4:30 PM</td><td>Client Call</td><td>Audio</td><td><span class="status-badge status-missed">Missed</span></td></tr>
-                        <tr><td>Jan 05, 9:00 AM</td><td>Design Review</td><td>Video</td><td><span class="status-badge status-done">Completed</span></td></tr>
-                    </tbody>
-                </table>
             </div>
         </div>
     </div>
@@ -610,10 +597,14 @@
 
     let isDark = true;
     function toggleTheme() {
-        isDark = !isDark;
-        document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
-        document.getElementById('themeIcon').className = isDark ? 'ph-bold ph-moon' : 'ph-bold ph-sun';
+        const current = document.documentElement.getAttribute('data-theme');
+        const newTheme = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('kairosTheme', newTheme);
+        document.getElementById('themeIcon').className = newTheme === 'dark' ? 'ph-bold ph-moon' : 'ph-bold ph-sun';
     }
+    // Set icon correctly on load
+    document.getElementById('themeIcon').className = savedTheme === 'dark' ? 'ph-bold ph-moon' : 'ph-bold ph-sun';
 
     function showToast(msg) {
         const t = document.getElementById('toast');
