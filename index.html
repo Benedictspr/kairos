@@ -211,6 +211,18 @@
     #toast { position: fixed; top: 24px; left: 50%; transform: translateX(-50%) translateY(-100px); background: var(--text-primary); color: var(--bg-main); padding: 10px 20px; border-radius: 50px; font-weight: 600; font-size: 12px; opacity: 0; transition: 0.5s; z-index: 2000; display: flex; align-items: center; gap: 8px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
     #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
+    /* LOADER FOR PRE-CALL */
+    .spinner-large {
+        width: 50px; height: 50px; 
+        border: 4px solid rgba(16,185,129,0.1); 
+        border-top: 4px solid #10b981; 
+        border-radius: 50%; 
+        animation: spin 1s linear infinite; 
+        margin: 0 auto;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+
     /* --- MOBILE RESPONSIVE FIXES --- */
     @media (max-width: 768px) {
         body { padding: 0; display: block; overflow: hidden; }
@@ -416,20 +428,28 @@
 
 <div id="startCallModal" class="modal-overlay">
     <div class="modal-card" style="text-align:center;">
-        <div class="modal-header">
-            <h3>Start Meeting</h3>
-            <div class="close-btn" onclick="closeModals()"><i class="ph-bold ph-x"></i></div>
+        <div id="startCallContent">
+            <div class="modal-header">
+                <h3>Start Meeting</h3>
+                <div class="close-btn" onclick="closeModals()"><i class="ph-bold ph-x"></i></div>
+            </div>
+            <p style="color:#888; font-size:13px; margin-bottom:20px;">Choose meeting type</p>
+            <div class="call-type-row">
+                <div class="call-type-btn" onclick="initiateCall('Audio')">
+                    <i class="ph-fill ph-phone call-type-icon"></i>
+                    <span style="font-size:12px; font-weight:600;">Audio</span>
+                </div>
+                <div class="call-type-btn" onclick="initiateCall('Video')">
+                    <i class="ph-fill ph-video-camera call-type-icon"></i>
+                    <span style="font-size:12px; font-weight:600;">Video</span>
+                </div>
+            </div>
         </div>
-        <p style="color:#888; font-size:13px; margin-bottom:20px;">Choose meeting type</p>
-        <div class="call-type-row">
-            <div class="call-type-btn" onclick="showToast('Starting Audio Call...')">
-                <i class="ph-fill ph-phone call-type-icon"></i>
-                <span style="font-size:12px; font-weight:600;">Audio</span>
-            </div>
-            <div class="call-type-btn" onclick="showToast('Starting Video Call...')">
-                <i class="ph-fill ph-video-camera call-type-icon"></i>
-                <span style="font-size:12px; font-weight:600;">Video</span>
-            </div>
+        <div id="preCallLoader" style="display:none; padding:20px 0;">
+            <div class="spinner-large"></div>
+            <h3 style="margin-top:20px; font-family:'Space Grotesk'">Connecting...</h3>
+            <p style="color:var(--text-secondary); font-size:13px; margin-top:8px;" id="connText">Establishing secure link</p>
+            <p style="color:var(--text-secondary); font-size:11px; margin-top:4px;">Waiting for participants to join...</p>
         </div>
     </div>
 </div>
@@ -577,7 +597,6 @@
 
 <script>
     // --- DATE & TIMEZONE UTILS (ROBUST STRING COMPARISON) ---
-    // Returns "YYYY-MM-DD" based on local time, ignoring timezone offsets
     const getTodayString = () => {
         const d = new Date();
         const year = d.getFullYear();
@@ -586,7 +605,6 @@
         return `${year}-${month}-${day}`;
     };
 
-    // Events State - Initialized with today's date so they always appear
     let events = JSON.parse(localStorage.getItem('kairosEvents')) || [
         { id: 1, title: "Design Review", start: getTodayString(), startTime: "09:00", end: getTodayString(), endTime: "10:00", type: "Zoom", color: "#3b82f6" },
         { id: 2, title: "Client Sync", start: getTodayString(), startTime: "13:30", end: getTodayString(), endTime: "14:30", type: "Google Meet", color: "#8b5cf6" }
@@ -629,11 +647,9 @@
         document.getElementById('currentContext').innerText = name;
         document.getElementById('contextDropdown').style.display = 'none';
         
-        // Simulating data refresh based on context
         const toastMsg = name === 'Personal Workspace' ? 'Switched to Personal' : `Joined ${name} Space`;
         showToast(toastMsg);
         
-        // Visual cue for context change
         const actionIcon = document.querySelector('.card-title .ph-lightning');
         if(actionIcon) {
             if(name !== 'Personal Workspace') {
@@ -644,7 +660,6 @@
         }
     }
 
-    // Close dropdown if clicking outside
     window.onclick = function(event) {
         if (!event.target.closest('.brand')) {
             const dd = document.getElementById('contextDropdown');
@@ -657,12 +672,30 @@
     function closeModals() { 
         document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
         editingEventId = null;
+        // Reset call modal state
+        setTimeout(() => {
+            document.getElementById('startCallContent').style.display = 'block';
+            document.getElementById('preCallLoader').style.display = 'none';
+        }, 500);
     }
     function openLinkModal() { closeModals(); setTimeout(() => document.getElementById('linkModal').classList.add('active'), 100); }
     function openDialPad() { closeModals(); setTimeout(() => document.getElementById('dialPadModal').classList.add('active'), 100); }
     function openTeamModal() { closeModals(); setTimeout(() => document.getElementById('teamModal').classList.add('active'), 100); }
     function openProfileModal() { closeModals(); setTimeout(() => document.getElementById('profileModal').classList.add('active'), 100); }
     function openStartCallModal() { closeModals(); setTimeout(() => document.getElementById('startCallModal').classList.add('active'), 100); }
+
+    // --- CALL REDIRECTION LOGIC ---
+    function initiateCall(type) {
+        // Swap content to loader
+        document.getElementById('startCallContent').style.display = 'none';
+        document.getElementById('preCallLoader').style.display = 'block';
+        document.getElementById('connText').innerText = `Securing ${type} channel...`;
+        
+        // Simulate delay then redirect
+        setTimeout(() => {
+            window.location.href = 'meeting_room.html';
+        }, 2500);
+    }
 
     // --- SCHEDULE & EDIT ---
     function openScheduleModal(evtId = null) {
