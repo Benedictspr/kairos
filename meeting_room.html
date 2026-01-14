@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>KAIROS | Live Session</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+<script>
+    // --- THEME PERSISTENCE ---
+    // Apply theme immediately to prevent flash
+    const savedTheme = localStorage.getItem('kairosTheme') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+</script>
+
+<style>
+    /* --- THEME VARIABLES --- */
+    :root[data-theme="dark"] {
+        --bg-main: #000000;
+        --bg-panel: #111111;
+        --border: rgba(255, 255, 255, 0.1);
+        --text-primary: #ffffff;
+        --text-secondary: #888888;
+        --surface-hover: rgba(255, 255, 255, 0.08);
+        --glass: rgba(17, 17, 17, 0.85);
+        --tile-bg: #1a1a1a;
+        --chat-bubble-me: #222;
+        --modal-bg: #111;
+    }
+
+    :root[data-theme="light"] {
+        --bg-main: #f0f2f5;
+        --bg-panel: #ffffff;
+        --border: rgba(0, 0, 0, 0.1);
+        --text-primary: #111827;
+        --text-secondary: #6b7280;
+        --surface-hover: rgba(0, 0, 0, 0.05);
+        --glass: rgba(255, 255, 255, 0.85);
+        --tile-bg: #222; /* Video tiles stay dark for contrast */
+        --chat-bubble-me: #e5e7eb;
+        --modal-bg: #ffffff;
+    }
+
+    :root {
+        --accent: #10b981;
+        --danger: #ef4444;
+        --warning: #f59e0b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; outline: none; -webkit-tap-highlight-color: transparent; }
+    body { background-color: var(--bg-main); color: var(--text-primary); font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; display: flex; flex-direction: column; transition: background 0.3s, color 0.3s; }
+
+    /* --- HEADER --- */
+    header {
+        height: 60px; padding: 0 20px; display: flex; justify-content: space-between; align-items: center;
+        border-bottom: 1px solid var(--border); background: var(--bg-panel); z-index: 10;
+        flex-shrink: 0; transition: background 0.3s;
+    }
+    .meeting-info h1 { font-family: 'Space Grotesk'; font-size: 16px; font-weight: 700; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+    .meeting-meta { font-size: 11px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
+    .rec-badge { 
+        display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-secondary); 
+        padding: 4px 8px; border-radius: 4px; background: rgba(125,125,125,0.1);
+    }
+    .rec-badge.active { color: var(--danger); background: rgba(239,68,68,0.1); font-weight: 600; }
+    .rec-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+    .rec-badge.active .rec-dot { animation: pulse 1.5s infinite; }
+
+    /* --- MAIN STAGE --- */
+    .stage-container { flex: 1; display: flex; overflow: hidden; position: relative; }
+    
+    .video-grid {
+        flex: 1; padding: 16px; display: grid; gap: 16px;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        grid-auto-rows: minmax(200px, 1fr);
+        align-content: center;
+        transition: 0.3s;
+        overflow-y: auto;
+    }
+
+    .video-tile {
+        background: var(--tile-bg); border-radius: 16px; position: relative; overflow: hidden;
+        border: 1px solid var(--border); display: flex; align-items: center; justify-content: center;
+        transition: transform 0.2s, border-color 0.2s;
+    }
+    .video-tile.speaking { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(16,185,129,0.3); }
+    
+    /* Mock Video Content */
+    .tile-avatar { width: 80px; height: 80px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; color: #888; }
+    .tile-overlay {
+        position: absolute; bottom: 12px; left: 12px; right: 12px;
+        display: flex; justify-content: space-between; align-items: flex-end;
+    }
+    .user-nametag {
+        background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); color: #fff;
+        padding: 6px 10px; border-radius: 8px; font-size: 12px; font-weight: 500;
+        display: flex; align-items: center; gap: 6px;
+    }
+    .attention-metric {
+        background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+        padding: 4px 8px; border-radius: 8px; display: flex; flex-direction: column; gap: 2px;
+    }
+    .att-label { font-size: 8px; color: #ccc; text-transform: uppercase; font-weight: 700; }
+    .att-bar { width: 40px; height: 3px; background: rgba(255,255,255,0.2); border-radius: 2px; overflow: hidden; }
+    .att-fill { height: 100%; background: var(--accent); transition: width 0.5s ease, background 0.5s; }
+
+    /* Visual Badges (Hand Raise) */
+    .status-badge {
+        position: absolute; top: 12px; right: 12px;
+        background: var(--warning); color: #000;
+        width: 32px; height: 32px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        transform: scale(0); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .status-badge.active { transform: scale(1); }
+
+    /* AI Tile Special Styling */
+    .ai-tile { background: radial-gradient(circle at center, #0f2e23 0%, #000 100%); }
+    .ai-visualizer { display: flex; gap: 4px; align-items: center; height: 40px; }
+    .ai-bar { width: 6px; background: var(--accent); border-radius: 4px; animation: wave 1s ease-in-out infinite; }
+    .ai-bar:nth-child(2) { animation-delay: 0.1s; height: 60%; }
+    .ai-bar:nth-child(3) { animation-delay: 0.2s; height: 80%; }
+    .ai-bar:nth-child(4) { animation-delay: 0.3s; height: 40%; }
+    
+    /* Reaction Layer */
+    .reaction-layer {
+        position: absolute; bottom: 100px; right: 20px; width: 100px; height: 300px;
+        pointer-events: none; overflow: hidden; z-index: 100;
+    }
+    .floating-emoji {
+        position: absolute; bottom: -20px; font-size: 24px;
+        animation: floatUp 2s ease-out forwards; opacity: 0;
+    }
+
+    /* --- SIDEBAR --- */
+    .sidebar {
+        width: 320px; background: var(--bg-panel); border-left: 1px solid var(--border);
+        display: flex; flex-direction: column; transform: translateX(0); transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative; z-index: 60;
+    }
+    .sidebar.collapsed { width: 0; border: none; overflow: hidden; }
+    
+    .sidebar-tabs { display: flex; border-bottom: 1px solid var(--border); overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .sidebar-tabs::-webkit-scrollbar { display: none; }
+    .tab-btn { flex: 1; min-width: 60px; padding: 14px; font-size: 12px; font-weight: 600; color: var(--text-secondary); cursor: pointer; text-align: center; border-bottom: 2px solid transparent; white-space: nowrap; }
+    .tab-btn:hover { background: var(--surface-hover); color: var(--text-primary); }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .sidebar-content { flex: 1; overflow-y: auto; padding: 16px; display: none; }
+    .sidebar-content.active { display: block; }
+
+    /* Polls */
+    .poll-card { background: var(--surface-hover); padding: 16px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 16px; }
+    .poll-question { font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+    .poll-option { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-radius: 8px; background: rgba(125,125,125,0.1); margin-bottom: 6px; cursor: pointer; border: 1px solid transparent; transition: 0.2s; }
+    .poll-option:hover { border-color: var(--text-secondary); }
+    .poll-option.selected { border-color: var(--accent); background: rgba(16,185,129,0.1); }
+    .poll-bar-bg { height: 4px; background: rgba(125,125,125,0.1); border-radius: 2px; margin-top: 4px; overflow: hidden; }
+    .poll-bar-fill { height: 100%; background: var(--accent); width: 0%; transition: 1s ease; }
+
+    /* Agenda Items */
+    .agenda-item { display: flex; gap: 10px; padding: 10px; border-radius: 8px; margin-bottom: 8px; align-items: flex-start; transition: 0.2s; }
+    .agenda-item:hover { background: var(--surface-hover); }
+    .chk-box { width: 16px; height: 16px; border: 1px solid var(--text-secondary); border-radius: 4px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: transparent; }
+    .chk-box.checked { background: var(--accent); border-color: var(--accent); color: #000; }
+    .agenda-text { font-size: 13px; line-height: 1.4; }
+    .agenda-text.done { text-decoration: line-through; color: var(--text-secondary); }
+
+    /* Transcript */
+    .transcript-entry { margin-bottom: 12px; font-size: 12px; }
+    .ts-meta { display: flex; justify-content: space-between; margin-bottom: 4px; color: var(--text-secondary); font-size: 10px; font-family: 'JetBrains Mono'; }
+    .ts-text { line-height: 1.5; color: var(--text-secondary); }
+    :root[data-theme="dark"] .ts-text { color: #ddd; }
+    .ai-note { border-left: 2px solid var(--accent); padding-left: 10px; margin: 10px 0; font-style: italic; color: var(--accent); font-size: 12px; }
+
+    /* Chat */
+    .chat-msg { margin-bottom: 12px; }
+    .chat-header { display: flex; gap: 8px; align-items: baseline; margin-bottom: 4px; }
+    .chat-name { font-size: 11px; font-weight: 700; }
+    .chat-time { font-size: 10px; color: var(--text-secondary); }
+    .chat-bubble { background: var(--chat-bubble-me); padding: 8px 12px; border-radius: 8px; font-size: 12px; line-height: 1.4; display: inline-block; color: var(--text-primary); }
+    .chat-input-area { padding: 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; background: var(--bg-panel); }
+    
+    /* --- CONTROLS --- */
+    .control-bar {
+        height: 70px; display: flex; justify-content: center; align-items: center; gap: 12px;
+        position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+        background: var(--glass); backdrop-filter: blur(16px);
+        padding: 0 16px; border-radius: 24px; border: 1px solid rgba(125,125,125,0.2);
+        z-index: 50; box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        max-width: 90%;
+    }
+
+    .ctrl-btn {
+        width: 44px; height: 44px; border-radius: 14px; background: #333; color: #fff;
+        display: flex; align-items: center; justify-content: center; font-size: 20px;
+        cursor: pointer; transition: 0.2s; position: relative; flex-shrink: 0;
+    }
+    .ctrl-btn:hover { background: #444; transform: translateY(-2px); }
+    .ctrl-btn:active { transform: scale(0.95); }
+    .ctrl-btn.danger { background: var(--danger); }
+    .ctrl-btn.active { background: var(--accent); color: #000; }
+    .ctrl-btn.warn.active { background: var(--warning); color: #000; }
+    
+    .tooltip {
+        position: absolute; top: -35px; left: 50%; transform: translateX(-50%);
+        background: #000; color: #fff; font-size: 10px; padding: 4px 8px; border-radius: 4px;
+        opacity: 0; pointer-events: none; transition: 0.2s; white-space: nowrap; font-weight: 600;
+    }
+    .ctrl-btn:hover .tooltip { opacity: 1; top: -40px; }
+
+    /* Reactions Menu (Mini) */
+    .reactions-menu {
+        position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%) scale(0.9);
+        background: #222; border-radius: 50px; padding: 8px; display: flex; gap: 8px;
+        opacity: 0; pointer-events: none; transition: 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 200;
+    }
+    .reactions-menu.active { opacity: 1; pointer-events: all; transform: translateX(-50%) scale(1); }
+    .reaction-btn { font-size: 20px; cursor: pointer; padding: 8px; border-radius: 50%; transition: 0.2s; }
+    .reaction-btn:hover { background: rgba(255,255,255,0.1); transform: scale(1.2); }
+
+    /* --- TOAST --- */
+    #toast {
+        position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-20px);
+        background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-primary);
+        padding: 10px 20px; border-radius: 50px; font-weight: 500; font-size: 12px;
+        opacity: 0; transition: 0.3s; z-index: 2000; display: flex; align-items: center; gap: 10px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2); pointer-events: none;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+    #toast img { width: 20px; height: 20px; border-radius: 50%; }
+
+    /* --- ANIMATIONS --- */
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+    @keyframes wave { 0%, 100% { height: 10%; } 50% { height: 100%; } }
+    @keyframes floatUp { 
+        0% { transform: translateY(0) scale(0.5); opacity: 0; } 
+        20% { opacity: 1; transform: translateY(-20px) scale(1.2); }
+        100% { transform: translateY(-200px) scale(1); opacity: 0; } 
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* --- MOBILE RESPONSIVE --- */
+    @media (max-width: 768px) {
+        .stage-container { flex-direction: column; }
+        .video-grid { display: flex; flex-direction: column; padding: 12px; padding-bottom: 100px; overflow-y: auto; height: 100%; }
+        .video-tile { min-height: 220px; flex-shrink: 0; }
+        .sidebar { position: fixed; top: 0; left: 0; width: 100%; height: 100%; transform: translateY(100%); transition: transform 0.3s ease; z-index: 100; border-left: none; }
+        .sidebar.mobile-active { transform: translateY(0); }
+        .sidebar-header-mobile { display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid var(--border); }
+        .control-bar { width: 95%; bottom: 16px; padding: 0 10px; gap: 8px; height: 64px; }
+        .ctrl-btn { width: 40px; height: 40px; font-size: 18px; }
+        .tooltip { display: none; }
+        .ai-tile { min-height: 150px; }
+    }
+
+    /* --- END MODAL --- */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(8px); opacity: 0; transition: opacity 0.5s; }
+    .modal-overlay.visible { opacity: 1; }
+    .modal-box { background: var(--modal-bg); border: 1px solid var(--border); padding: 30px; border-radius: 20px; width: 400px; text-align: center; box-shadow: 0 30px 60px rgba(0,0,0,0.5); transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    .modal-overlay.visible .modal-box { transform: scale(1); }
+    
+    .summary-preview { text-align: left; background: var(--surface-hover); padding: 15px; border-radius: 10px; font-size: 12px; margin: 20px 0; color: var(--text-secondary); border-left: 2px solid var(--accent); display: none; }
+    .processing-view { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 20px; }
+    .spinner { width: 30px; height: 30px; border: 3px solid rgba(16,185,129,0.3); border-top: 3px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+</style>
+</head>
+<body>
+
+<div id="toast">
+    <img src="https://ui-avatars.com/api/?name=Alice&background=2563eb&color=fff" alt="">
+    <span id="toastMsg">Alice raised hand</span>
+</div>
+
+<header>
+    <div class="meeting-info">
+        <h1>Q1 Product Roadmap Review</h1>
+        <div class="meeting-meta">
+            <span id="timer">00:00:00</span>
+            <span>•</span>
+            <span style="color:var(--accent)">Live</span>
+        </div>
+    </div>
+    <div class="rec-badge active">
+        <div class="rec-dot"></div>
+        <span>REC</span>
+    </div>
+</header>
+
+<div class="stage-container">
+    <div class="video-grid" id="grid">
+        <div class="video-tile" id="tile-me">
+            <div class="status-badge" id="myHand"><i class="ph-bold ph-hand-waving"></i></div>
+            <div class="tile-avatar">Me</div>
+            <div class="tile-overlay">
+                <div class="user-nametag">Benedict (Host)</div>
+            </div>
+        </div>
+
+        <div class="video-tile">
+            <div class="tile-avatar" style="background: #2563eb; color: #fff;">A</div>
+            <div class="tile-overlay">
+                <div class="user-nametag">Alice Design</div>
+                <div class="attention-metric">
+                    <div class="att-label">Focus</div>
+                    <div class="att-bar"><div class="att-fill" id="att-1" style="width: 90%;"></div></div>
+                </div>
+            </div>
+            <div class="reaction-layer" id="react-layer-1"></div>
+        </div>
+
+        <div class="video-tile speaking">
+            <div class="tile-avatar" style="background: #d97706; color: #fff;">J</div>
+            <div class="tile-overlay">
+                <div class="user-nametag">John Dev</div>
+                <div class="attention-metric">
+                    <div class="att-label">Focus</div>
+                    <div class="att-bar"><div class="att-fill" id="att-2" style="width: 75%; background: #f59e0b;"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="video-tile ai-tile">
+            <div class="tile-overlay" style="top:0; bottom:0; flex-direction: column; align-items: center; justify-content: center; gap:10px;">
+                <div class="ai-visualizer">
+                    <div class="ai-bar" style="height: 40px;"></div>
+                    <div class="ai-bar" style="height: 60px;"></div>
+                    <div class="ai-bar" style="height: 30px;"></div>
+                    <div class="ai-bar" style="height: 70px;"></div>
+                    <div class="ai-bar" style="height: 40px;"></div>
+                </div>
+                <div class="user-nametag" style="border: 1px solid var(--accent); color: var(--accent); background: rgba(16,185,129,0.1);">
+                    <i class="ph-bold ph-sparkle"></i> KAIROS AI
+                </div>
+                <div style="font-size: 10px; color: var(--accent); margin-top: 4px;">Capturing decisions...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header-mobile" style="display:none;" id="mobSidebarHeader">
+            <h3 style="font-family:'Space Grotesk'; font-size:16px;">Meeting Details</h3>
+            <button onclick="toggleSidebar()" style="background:none; border:none; color:var(--text-primary); font-size:24px;"><i class="ph-bold ph-x"></i></button>
+        </div>
+
+        <div class="sidebar-tabs">
+            <div class="tab-btn active" onclick="switchTab('notes')">AI Notes</div>
+            <div class="tab-btn" onclick="switchTab('agenda')">Agenda</div>
+            <div class="tab-btn" onclick="switchTab('polls')">Polls</div>
+            <div class="tab-btn" onclick="switchTab('chat')">Chat</div>
+        </div>
+
+        <div id="tab-notes" class="sidebar-content active">
+            <div style="font-size:10px; color:var(--text-secondary); margin-bottom:10px; text-align:center;">LIVE TRANSCRIPT & INSIGHTS</div>
+            <div id="transcript-feed"></div>
+        </div>
+
+        <div id="tab-agenda" class="sidebar-content">
+            <div class="agenda-item" onclick="toggleCheck(this)">
+                <div class="chk-box checked"><i class="ph-bold ph-check"></i></div>
+                <div class="agenda-text done">Review Q4 metrics</div>
+            </div>
+            <div class="agenda-item" onclick="toggleCheck(this)">
+                <div class="chk-box"><i class="ph-bold ph-check"></i></div>
+                <div class="agenda-text">Confirm tech stack migration</div>
+            </div>
+            <div class="agenda-item" onclick="toggleCheck(this)">
+                <div class="chk-box"><i class="ph-bold ph-check"></i></div>
+                <div class="agenda-text">Budget approval for Sparky Solutions</div>
+            </div>
+        </div>
+
+        <div id="tab-polls" class="sidebar-content">
+            <div class="poll-card">
+                <div class="poll-question">Vote: Primary JS Framework</div>
+                <div class="poll-option" onclick="vote(this, 60)">
+                    <span style="font-size:12px;">Next.js 14</span>
+                    <span style="font-size:10px; color:var(--text-secondary);">0 votes</span>
+                </div>
+                <div class="poll-bar-bg"><div class="poll-bar-fill"></div></div>
+                
+                <div class="poll-option" style="margin-top:10px;" onclick="vote(this, 30)">
+                    <span style="font-size:12px;">Vue 3</span>
+                    <span style="font-size:10px; color:var(--text-secondary);">0 votes</span>
+                </div>
+                <div class="poll-bar-bg"><div class="poll-bar-fill"></div></div>
+            </div>
+            <button style="width:100%; padding:10px; border:1px dashed var(--text-secondary); color:var(--text-secondary); border-radius:8px; font-size:12px; cursor:pointer;">+ Create New Poll</button>
+        </div>
+
+        <div id="tab-chat" class="sidebar-content" style="display:none; flex-direction:column; height:100%;">
+            <div style="flex:1; overflow-y:auto;" id="chat-feed">
+                <div class="chat-msg">
+                    <div class="chat-header"><span class="chat-name">Alice</span> <span class="chat-time">10:02</span></div>
+                    <div class="chat-bubble" style="background:var(--surface-hover); color:var(--text-primary);">Can you share the Figma link?</div>
+                </div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" placeholder="Type a message..." class="input-field" style="flex:1; background:var(--bg-main); border:1px solid var(--border); padding:10px; border-radius:20px; color:var(--text-primary);" id="chatInput" onkeypress="handleChat(event)">
+                <button style="color:var(--accent); background:none; border:none; font-size:18px;" onclick="sendChat()"><i class="ph-fill ph-paper-plane-right"></i></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="reactions-menu" id="reactionMenu">
+    <div class="reaction-btn" onclick="sendReaction('👍')">👍</div>
+    <div class="reaction-btn" onclick="sendReaction('❤️')">❤️</div>
+    <div class="reaction-btn" onclick="sendReaction('🎉')">🎉</div>
+    <div class="reaction-btn" onclick="sendReaction('👏')">👏</div>
+</div>
+
+<div class="control-bar">
+    <div class="ctrl-btn" onclick="toggleState(this, 'mute')">
+        <i class="ph-fill ph-microphone"></i><div class="tooltip">Mute</div>
+    </div>
+    <div class="ctrl-btn" onclick="toggleState(this, 'video')">
+        <i class="ph-fill ph-video-camera"></i><div class="tooltip">Video</div>
+    </div>
+    <div class="ctrl-btn warn" onclick="toggleHand(this)">
+        <i class="ph-bold ph-hand-waving"></i><div class="tooltip">Raise Hand</div>
+    </div>
+    <div class="ctrl-btn" onclick="toggleReactionMenu()">
+        <i class="ph-bold ph-smiley"></i><div class="tooltip">React</div>
+    </div>
+    
+    <div style="width:1px; height:24px; background:var(--text-secondary); opacity:0.3; margin:0 4px;"></div>
+    
+    <div class="ctrl-btn active" onclick="toggleSidebar()">
+        <i class="ph-bold ph-chats-circle"></i><div class="tooltip">Sidebar</div>
+    </div>
+    
+    <div class="ctrl-btn danger" onclick="endCall()">
+        <i class="ph-bold ph-phone-disconnect"></i><div class="tooltip">End</div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="endModal">
+    <div class="modal-box">
+        <div id="processingState" class="processing-view">
+            <div class="spinner"></div>
+            <h3 style="font-family:'Space Grotesk'; font-size:16px;">KAIROS is organizing memory...</h3>
+            <p style="font-size:12px; color:var(--text-secondary);">Analyzing decision points and actions.</p>
+        </div>
+
+        <div id="summaryState" style="display:none;">
+            <i class="ph-duotone ph-check-circle" style="font-size: 48px; color: var(--accent); margin-bottom: 16px;"></i>
+            <h2 style="font-family:'Space Grotesk'; margin-bottom:8px;">Meeting Ended</h2>
+            
+            <div class="summary-preview" style="display:block;">
+                <div style="font-weight:700; margin-bottom:6px; color:var(--text-primary);">AI Summary:</div>
+                • Tech stack migration ratified (Next.js 14).<br>
+                • Action Item: Benedict to email Sparky Solutions.<br>
+                • Alice to update Figma by EOD.
+            </div>
+            
+            <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:20px;">
+                <i class="ph-bold ph-envelope-simple" style="color:var(--text-secondary)"></i>
+                <span style="font-size:12px; color:var(--text-secondary);">Sending recap to all participants...</span>
+            </div>
+
+            <button onclick="window.location.href='index.html'" style="background:var(--text-primary); color:var(--bg-main); width:100%; padding:12px; border-radius:10px; font-weight:600; cursor:pointer; border:none; transition:0.2s;">
+                Return to Command Center
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- RESPONSIVE INIT ---
+    if(window.innerWidth <= 768) {
+        document.getElementById('mobSidebarHeader').style.display = 'flex';
+    }
+
+    // --- TIMER LOGIC ---
+    let seconds = 0;
+    setInterval(() => {
+        seconds++;
+        const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+        const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+        const s = (seconds % 60).toString().padStart(2, '0');
+        document.getElementById('timer').innerText = `${h}:${m}:${s}`;
+    }, 1000);
+
+    // --- LIVE SIMULATION ---
+    // Simulate Attention Span
+    setInterval(() => {
+        const setAttention = (id) => {
+            const val = Math.floor(Math.random() * (100 - 60 + 1) + 60);
+            const el = document.getElementById(id);
+            if(el) {
+                el.style.width = `${val}%`;
+                el.style.backgroundColor = val > 80 ? '#10b981' : (val > 50 ? '#f59e0b' : '#ef4444');
+            }
+        };
+        setAttention('att-1');
+        setAttention('att-2');
+    }, 3000);
+
+    // Simulate AI Transcript
+    const transcriptData = [
+        { speaker: "Alice", text: "I've uploaded the new designs." },
+        { speaker: "John", text: "Looking at them now. The navigation looks clean." },
+        { speaker: "KAIROS", text: "Note: Design approval consensus detected.", type: "ai" },
+        { speaker: "Benedict", text: "Let's move to the budget item." },
+        { speaker: "John", text: "We need 20% more for the server costs." }
+    ];
+    let transIndex = 0;
+    
+    function addTranscript() {
+        if(transIndex >= transcriptData.length) return;
+        const data = transcriptData[transIndex];
+        const feed = document.getElementById('transcript-feed');
+        
+        const el = document.createElement('div');
+        if(data.type === 'ai') {
+            el.innerHTML = `<div class="ai-note"><i class="ph-bold ph-sparkle"></i> ${data.text}</div>`;
+        } else {
+            el.className = 'transcript-entry';
+            el.innerHTML = `
+                <div class="ts-meta"><span>${data.speaker}</span> <span>Just now</span></div>
+                <div class="ts-text">${data.text}</div>
+            `;
+        }
+        feed.appendChild(el);
+        feed.scrollTop = feed.scrollHeight;
+        transIndex++;
+        setTimeout(addTranscript, Math.random() * 3000 + 2000);
+    }
+    setTimeout(addTranscript, 1000);
+
+    // --- INTERACTIONS ---
+    function switchTab(tabName) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.sidebar-content').forEach(c => {
+            c.style.display = 'none';
+            c.classList.remove('active');
+        });
+        
+        event.target.classList.add('active');
+        const content = document.getElementById(`tab-${tabName}`);
+        content.style.display = tabName === 'chat' ? 'flex' : 'block';
+        setTimeout(() => content.classList.add('active'), 10);
+    }
+
+    function toggleCheck(el) {
+        const box = el.querySelector('.chk-box');
+        const text = el.querySelector('.agenda-text');
+        if(box.classList.contains('checked')) {
+            box.classList.remove('checked'); text.classList.remove('done');
+        } else {
+            box.classList.add('checked'); text.classList.add('done');
+        }
+    }
+
+    function toggleSidebar() {
+        const sb = document.getElementById('sidebar');
+        if(window.innerWidth <= 768) {
+            sb.classList.toggle('mobile-active');
+        } else {
+            sb.classList.toggle('collapsed');
+        }
+    }
+
+    function toggleState(btn, type) {
+        btn.classList.toggle('active');
+        const icon = btn.querySelector('i');
+        if(type === 'mute') {
+            icon.className = btn.classList.contains('active') ? 'ph-fill ph-microphone-slash' : 'ph-fill ph-microphone';
+            btn.classList.toggle('danger');
+        }
+        if(type === 'video') {
+            icon.className = btn.classList.contains('active') ? 'ph-fill ph-video-camera-slash' : 'ph-fill ph-video-camera';
+        }
+    }
+
+    // Raise Hand Logic
+    function toggleHand(btn) {
+        btn.classList.toggle('active');
+        const badge = document.getElementById('myHand');
+        if(btn.classList.contains('active')) {
+            badge.classList.add('active');
+            showToast('You raised your hand');
+        } else {
+            badge.classList.remove('active');
+        }
+    }
+
+    // Reactions
+    function toggleReactionMenu() {
+        document.getElementById('reactionMenu').classList.toggle('active');
+    }
+    
+    function sendReaction(emoji) {
+        // Create floating element
+        const layer = document.getElementById('tile-me'); // Attach to self or grid
+        const el = document.createElement('div');
+        el.className = 'floating-emoji';
+        el.innerText = emoji;
+        // Randomize horizontal position slightly
+        el.style.left = Math.random() * 60 + 20 + '%'; 
+        
+        // Append to specific participant layer (Simulated for 'Alice')
+        const target = document.getElementById('react-layer-1');
+        if(target) target.appendChild(el);
+        
+        setTimeout(() => el.remove(), 2000);
+        document.getElementById('reactionMenu').classList.remove('active');
+    }
+
+    // Polls
+    function vote(opt, percent) {
+        const parent = opt.parentElement;
+        // Reset others
+        parent.querySelectorAll('.poll-option').forEach(o => o.classList.remove('selected'));
+        parent.querySelectorAll('.poll-bar-fill').forEach(b => b.style.width = '0%');
+        
+        // Select this
+        opt.classList.add('selected');
+        const bar = opt.nextElementSibling.querySelector('.poll-bar-fill');
+        bar.style.width = percent + '%';
+        opt.querySelector('span:last-child').innerText = '1 vote';
+    }
+
+    // Chat
+    function handleChat(e) { if(e.key === 'Enter') sendChat(); }
+    function sendChat() {
+        const input = document.getElementById('chatInput');
+        const text = input.value;
+        if(!text) return;
+        const feed = document.getElementById('chat-feed');
+        const el = document.createElement('div');
+        el.className = 'chat-msg';
+        el.innerHTML = `<div class="chat-header"><span class="chat-name">Me</span> <span class="chat-time">Now</span></div><div class="chat-bubble" style="background:var(--accent); color:#000;">${text}</div>`;
+        feed.appendChild(el);
+        input.value = '';
+        feed.scrollTop = feed.scrollHeight;
+    }
+
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        document.getElementById('toastMsg').innerText = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    // --- END CALL LOGIC ---
+    function endCall() {
+        const modal = document.getElementById('endModal');
+        modal.style.display = 'flex';
+        // Force reflow for transition
+        setTimeout(() => modal.classList.add('visible'), 10);
+
+        // Simulate AI Processing time
+        setTimeout(() => {
+            document.getElementById('processingState').style.display = 'none';
+            document.getElementById('summaryState').style.display = 'block';
+        }, 2000); // 2 second delay
+    }
+</script>
+</body>
+</html>
