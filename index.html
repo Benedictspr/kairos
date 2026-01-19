@@ -43,9 +43,9 @@
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; outline: none; -webkit-tap-highlight-color: transparent; }
-    
+     
     html { overflow: hidden; height: 100%; width: 100%; }
-    
+     
     body {
         background-color: var(--bg-main);
         color: var(--text-primary);
@@ -93,7 +93,7 @@
     .nav-btn {
         padding: 10px 12px; border-radius: 10px; color: var(--text-secondary); cursor: pointer;
         font-weight: 500; font-size: 13px; display: flex; align-items: center; gap: 10px; transition: 0.2s;
-        text-decoration: none; margin-bottom: 4px;
+        text-decoration: none; margin-bottom: 4px; border: 1px solid transparent;
     }
     .nav-btn:hover { background: var(--surface-hover); color: var(--text-primary); }
     .nav-btn.active { 
@@ -144,7 +144,7 @@
 
     /* Grid Layout */
     .grid-layout { display: grid; grid-template-columns: 2.2fr 1fr; gap: 20px; flex: 1; min-height: 0; }
-    
+     
     .card { background: var(--surface-hover); border: 1px solid var(--border); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; overflow: hidden; }
     .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-shrink: 0; }
     .card-title { font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
@@ -169,6 +169,67 @@
     .btn-primary { width: 100%; padding: 12px; border-radius: 10px; background: var(--text-primary); color: var(--bg-main); font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform 0.2s; margin-top: 12px; flex-shrink: 0; }
     .btn-primary:hover { transform: translateY(-1px); }
 
+    /* --- VIEW SPECIFIC STYLES (New) --- */
+    .view-header {
+        padding: 16px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--border);
+    }
+    .view-title { font-family: 'Space Grotesk'; font-size: 18px; font-weight: 700; }
+     
+    .pill-nav-container { padding: 10px 20px; overflow-x: auto; display: flex; gap: 8px; flex-shrink: 0; -webkit-overflow-scrolling: touch;}
+    .pill-nav {
+        padding: 6px 14px;
+        background: var(--surface-hover);
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: 0.2s;
+        white-space: nowrap;
+    }
+    .pill-nav.active { background: #3b82f6; color: white; }
+    .pill-nav.blue-pill { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+     
+    .content-list { padding: 0 20px; flex: 1; overflow-y: auto; }
+     
+    .docs-empty {
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        height: 100%; color: var(--text-secondary); gap: 16px;
+    }
+    .docs-icon { font-size: 48px; opacity: 0.5; }
+    
+    /* Doc Item */
+    .doc-item {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 12px; border-bottom: 1px solid var(--border);
+        cursor: pointer; transition: 0.2s; border-radius: 8px;
+        margin-top: 4px;
+    }
+    .doc-item:hover { background: var(--surface-hover); }
+    .doc-info { display: flex; align-items: center; gap: 12px; }
+    .doc-icon { width: 32px; height: 32px; background: rgba(59, 130, 246, 0.1); color: #3b82f6; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+
+
+    .chat-item {
+        display: flex; align-items: center; gap: 12px;
+        padding: 12px 0; border-bottom: 1px solid var(--border);
+        cursor: pointer; position: relative;
+    }
+    .chat-avatar { width: 40px; height: 40px; border-radius: 12px; background: #333; overflow: hidden; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; }
+    .vault-link-btn {
+        margin-left: auto;
+        width: 32px; height: 32px; border-radius: 50%;
+        background: var(--surface-hover); color: var(--text-secondary);
+        display: flex; align-items: center; justify-content: center;
+        transition: 0.2s;
+    }
+    .vault-link-btn:hover { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+
+     
     /* --- MODALS (Standardized) --- */
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); z-index: 2500; opacity: 0; pointer-events: none; transition: 0.3s; display: flex; align-items: center; justify-content: center; }
     .modal-overlay.active { opacity: 1; pointer-events: all; }
@@ -181,12 +242,42 @@
     .meeting-icon { width: 60px; height: 60px; border-radius: 20px; background: #1a1a1a; display: flex; align-items: center; justify-content: center; font-size: 28px; color: #fff; border: 1px solid rgba(255,255,255,0.1); }
     .meeting-label { font-size: 13px; font-weight: 600; color: #fff; }
 
-    /* Forms */
+    /* Forms & Profile List */
     .form-group { margin-bottom: 16px; }
     .form-label { font-size: 12px; color: #888; margin-bottom: 8px; display: block; }
     .input-field { width: 100%; background: #1a1a1a; border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 12px; color: #fff; font-family: 'Inter', sans-serif; font-size: 14px; }
     .input-field:focus { border-color: #fff; }
     .date-row { display: flex; gap: 12px; }
+     
+    /* --- SWIPEABLE PROFILE --- */
+    .profile-swipe-container {
+        display: flex;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        gap: 16px;
+        padding-bottom: 10px; /* Space for scrollbar if present */
+        -webkit-overflow-scrolling: touch;
+    }
+    .profile-swipe-container::-webkit-scrollbar { display: none; }
+    
+    .profile-card-page {
+        min-width: 100%;
+        scroll-snap-align: center;
+        background: #1a1a1a;
+        border-radius: 20px;
+        padding: 20px;
+        border: 1px solid rgba(255,255,255,0.05);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .profile-list-item {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.1);
+        cursor: pointer;
+    }
+    .profile-label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+    .profile-val { font-size: 13px; color: #fff; font-weight: 500; display: flex; align-items: center; gap: 8px; text-align: right;}
 
     /* Link Box */
     .call-link-box { background: #1a1a1a; padding: 4px; border-radius: 12px; display: flex; align-items: center; border: 1px solid rgba(255,255,255,0.1); margin: 16px 0; }
@@ -208,7 +299,7 @@
     .team-member { display: flex; align-items: center; justify-content: space-between; padding: 10px; background: #1a1a1a; border-radius: 12px; }
     .member-info { display: flex; gap: 10px; align-items: center; }
     .member-avatar { width: 30px; height: 30px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 10px; }
-    
+     
     .call-type-row { display: flex; gap: 16px; justify-content: center; margin: 20px 0; }
     .call-type-btn { display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; padding: 16px; border-radius: 16px; background: #1a1a1a; width: 100px; transition: 0.2s; }
     .call-type-btn:hover { background: #333; }
@@ -232,11 +323,14 @@
     .step-indicator { display: flex; gap: 6px; justify-content: center; margin-bottom: 20px; }
     .step-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); transition: 0.3s; }
     .step-dot.active { background: var(--accent); }
+    
+    /* FAB Elevated */
+    .fab-container { position: absolute; bottom: 80px; right: 20px; z-index: 50; }
 
     /* --- MOBILE RESPONSIVE FIXES (Corrected to match Vault) --- */
     @media (max-width: 768px) {
         body { padding: 0; display: block; overflow: hidden; }
-        
+         
         /* Mobile Sidebar - Matches Vault Styling */
         #sidebar { 
             position: fixed; top: 0; left: 0; height: 100%; width: 100%; 
@@ -244,21 +338,21 @@
             transform: translateX(-100%);
         }
         #sidebar.active { transform: translateX(0); }
-        
+         
         #main { border-radius: 0; border: none; height: 100dvh; display: block; position: relative; }
-        
-        .dashboard-content { 
+         
+        .dashboard-content, .view-section { 
             padding: 16px; padding-top: 70px; gap: 16px; 
             overflow-y: auto; -webkit-overflow-scrolling: touch; 
             height: 100%;
         }
-        
+         
         .grid-layout { 
             grid-template-columns: 1fr; 
             display: flex; flex-direction: column; 
             overflow: visible; height: auto; padding-bottom: 100px;
         }
-        
+         
         /* Size Corrections */
         .card { height: auto; flex-shrink: 0; overflow: visible; border-radius: 12px; }
         .agenda-feed { 
@@ -266,13 +360,13 @@
             min-height: 150px; 
             flex: none; height: auto; 
         }
-        
+         
         .main-clock { font-size: 32px; }
         .time-header { flex-direction: row; align-items: flex-end; padding-bottom: 16px; }
         .world-clocks { display: none; }
-        
+         
         .mobile-menu-btn { display: block; position: absolute; top: 16px; right: 16px; z-index: 2000; background: var(--surface-hover); border: none; padding: 8px; border-radius: 8px; color: var(--text-primary); font-size: 20px; }
-        
+         
         .modal-card { width: 90%; }
         .input-field { font-size: 16px; }
     }
@@ -298,7 +392,7 @@
                 <div class="nav-btn" onclick="setContext('Personal Workspace')">Personal</div>
                 <div class="nav-btn" onclick="setContext('Design Team')">Design Team</div>
                 <div class="nav-btn" onclick="setContext('Engineering')">Engineering</div>
-                <div style="height:1px; background:var(--border); margin:8px 0;"></div>
+                <div style="height:1px; background:var(--border); margin:8px 0;" id="teamDivider"></div>
                 <div class="nav-btn" style="color:#10b981;" onclick="openNewTeamWizard()"><i class="ph-bold ph-plus"></i> New Team</div>
             </div>
         </div>
@@ -307,32 +401,37 @@
             <i class="ph-bold ph-moon" id="themeIcon"></i>
         </button>
     </div>
-    
-    <div class="nav-btn active" onclick="switchView('dashboard')"><i class="ph-duotone ph-squares-four"></i> Dashboard</div>
-    <div class="nav-btn" onclick="openTeamModal()"><i class="ph-duotone ph-users"></i> Team Sync</div>
-    
+     
+    <div class="nav-btn" id="nav-dashboard" onclick="switchView('dashboard')"><i class="ph-duotone ph-squares-four"></i> Dashboard</div>
+     
+    <div class="nav-btn" id="nav-teamchat" onclick="switchView('teamchat')"><i class="ph-duotone ph-chat-circle-dots"></i> Team Chat</div>
+     
+    <div class="nav-btn" id="nav-docs" onclick="switchView('docs')"><i class="ph-duotone ph-file-text"></i> Docs</div>
+     
+    <div class="nav-btn" id="nav-teamsync" onclick="openTeamModal()"><i class="ph-duotone ph-users"></i> Team Sync</div>
+     
     <div class="nav-divider"></div>
     <div class="nav-label">External</div>
-    
+     
     <div onclick="initCalendarAuth()" class="nav-btn">
         <i class="ph-bold ph-google-logo"></i> Google Calendar
     </div>
-    
+     
     <a href="memory_vault.html" class="nav-btn" style="text-decoration:none;">
         <i class="ph-bold ph-brain"></i> Memory Vault
     </a>
-    
+     
     <div onclick="openMeetingHub()" class="nav-btn">
         <i class="ph-bold ph-video-camera"></i> Meetings
     </div>
 
     <div class="bottom-dock" onclick="openProfileModal()">
         <div class="user-avatar" id="dockAvatar">
-            <span>B</span>
+            <span>BA</span>
         </div>
         <div>
             <div style="font-size:12px; font-weight:600; color:var(--text-primary)" id="dockName">Benedict</div>
-            <div style="font-size:10px; color:var(--text-secondary)">Edit Profile</div>
+            <div style="font-size:10px; color:var(--text-secondary)">Settings & Profile</div>
         </div>
     </div>
 </nav>
@@ -347,8 +446,8 @@
                 </div>
                 <div class="world-clocks">
                     <div class="wc-item">
-                        <div class="wc-city">New York</div>
-                        <div class="wc-time" id="time-ny">--:--</div>
+                        <div class="wc-city">Lagos</div>
+                        <div class="wc-time" id="time-lagos">--:--</div>
                     </div>
                     <div class="wc-item">
                         <div class="wc-city">London</div>
@@ -399,6 +498,54 @@
             </div>
         </div>
     </div>
+
+    <div id="view-teamchat" class="view-section">
+        <div class="view-header">
+            <div class="view-title">Team Chat</div>
+            <div style="display:flex; gap:12px;">
+                 <button class="theme-toggle"><i class="ph-bold ph-magnifying-glass"></i></button>
+                 <button class="theme-toggle"><i class="ph-bold ph-dots-three"></i></button>
+            </div>
+        </div>
+        <div class="pill-nav-container">
+            <div class="pill-nav active">All</div>
+            <div class="pill-nav">Mentions</div>
+            <div class="pill-nav">Chats</div>
+            <div class="pill-nav">Channels</div>
+            <div class="pill-nav">Meeting chat</div>
+        </div>
+        <div class="content-list" id="chatListContainer">
+            </div>
+        <div class="fab-container">
+             <button class="btn-primary" style="width:56px; height:56px; border-radius:50%; box-shadow:0 10px 30px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center;">
+                 <i class="ph-bold ph-plus" style="font-size:24px;"></i>
+             </button>
+        </div>
+    </div>
+
+    <div id="view-docs" class="view-section">
+        <div class="view-header">
+            <div class="view-title">Docs</div>
+            <div style="display:flex; gap:12px;">
+                 <button class="theme-toggle"><i class="ph-bold ph-magnifying-glass"></i></button>
+                 <button class="theme-toggle"><i class="ph-bold ph-bell"></i></button>
+            </div>
+        </div>
+        <div class="pill-nav-container">
+            <div class="pill-nav active blue-pill" onclick="filterDocs('all', this)">All</div>
+            <div class="pill-nav" onclick="filterDocs('recent', this)">Recent</div>
+            <div class="pill-nav" onclick="filterDocs('starred', this)">Starred</div>
+            <div class="pill-nav" onclick="filterDocs('shared', this)">Shared</div>
+        </div>
+        <div class="content-list" style="position:relative;" id="docsList">
+            </div>
+        <div style="position:absolute; bottom:20px; right:20px;">
+             <button class="btn-primary" onclick="createNewDoc()" style="width:56px; height:56px; border-radius:50%; box-shadow:0 10px 30px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center; background:#3b82f6;">
+                 <i class="ph-bold ph-plus" style="font-size:24px; color:#fff;"></i>
+             </button>
+        </div>
+    </div>
+
 </main>
 
 <div id="meetingHub" class="modal-overlay">
@@ -477,7 +624,7 @@
         </div>
         <div class="form-group">
             <label class="form-label">Meeting name</label>
-            <input type="text" id="schedName" class="input-field" value="Icreate-Idesign's Meeting" style="border-bottom: 2px solid #10b981; border-radius: 4px 4px 0 0;">
+            <input type="text" id="schedName" class="input-field" value="KAIROS Sync" style="border-bottom: 2px solid #10b981; border-radius: 4px 4px 0 0;">
         </div>
         <div class="form-group">
             <input type="text" id="schedDesc" class="input-field" placeholder="Description (optional)">
@@ -564,8 +711,14 @@
         </div>
         <div class="form-group">
             <label class="form-label">Add Member</label>
+            <input type="text" id="newMemberInput" class="input-field" placeholder="Email or Phone Number">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Assign to Team</label>
             <div style="display:flex; gap:8px;">
-                <input type="text" id="newMemberInput" class="input-field" placeholder="Email or Phone Number">
+                <select id="teamSelector" class="input-field" style="appearance:none; cursor:pointer;">
+                    <option value="" disabled selected>Select Team...</option>
+                    </select>
                 <button class="btn-primary" style="width:auto; margin:0;" onclick="addMember()">Add</button>
             </div>
         </div>
@@ -573,9 +726,12 @@
             <div class="team-member">
                 <div class="member-info">
                     <div class="member-avatar">A</div>
-                    <span style="font-size:13px; font-weight:600;">Alice Design</span>
+                    <div>
+                        <span style="font-size:13px; font-weight:600; display:block;">Alice Design</span>
+                        <span style="font-size:10px; color:var(--text-secondary);">Design Team</span>
+                    </div>
                 </div>
-                <div style="font-size:10px; color:#888;">In Call</div>
+                <div style="font-size:10px; color:#10b981;">Online</div>
             </div>
         </div>
     </div>
@@ -648,33 +804,101 @@
 <div id="profileModal" class="modal-overlay">
     <div class="modal-card">
         <div class="modal-header">
-            <h3>Edit Profile</h3>
+            <h3>Benedict Profile</h3>
             <div class="close-btn" onclick="closeModals()"><i class="ph-bold ph-x"></i></div>
         </div>
-        <div style="text-align:center; margin-bottom:20px;">
-            <div id="profilePreview" style="width:80px; height:80px; background:#333; border-radius:50%; margin:0 auto 10px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
-                <span id="profileInitials" style="font-size:24px; font-weight:700; color:#888;">B</span>
+        
+        <div class="profile-swipe-container">
+            <div class="profile-card-page">
+                <div style="text-align:center; margin-bottom:12px;">
+                    <div id="profilePreview" style="width:80px; height:80px; background:#333; border-radius:24px; margin:0 auto 10px; display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative;">
+                        <span id="profileInitials" style="font-size:24px; font-weight:700; color:#888;">BA</span>
+                        <div style="position:absolute; bottom:0; width:100%; padding:4px; background:rgba(0,0,0,0.5); font-size:9px; color:#fff;">EDIT</div>
+                    </div>
+                    <h2 id="displayProfName" style="font-size:18px; margin-bottom:4px;">Benedict Adurosakin</h2>
+                    <div style="display:flex; align-items:center; justify-content:center; gap:8px;">
+                        <span style="width:8px; height:8px; background:#10b981; border-radius:50%;"></span>
+                        <span style="font-size:12px; color:var(--text-secondary);">Clinical Informatics Nurse</span>
+                    </div>
+                </div>
+                <div class="profile-list-item">
+                     <span class="profile-label">Role</span>
+                     <div class="profile-val">RN, Writer, Content Creator</div>
+                </div>
+                <div class="profile-list-item">
+                     <span class="profile-label">Location</span>
+                     <div class="profile-val">Lagos, Nigeria</div>
+                </div>
+                <div class="profile-list-item" style="border-bottom:none;">
+                     <span class="profile-label">Projects</span>
+                     <div class="profile-val">The Hustle Truth Series</div>
+                </div>
+                <div style="text-align:center; margin-top:auto; color:#888; font-size:10px;">
+                    <i class="ph-bold ph-arrow-right"></i> Swipe for Contact
+                </div>
             </div>
-            <input type="file" id="photoInput" hidden accept="image/*" onchange="handlePhotoUpload(event)">
-            <button style="font-size:12px; color:#10b981; font-weight:600;" onclick="triggerPhotoUpload()">Change Photo</button>
+
+            <div class="profile-card-page">
+                <div style="font-size:14px; font-weight:700; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:8px;">Contact Details</div>
+                
+                <div class="profile-list-item">
+                    <span class="profile-label">Email</span>
+                    <div class="profile-val" style="font-size:12px;">benedictadurosakin@gmail.com</div>
+                </div>
+                <div class="profile-list-item">
+                    <span class="profile-label">Phone</span>
+                    <div class="profile-val">+234-906-179-0548</div>
+                </div>
+                <div class="profile-list-item">
+                    <span class="profile-label">Links</span>
+                    <div class="profile-val">linktr.ee/Benedictadurosakin</div>
+                </div>
+                <div class="profile-list-item">
+                    <span class="profile-label">Alias</span>
+                    <div class="profile-val">icreate idesign</div>
+                </div>
+                
+                <div style="background:#1a1a1a; padding:12px; border-radius:12px; display:flex; justify-content:space-between; align-items:center; margin-top:16px; border:1px solid var(--border); cursor:pointer;" onclick="showToast('Link Copied')">
+                     <span class="profile-label" style="font-size:11px;">Copy direct chat link</span>
+                     <i class="ph-bold ph-copy" style="color:#888;"></i>
+                </div>
+            </div>
+
+             <div class="profile-card-page">
+                <div style="font-size:14px; font-weight:700; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:8px;">App Settings</div>
+                
+                <div class="profile-list-item" onclick="toggleTheme()">
+                    <span class="profile-label">Theme</span>
+                    <div class="profile-val">Toggle Mode <i class="ph-bold ph-moon"></i></div>
+                </div>
+                <div class="profile-list-item">
+                    <span class="profile-label">Notifications</span>
+                    <div class="profile-val">On <i class="ph-bold ph-toggle-right" style="color:#10b981; font-size:16px;"></i></div>
+                </div>
+                <div class="profile-list-item">
+                    <span class="profile-label">Meeting Reminders</span>
+                    <div class="profile-val">15 mins before</div>
+                </div>
+                <button style="margin-top:auto; color:#ef4444; font-size:12px; font-weight:600;">Sign Out</button>
+            </div>
         </div>
-        <div class="form-group">
-            <label class="form-label">Full Name</label>
-            <input type="text" id="profName" class="input-field" value="Benedict">
-        </div>
-        <div class="form-group">
-            <label class="form-label">Email</label>
-            <input type="email" id="profEmail" class="input-field" value="benedict@kairos.ai">
-        </div>
-         <div class="form-group">
-            <label class="form-label">Role / Bio</label>
-            <input type="text" id="profRole" class="input-field" value="Product Lead">
-        </div>
-        <button class="btn-primary" onclick="saveProfile()">Save Changes</button>
     </div>
 </div>
 
 <script>
+    // --- CORE DATA ---
+    const TEAMS = ['Personal Workspace', 'Design Team', 'Engineering'];
+    const CHATS = [
+        { id: 1, name: 'Personal Workspace', type: 'Self', msg: 'Draft: Project Alpha', time: '10:02' },
+        { id: 2, name: 'Design Team', type: 'Team', msg: 'Alice: New mockups ready?', time: '09:45' },
+        { id: 3, name: 'Engineering', type: 'Team', msg: 'System update scheduled.', time: 'Yesterday' }
+    ];
+    let DOCS = [
+        { name: "Project Proposal.docx", type: "word", date: "Today", tag: "recent" },
+        { name: "Q1 Budget.xlsx", type: "excel", date: "Yesterday", tag: "starred" },
+        { name: "Meeting Notes.txt", type: "text", date: "2 days ago", tag: "shared" }
+    ];
+
     // --- DATE & TIMEZONE UTILS ---
     const getTodayString = () => {
         const d = new Date();
@@ -689,7 +913,6 @@
         { id: 2, title: "Client Sync", start: getTodayString(), startTime: "13:30", end: getTodayString(), endTime: "14:30", type: "Google Meet", color: "#8b5cf6" }
     ];
 
-    let currentUser = { name: "Benedict", email: "benedict@kairos.ai", role: "Lead" };
     let editingEventId = null;
 
     // Theme Logic
@@ -715,6 +938,11 @@
         document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
         const target = document.getElementById('view-' + viewName);
         if(target) target.classList.add('active');
+        
+        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+        const navBtn = document.getElementById('nav-' + viewName);
+        if(navBtn) navBtn.classList.add('active');
+
         if(window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('active');
     }
 
@@ -759,13 +987,24 @@
     
     function openLinkModal() { closeModals(); setTimeout(() => document.getElementById('linkModal').classList.add('active'), 100); }
     function openDialPad() { closeModals(); setTimeout(() => document.getElementById('dialPadModal').classList.add('active'), 100); }
-    function openTeamModal() { closeModals(); setTimeout(() => document.getElementById('teamModal').classList.add('active'), 100); }
     function openProfileModal() { closeModals(); setTimeout(() => document.getElementById('profileModal').classList.add('active'), 100); }
     function openStartCallModal() { closeModals(); setTimeout(() => document.getElementById('startCallModal').classList.add('active'), 100); }
+    
+    // Updated Team Modal Opener to populate dropdown
+    function openTeamModal() { 
+        closeModals(); 
+        const sel = document.getElementById('teamSelector');
+        sel.innerHTML = '<option value="" disabled selected>Select Team...</option>';
+        TEAMS.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t; opt.innerText = t;
+            sel.appendChild(opt);
+        });
+        setTimeout(() => document.getElementById('teamModal').classList.add('active'), 100); 
+    }
 
     // --- NEW TEAM WIZARD LOGIC ---
     function openNewTeamWizard() {
-        // Reset wizard
         document.querySelectorAll('.wizard-step').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.step-dot').forEach(el => el.classList.remove('active'));
         document.getElementById('wizStep1').classList.add('active');
@@ -809,26 +1048,28 @@
     function finishWizard() {
         const teamName = document.getElementById('wizTeamName').value || "New Team";
         
-        // 1. Add to Sidebar Dropdown
+        // 1. Add to Data Structures
+        TEAMS.push(teamName);
+        CHATS.push({ id: Date.now(), name: teamName, type: 'Team', msg: 'Team created', time: 'Just now' });
+
+        // 2. Add to Sidebar Dropdown
         const dropdown = document.getElementById('contextDropdown');
-        const divider = dropdown.querySelector('div[style*="height:1px"]');
-        
+        const divider = document.getElementById('teamDivider');
         const newBtn = document.createElement('div');
         newBtn.className = 'nav-btn';
         newBtn.innerText = teamName;
         newBtn.onclick = function() { setContext(teamName); };
-        
-        // Insert before the divider so it shows with other teams
         dropdown.insertBefore(newBtn, divider);
 
-        // 2. Switch Context
+        // 3. Switch Context & Render
         setContext(teamName);
+        renderChatList();
         
-        // 3. Close & Toast
+        // 4. Close & Toast
         closeModals();
         showToast(`Team "${teamName}" Created`);
         
-        // 4. Add Kickoff Event
+        // 5. Add Kickoff Event
         const kDate = document.getElementById('wizDate').value || getTodayString();
         const kTime = document.getElementById('wizTime').value || "09:00";
         events.push({
@@ -840,6 +1081,86 @@
         localStorage.setItem('kairosEvents', JSON.stringify(events));
         renderAgenda();
         renderCal();
+    }
+
+    // --- CHAT LIST RENDER ---
+    function renderChatList() {
+        const list = document.getElementById('chatListContainer');
+        list.innerHTML = '';
+        CHATS.forEach(chat => {
+            const initial = chat.name.charAt(0);
+            const el = document.createElement('div');
+            el.className = 'chat-item';
+            el.innerHTML = `
+                <div class="chat-avatar">${initial}</div>
+                <div style="flex:1">
+                    <div style="font-size:14px; font-weight:600; display:flex; justify-content:space-between;">
+                        ${chat.name} <span style="font-size:11px; font-weight:400; color:var(--text-secondary);">${chat.time}</span>
+                    </div>
+                    <div style="font-size:12px; color:var(--text-secondary);">${chat.msg}</div>
+                </div>
+                <a href="memory_vault.html" class="vault-link-btn" title="Open Memory Vault">
+                    <i class="ph-bold ph-brain"></i>
+                </a>
+            `;
+            list.appendChild(el);
+        });
+    }
+
+    // --- DOCS LOGIC ---
+    function renderDocs(filterTag = 'all') {
+        const list = document.getElementById('docsList');
+        list.innerHTML = '';
+        
+        const filtered = filterTag === 'all' ? DOCS : DOCS.filter(d => d.tag === filterTag);
+        
+        if (filtered.length === 0) {
+            list.innerHTML = `
+                <div class="docs-empty">
+                    <div style="width:60px; height:80px; border:2px dashed var(--text-secondary); border-radius:8px; display:flex; align-items:center; justify-content:center;">
+                        <i class="ph-duotone ph-file-text docs-icon"></i>
+                    </div>
+                    <div>
+                        <div style="font-weight:600; margin-bottom:4px;">No files found</div>
+                        <div style="font-size:12px;">Create a new document to get started</div>
+                    </div>
+                </div>`;
+            return;
+        }
+
+        filtered.forEach(doc => {
+            const el = document.createElement('div');
+            el.className = 'doc-item';
+            el.innerHTML = `
+                <div class="doc-info">
+                    <div class="doc-icon"><i class="ph-bold ph-file-text"></i></div>
+                    <div>
+                        <div style="font-size:13px; font-weight:600;">${doc.name}</div>
+                        <div style="font-size:11px; color:var(--text-secondary);">${doc.date}</div>
+                    </div>
+                </div>
+                <i class="ph-bold ph-dots-three-vertical" style="color:var(--text-secondary)"></i>
+            `;
+            list.appendChild(el);
+        });
+    }
+
+    function filterDocs(tag, btn) {
+        document.querySelectorAll('#view-docs .pill-nav').forEach(p => p.classList.remove('active', 'blue-pill'));
+        btn.classList.add('active', 'blue-pill');
+        renderDocs(tag);
+    }
+
+    function createNewDoc() {
+        const name = prompt("Enter document name:", "Untitled Draft");
+        if(name) {
+            DOCS.unshift({ name: name + ".txt", type: "text", date: "Just now", tag: "recent" });
+            renderDocs('recent');
+            // Reset active pill visually
+            document.querySelectorAll('#view-docs .pill-nav').forEach(p => p.classList.remove('active', 'blue-pill'));
+            document.querySelectorAll('#view-docs .pill-nav')[1].classList.add('active', 'blue-pill'); 
+            showToast('Document Created');
+        }
     }
 
     // --- CALL REDIRECTION LOGIC ---
@@ -922,41 +1243,19 @@
     // --- TEAM & PROFILE ---
     function addMember() {
         const val = document.getElementById('newMemberInput').value;
-        if(val) {
-            const list = document.getElementById('teamList');
-            const el = document.createElement('div');
-            el.className = 'team-member';
-            el.innerHTML = `<div class="member-info"><div class="member-avatar">${val.charAt(0).toUpperCase()}</div><span style="font-size:13px; font-weight:600;">${val}</span></div><div style="font-size:10px; color:#10b981;">Invited</div>`;
-            list.appendChild(el);
-            document.getElementById('newMemberInput').value = "";
-            showToast('Invitation Sent');
-        }
-    }
+        const team = document.getElementById('teamSelector').value;
+        
+        if(!val) { showToast('Please enter details'); return; }
+        if(!team) { showToast('Please select a team'); return; }
 
-    // FIXED: Photo Upload Logic
-    function triggerPhotoUpload() {
-        document.getElementById('photoInput').click();
-    }
-    function handlePhotoUpload(event) {
-        const file = event.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const imgTag = `<img src="${e.target.result}" style="width:100%; height:100%; object-fit:cover;">`;
-                document.getElementById('profilePreview').innerHTML = imgTag;
-                document.getElementById('dockAvatar').innerHTML = imgTag;
-            };
-            reader.readAsDataURL(file);
-        }
-    }
-
-    function saveProfile() {
-        currentUser.name = document.getElementById('profName').value;
-        currentUser.email = document.getElementById('profEmail').value;
-        document.getElementById('dockName').innerText = currentUser.name;
-        // Avatar is updated via handlePhotoUpload immediately
-        closeModals();
-        showToast('Profile Saved');
+        const list = document.getElementById('teamList');
+        const el = document.createElement('div');
+        el.className = 'team-member';
+        el.innerHTML = `<div class="member-info"><div class="member-avatar">${val.charAt(0).toUpperCase()}</div><div><span style="font-size:13px; font-weight:600; display:block;">${val}</span><span style="font-size:10px; color:var(--text-secondary);">${team}</span></div></div><div style="font-size:10px; color:#10b981;">Invited</div>`;
+        list.appendChild(el);
+        document.getElementById('newMemberInput').value = "";
+        document.getElementById('teamSelector').selectedIndex = 0;
+        showToast(`Invited to ${team}`);
     }
 
     // --- HELPERS ---
@@ -1046,7 +1345,7 @@
         document.getElementById('clock').innerText = now.toLocaleTimeString('en-GB', {hour: '2-digit', minute:'2-digit'});
         document.getElementById('date').innerText = now.toLocaleDateString('en-US', {weekday:'long', day:'numeric', month:'long'});
         const format = (tz) => new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit' }).format(now);
-        document.getElementById('time-ny').innerText = format('America/New_York');
+        document.getElementById('time-lagos').innerText = format('Africa/Lagos');
         document.getElementById('time-ldn').innerText = format('Europe/London');
     }
     
@@ -1055,6 +1354,8 @@
     updateTime();
     renderCal();
     renderAgenda();
+    renderChatList();
+    renderDocs();
 
     function initCalendarAuth() {
         const btn = event.currentTarget;
