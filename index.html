@@ -15,7 +15,7 @@
 </script>
 
 <style>
-    /* --- THEME VARIABLES --- */
+    /* --- SHARED VARIABLES (Exact Match with Vault) --- */
     :root[data-theme="dark"] {
         --bg-main: #050505;
         --bg-panel: #0a0a0a;
@@ -24,6 +24,8 @@
         --text-secondary: #888888;
         --surface-hover: rgba(255, 255, 255, 0.05);
         --cal-today-bg: rgba(255,255,255,0.1);
+        --accent: #10b981;
+        --danger: #ef4444;
         --shadow: 0 20px 40px -10px rgba(0,0,0,0.5);
     }
 
@@ -35,13 +37,14 @@
         --text-secondary: #6b7280;
         --surface-hover: rgba(0, 0, 0, 0.04);
         --cal-today-bg: rgba(0,0,0,0.08);
+        --accent: #059669;
+        --danger: #dc2626;
         --shadow: 0 20px 40px -10px rgba(0,0,0,0.1);
     }
 
-    /* --- RESET --- */
     * { box-sizing: border-box; margin: 0; padding: 0; outline: none; -webkit-tap-highlight-color: transparent; }
-    html, body { overflow: hidden; height: 100%; width: 100%; }
-    ::-webkit-scrollbar { display: none; }
+    
+    html { overflow: hidden; height: 100%; width: 100%; }
     
     body {
         background-color: var(--bg-main);
@@ -49,6 +52,9 @@
         font-family: 'Inter', sans-serif;
         display: flex; padding: 12px; gap: 12px;
         transition: background-color 0.4s ease, color 0.4s ease;
+        height: 100dvh; /* Dynamic Height for Mobile */
+        width: 100vw;
+        overflow: hidden;
     }
 
     /* Background Texture */
@@ -59,8 +65,9 @@
     }
 
     button { border: none; background: none; cursor: pointer; color: inherit; font-family: inherit; }
+    .mobile-menu-btn { display: none; }
 
-    /* --- SIDEBAR --- */
+    /* --- SIDEBAR (Standardized) --- */
     #sidebar {
         width: 240px; background: var(--bg-panel); border: 1px solid var(--border);
         border-radius: 20px; padding: 20px; display: flex; flex-direction: column;
@@ -71,7 +78,7 @@
     .brand-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
     .brand {
         font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700;
-        color: var(--text-primary); display: flex; align-items: center; gap: 10px;
+        color: var(--text-primary); display: flex; align-items: center; gap: 10px; cursor: pointer; position: relative;
     }
     .brand-icon {
         width: 28px; height: 28px; background: var(--text-primary); color: var(--bg-main);
@@ -89,7 +96,22 @@
         text-decoration: none; margin-bottom: 4px;
     }
     .nav-btn:hover { background: var(--surface-hover); color: var(--text-primary); }
-    .nav-btn.active { background: var(--text-primary); color: var(--bg-main); font-weight: 600; }
+    .nav-btn.active { 
+        background: var(--surface-hover); 
+        color: var(--text-primary); 
+        font-weight: 600; 
+        border: 1px solid var(--border);
+    }
+
+    /* Context Dropdown */
+    #contextDropdown {
+        display:none; position:absolute; top:40px; left:0; width:200px; 
+        background:var(--bg-panel); border:1px solid var(--border); 
+        border-radius:12px; padding:8px; box-shadow:var(--shadow); z-index:999;
+    }
+    #contextDropdown .nav-btn { background: transparent; border: none; font-weight: 500; color: var(--text-secondary); }
+    #contextDropdown .nav-btn:hover { color: var(--text-primary); }
+
     .nav-divider { height: 1px; background: var(--border); margin: 20px 0; }
     .nav-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 10px; padding-left: 10px; }
 
@@ -101,7 +123,7 @@
     .user-avatar { width: 32px; height: 32px; background: #e5e7eb; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #111; font-size: 12px; overflow: hidden; }
     .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
 
-    /* --- MAIN DASHBOARD --- */
+    /* --- MAIN DASHBOARD (Standardized Box Sizing) --- */
     #main {
         flex: 1; background: var(--bg-panel); border: 1px solid var(--border);
         border-radius: 20px; position: relative; overflow: hidden; display: flex; flex-direction: column;
@@ -110,7 +132,7 @@
     .view-section { display: none; flex: 1; flex-direction: column; height: 100%; }
     .view-section.active { display: flex; }
 
-    .dashboard-content { flex: 1; padding: 24px; overflow: hidden; display: flex; flex-direction: column; gap: 20px; }
+    .dashboard-content { flex: 1; padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
 
     .time-header { display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 20px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
     .main-clock { font-family: 'Space Grotesk', sans-serif; font-size: 48px; font-weight: 700; line-height: 1; letter-spacing: -2px; }
@@ -136,17 +158,9 @@
     .day-cell.faded { opacity: 0.2; }
     .event-chip { margin-top: 4px; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
 
-    /* Agenda Feed & Action Center */
-    .agenda-feed { 
-        display: flex; flex-direction: column; gap: 8px; 
-        overflow-y: auto; flex: 1; padding-right: 4px; 
-        min-height: 0;
-    }
-    .agenda-item { 
-        display: flex; gap: 12px; padding: 10px 12px; border-radius: 12px; 
-        background: var(--bg-main); border: 1px solid var(--border); 
-        align-items: center; transition: 0.2s; cursor: pointer; flex-shrink: 0;
-    }
+    /* Agenda Feed */
+    .agenda-feed { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; flex: 1; padding-right: 4px; min-height: 0; }
+    .agenda-item { display: flex; gap: 12px; padding: 10px 12px; border-radius: 12px; background: var(--bg-main); border: 1px solid var(--border); align-items: center; transition: 0.2s; cursor: pointer; flex-shrink: 0; }
     .agenda-item:hover { transform: translateX(2px); border-color: var(--text-secondary); }
     .agenda-time { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-secondary); width: 36px; flex-shrink: 0; }
     .agenda-details h4 { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
@@ -155,10 +169,10 @@
     .btn-primary { width: 100%; padding: 12px; border-radius: 10px; background: var(--text-primary); color: var(--bg-main); font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform 0.2s; margin-top: 12px; flex-shrink: 0; }
     .btn-primary:hover { transform: translateY(-1px); }
 
-    /* --- MODALS --- */
-    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); z-index: 1000; opacity: 0; pointer-events: none; transition: 0.3s; display: flex; align-items: center; justify-content: center; }
+    /* --- MODALS (Standardized) --- */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); z-index: 2500; opacity: 0; pointer-events: none; transition: 0.3s; display: flex; align-items: center; justify-content: center; }
     .modal-overlay.active { opacity: 1; pointer-events: all; }
-    .modal-card { background: #111; color: #fff; width: 100%; max-width: 400px; border-radius: 24px; padding: 24px; border: 1px solid rgba(255,255,255,0.1); transform: scale(0.95); transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 30px 60px rgba(0,0,0,0.5); display: flex; flex-direction: column; max-height: 90vh; overflow-y: auto; }
+    .modal-card { background: #111; color: #fff; width: 100%; max-width: 400px; border-radius: 24px; padding: 24px; border: 1px solid rgba(255,255,255,0.1); transform: scale(0.95); transition: 0.3s; box-shadow: 0 30px 60px rgba(0,0,0,0.5); display: flex; flex-direction: column; max-height: 90vh; overflow-y: auto; }
     .modal-overlay.active .modal-card { transform: scale(1); }
 
     .meeting-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px; }
@@ -167,13 +181,14 @@
     .meeting-icon { width: 60px; height: 60px; border-radius: 20px; background: #1a1a1a; display: flex; align-items: center; justify-content: center; font-size: 28px; color: #fff; border: 1px solid rgba(255,255,255,0.1); }
     .meeting-label { font-size: 13px; font-weight: 600; color: #fff; }
 
-    /* Forms & Inputs */
+    /* Forms */
     .form-group { margin-bottom: 16px; }
     .form-label { font-size: 12px; color: #888; margin-bottom: 8px; display: block; }
     .input-field { width: 100%; background: #1a1a1a; border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 12px; color: #fff; font-family: 'Inter', sans-serif; font-size: 14px; }
     .input-field:focus { border-color: #fff; }
     .date-row { display: flex; gap: 12px; }
 
+    /* Link Box */
     .call-link-box { background: #1a1a1a; padding: 4px; border-radius: 12px; display: flex; align-items: center; border: 1px solid rgba(255,255,255,0.1); margin: 16px 0; }
     .link-text { flex: 1; padding: 10px; font-size: 12px; color: #888; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .copy-btn { padding: 8px; color: #fff; border-radius: 8px; }
@@ -181,12 +196,14 @@
     .av-btn { padding: 6px 12px; font-size: 11px; font-weight: 600; color: #888; border-radius: 6px; cursor: pointer; transition: 0.2s; display: flex; gap: 6px; align-items: center; }
     .av-btn.active { background: #064e3b; color: #10b981; }
 
-    .dial-display { font-size: 24px; text-align: center; margin-bottom: 24px; font-family: 'Space Grotesk', sans-serif; letter-spacing: 2px; min-height: 30px; }
+    /* Phone */
+    .dial-display { font-size: 24px; text-align: center; margin-bottom: 24px; font-family: 'Space Grotesk'; letter-spacing: 2px; min-height: 30px; }
     .dial-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; justify-items: center; }
     .dial-key { width: 50px; height: 50px; border-radius: 50%; background: #1a1a1a; color: #fff; font-size: 18px; font-weight: 600; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.1s; }
     .dial-key:active { background: #333; transform: scale(0.95); }
     .dial-action { background: #10b981; color: #000; font-size: 20px; margin-top: 10px; }
 
+    /* Team List */
     .team-list { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
     .team-member { display: flex; align-items: center; justify-content: space-between; padding: 10px; background: #1a1a1a; border-radius: 12px; }
     .member-info { display: flex; gap: 10px; align-items: center; }
@@ -197,69 +214,67 @@
     .call-type-btn:hover { background: #333; }
     .call-type-icon { font-size: 32px; color: #10b981; }
 
-    .history-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    .history-table th { text-align: left; font-size: 10px; text-transform: uppercase; color: var(--text-secondary); padding: 8px; border-bottom: 1px solid var(--border); }
-    .history-table td { padding: 12px 8px; font-size: 13px; border-bottom: 1px solid var(--border); color: var(--text-primary); }
-    .status-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
-    .status-missed { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
-    .status-done { background: rgba(16, 185, 129, 0.1); color: #10b981; }
-
     .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
     .close-btn { font-size: 20px; color: #888; cursor: pointer; }
     .close-btn:hover { color: #fff; }
 
-    #toast { position: fixed; top: 24px; left: 50%; transform: translateX(-50%) translateY(-100px); background: var(--text-primary); color: var(--bg-main); padding: 10px 20px; border-radius: 50px; font-weight: 600; font-size: 12px; opacity: 0; transition: 0.5s; z-index: 2000; display: flex; align-items: center; gap: 8px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+    #toast { position: fixed; top: 24px; left: 50%; transform: translateX(-50%) translateY(-100px); background: var(--text-primary); color: var(--bg-main); padding: 10px 20px; border-radius: 50px; font-weight: 600; font-size: 12px; opacity: 0; transition: 0.5s; z-index: 3000; display: flex; align-items: center; gap: 8px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); pointer-events: none; }
     #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
     /* LOADER FOR PRE-CALL */
-    .spinner-large {
-        width: 50px; height: 50px; 
-        border: 4px solid rgba(16,185,129,0.1); 
-        border-top: 4px solid #10b981; 
-        border-radius: 50%; 
-        animation: spin 1s linear infinite; 
-        margin: 0 auto;
-    }
+    .spinner-large { width: 50px; height: 50px; border: 4px solid rgba(16,185,129,0.1); border-top: 4px solid #10b981; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
+    /* WIZARD STYLES */
+    .wizard-step { display: none; animation: fadeIn 0.3s ease; }
+    .wizard-step.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    .step-indicator { display: flex; gap: 6px; justify-content: center; margin-bottom: 20px; }
+    .step-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); transition: 0.3s; }
+    .step-dot.active { background: var(--accent); }
 
-    /* --- MOBILE RESPONSIVE FIXES --- */
+    /* --- MOBILE RESPONSIVE FIXES (Corrected to match Vault) --- */
     @media (max-width: 768px) {
         body { padding: 0; display: block; overflow: hidden; }
         
-        /* Mobile Sidebar */
-        #sidebar { position: fixed; top: 0; left: 0; height: 100%; width: 100%; transform: translateX(-100%); border-radius: 0; border: none; padding-top: 60px; z-index: 999; }
+        /* Mobile Sidebar - Matches Vault Styling */
+        #sidebar { 
+            position: fixed; top: 0; left: 0; height: 100%; width: 100%; 
+            border-radius: 0; border: none; padding-top: 60px; z-index: 1000;
+            transform: translateX(-100%);
+        }
         #sidebar.active { transform: translateX(0); }
         
-        #main { border-radius: 0; border: none; height: 100%; }
+        #main { border-radius: 0; border: none; height: 100dvh; display: block; position: relative; }
         
-        /* KEY MOBILE SCROLL FIX:
-           Allow .dashboard-content to scroll vertically. 
-           Set flex-direction column for grid content.
-        */
         .dashboard-content { 
-            padding: 16px; padding-top: 60px; gap: 16px; 
+            padding: 16px; padding-top: 70px; gap: 16px; 
             overflow-y: auto; -webkit-overflow-scrolling: touch; 
+            height: 100%;
         }
         
         .grid-layout { 
             grid-template-columns: 1fr; 
             display: flex; flex-direction: column; 
-            overflow: visible; height: auto; padding-bottom: 100px; /* Space for FAB */
+            overflow: visible; height: auto; padding-bottom: 100px;
         }
         
-        /* Agenda Expansion Fix */
-        .card { height: auto; flex-shrink: 0; overflow: visible; }
+        /* Size Corrections */
+        .card { height: auto; flex-shrink: 0; overflow: visible; border-radius: 12px; }
         .agenda-feed { 
-            max-height: 400px; /* Cap height but allow scroll */
-            min-height: 150px; /* Ensure visibility */
+            max-height: 400px; 
+            min-height: 150px; 
             flex: none; height: auto; 
         }
         
         .main-clock { font-size: 32px; }
-        .time-header { flex-direction: row; align-items: flex-end; }
+        .time-header { flex-direction: row; align-items: flex-end; padding-bottom: 16px; }
         .world-clocks { display: none; }
-        .mobile-menu-btn { display: block; position: absolute; top: 16px; right: 16px; z-index: 110; background: var(--surface-hover); border: none; padding: 8px; border-radius: 8px; color: var(--text-primary); font-size: 20px; }
+        
+        .mobile-menu-btn { display: block; position: absolute; top: 16px; right: 16px; z-index: 2000; background: var(--surface-hover); border: none; padding: 8px; border-radius: 8px; color: var(--text-primary); font-size: 20px; }
+        
+        .modal-card { width: 90%; }
+        .input-field { font-size: 16px; }
     }
 </style>
 </head>
@@ -279,12 +294,12 @@
             </div>
             <i class="ph-bold ph-caret-down" style="font-size:12px; margin-left:8px; color:var(--text-secondary);"></i>
             
-            <div id="contextDropdown" style="display:none; position:absolute; top:40px; left:0; width:200px; background:var(--bg-panel); border:1px solid var(--border); border-radius:12px; padding:8px; box-shadow:var(--shadow); z-index:999;">
-                <div class="nav-btn active" onclick="setContext('Personal Workspace')">Personal</div>
+            <div id="contextDropdown">
+                <div class="nav-btn" onclick="setContext('Personal Workspace')">Personal</div>
                 <div class="nav-btn" onclick="setContext('Design Team')">Design Team</div>
                 <div class="nav-btn" onclick="setContext('Engineering')">Engineering</div>
                 <div style="height:1px; background:var(--border); margin:8px 0;"></div>
-                <div class="nav-btn" style="color:#10b981;"><i class="ph-bold ph-plus"></i> New Team</div>
+                <div class="nav-btn" style="color:#10b981;" onclick="openNewTeamWizard()"><i class="ph-bold ph-plus"></i> New Team</div>
             </div>
         </div>
 
@@ -507,7 +522,6 @@
             Anyone with WhatsApp can use this link to join this meeting. Only share it with people you trust.
         </p>
         <div style="display:flex; gap:12px; align-items:center;">
-            <button style="color:#10b981; font-weight:600; font-size:13px;" onclick="closeModals()">Close</button>
             <button class="btn-primary" style="margin:0; background:#fff; color:#000; flex:1;" onclick="sendToWhatsapp()">
                 <i class="ph-bold ph-whatsapp-logo"></i> Send link
             </button>
@@ -567,6 +581,70 @@
     </div>
 </div>
 
+<div id="newTeamWizard" class="modal-overlay">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 id="wizTitle">Create New Team</h3>
+            <div class="close-btn" onclick="closeModals()"><i class="ph-bold ph-x"></i></div>
+        </div>
+        
+        <div class="step-indicator">
+            <div class="step-dot active" id="dot1"></div>
+            <div class="step-dot" id="dot2"></div>
+            <div class="step-dot" id="dot3"></div>
+        </div>
+
+        <div id="wizStep1" class="wizard-step active">
+            <div style="text-align:center; margin-bottom:20px;">
+                <div style="width:60px; height:60px; background:rgba(16,185,129,0.1); border-radius:50%; margin:0 auto 10px; display:flex; align-items:center; justify-content:center; color:#10b981; font-size:24px;"><i class="ph-bold ph-users-three"></i></div>
+                <h4 style="margin-bottom:4px;">Who's in?</h4>
+                <p style="font-size:12px; color:#888;">Add members by email or phone.</p>
+            </div>
+            <div class="form-group">
+                <input type="text" id="wizMemberInput" class="input-field" placeholder="colleague@kairos.ai">
+            </div>
+            <div class="team-list" id="wizMemberList" style="max-height:100px; overflow-y:auto; margin-bottom:16px;"></div>
+            <button class="btn-primary" onclick="wizAddMember()" style="background:var(--surface-hover); color:var(--text-primary); margin-bottom:12px;">+ Add to list</button>
+            <button class="btn-primary" onclick="nextWizardStep(2)">Next: Team Details</button>
+        </div>
+
+        <div id="wizStep2" class="wizard-step">
+            <div style="text-align:center; margin-bottom:20px;">
+                <div style="width:60px; height:60px; background:rgba(16,185,129,0.1); border-radius:50%; margin:0 auto 10px; display:flex; align-items:center; justify-content:center; color:#10b981; font-size:24px;"><i class="ph-bold ph-identification-card"></i></div>
+                <h4 style="margin-bottom:4px;">Identity</h4>
+                <p style="font-size:12px; color:#888;">Name your squad.</p>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Team Name</label>
+                <input type="text" id="wizTeamName" class="input-field" placeholder="e.g. Q1 Marketing">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <input type="text" id="wizTeamDesc" class="input-field" placeholder="Project goals...">
+            </div>
+            <button class="btn-primary" onclick="nextWizardStep(3)">Next: Kickoff</button>
+        </div>
+
+        <div id="wizStep3" class="wizard-step">
+            <div style="text-align:center; margin-bottom:20px;">
+                <div style="width:60px; height:60px; background:rgba(16,185,129,0.1); border-radius:50%; margin:0 auto 10px; display:flex; align-items:center; justify-content:center; color:#10b981; font-size:24px;"><i class="ph-bold ph-rocket-launch"></i></div>
+                <h4 style="margin-bottom:4px;">Launch It</h4>
+                <p style="font-size:12px; color:#888;">Schedule the kickoff meeting.</p>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Kickoff Date</label>
+                <div class="date-row">
+                    <input type="date" id="wizDate" class="input-field">
+                    <input type="time" id="wizTime" class="input-field" value="09:00">
+                </div>
+            </div>
+            <button class="btn-primary" onclick="finishWizard()">
+                Create Team & Schedule <i class="ph-bold ph-check"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
 <div id="profileModal" class="modal-overlay">
     <div class="modal-card">
         <div class="modal-header">
@@ -574,10 +652,11 @@
             <div class="close-btn" onclick="closeModals()"><i class="ph-bold ph-x"></i></div>
         </div>
         <div style="text-align:center; margin-bottom:20px;">
-            <div style="width:80px; height:80px; background:#333; border-radius:50%; margin:0 auto 10px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+            <div id="profilePreview" style="width:80px; height:80px; background:#333; border-radius:50%; margin:0 auto 10px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
                 <span id="profileInitials" style="font-size:24px; font-weight:700; color:#888;">B</span>
             </div>
-            <button style="font-size:12px; color:#10b981; font-weight:600;">Change Photo</button>
+            <input type="file" id="photoInput" hidden accept="image/*" onchange="handlePhotoUpload(event)">
+            <button style="font-size:12px; color:#10b981; font-weight:600;" onclick="triggerPhotoUpload()">Change Photo</button>
         </div>
         <div class="form-group">
             <label class="form-label">Full Name</label>
@@ -596,7 +675,7 @@
 </div>
 
 <script>
-    // --- DATE & TIMEZONE UTILS (ROBUST STRING COMPARISON) ---
+    // --- DATE & TIMEZONE UTILS ---
     const getTodayString = () => {
         const d = new Date();
         const year = d.getFullYear();
@@ -613,7 +692,10 @@
     let currentUser = { name: "Benedict", email: "benedict@kairos.ai", role: "Lead" };
     let editingEventId = null;
 
-    let isDark = true;
+    // Theme Logic
+    const savedThemeVal = localStorage.getItem('kairosTheme') || 'dark';
+    document.getElementById('themeIcon').className = savedThemeVal === 'dark' ? 'ph-bold ph-moon' : 'ph-bold ph-sun';
+
     function toggleTheme() {
         const current = document.documentElement.getAttribute('data-theme');
         const newTheme = current === 'dark' ? 'light' : 'dark';
@@ -621,8 +703,6 @@
         localStorage.setItem('kairosTheme', newTheme);
         document.getElementById('themeIcon').className = newTheme === 'dark' ? 'ph-bold ph-moon' : 'ph-bold ph-sun';
     }
-    // Set icon correctly on load
-    document.getElementById('themeIcon').className = savedTheme === 'dark' ? 'ph-bold ph-moon' : 'ph-bold ph-sun';
 
     function showToast(msg) {
         const t = document.getElementById('toast');
@@ -633,7 +713,8 @@
 
     function switchView(viewName) {
         document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-        document.getElementById('view-' + viewName).classList.add('active');
+        const target = document.getElementById('view-' + viewName);
+        if(target) target.classList.add('active');
         if(window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('active');
     }
 
@@ -652,49 +733,126 @@
         
         const actionIcon = document.querySelector('.card-title .ph-lightning');
         if(actionIcon) {
-            if(name !== 'Personal Workspace') {
-                actionIcon.style.color = '#10b981'; 
-            } else {
-                actionIcon.style.color = 'inherit';
-            }
+            actionIcon.style.color = name !== 'Personal Workspace' ? '#10b981' : 'inherit';
         }
     }
 
-    window.onclick = function(event) {
+    document.addEventListener('click', function(event) {
         if (!event.target.closest('.brand')) {
             const dd = document.getElementById('contextDropdown');
             if (dd) dd.style.display = 'none';
         }
-    }
+    });
 
     // --- MODAL CONTROLLERS ---
     function openMeetingHub() { document.getElementById('meetingHub').classList.add('active'); }
     function closeModals() { 
         document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
         editingEventId = null;
-        // Reset call modal state
         setTimeout(() => {
-            document.getElementById('startCallContent').style.display = 'block';
-            document.getElementById('preCallLoader').style.display = 'none';
+            const scContent = document.getElementById('startCallContent');
+            const preLoader = document.getElementById('preCallLoader');
+            if(scContent) scContent.style.display = 'block';
+            if(preLoader) preLoader.style.display = 'none';
         }, 500);
     }
+    
     function openLinkModal() { closeModals(); setTimeout(() => document.getElementById('linkModal').classList.add('active'), 100); }
     function openDialPad() { closeModals(); setTimeout(() => document.getElementById('dialPadModal').classList.add('active'), 100); }
     function openTeamModal() { closeModals(); setTimeout(() => document.getElementById('teamModal').classList.add('active'), 100); }
     function openProfileModal() { closeModals(); setTimeout(() => document.getElementById('profileModal').classList.add('active'), 100); }
     function openStartCallModal() { closeModals(); setTimeout(() => document.getElementById('startCallModal').classList.add('active'), 100); }
 
+    // --- NEW TEAM WIZARD LOGIC ---
+    function openNewTeamWizard() {
+        // Reset wizard
+        document.querySelectorAll('.wizard-step').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.step-dot').forEach(el => el.classList.remove('active'));
+        document.getElementById('wizStep1').classList.add('active');
+        document.getElementById('dot1').classList.add('active');
+        document.getElementById('wizMemberList').innerHTML = '';
+        document.getElementById('wizMemberInput').value = '';
+        document.getElementById('wizTeamName').value = '';
+        document.getElementById('wizTeamDesc').value = '';
+        document.getElementById('contextDropdown').style.display = 'none';
+        
+        closeModals();
+        setTimeout(() => document.getElementById('newTeamWizard').classList.add('active'), 100);
+    }
+
+    function wizAddMember() {
+        const input = document.getElementById('wizMemberInput');
+        const val = input.value;
+        if(val) {
+            const list = document.getElementById('wizMemberList');
+            const item = document.createElement('div');
+            item.style.padding = '8px';
+            item.style.border = '1px solid var(--border)';
+            item.style.borderRadius = '8px';
+            item.style.marginBottom = '4px';
+            item.style.fontSize = '12px';
+            item.style.display = 'flex';
+            item.style.justifyContent = 'space-between';
+            item.innerHTML = `<span>${val}</span> <i class="ph-bold ph-check" style="color:#10b981"></i>`;
+            list.appendChild(item);
+            input.value = '';
+        }
+    }
+
+    function nextWizardStep(step) {
+        document.querySelectorAll('.wizard-step').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.step-dot').forEach(el => el.classList.remove('active'));
+        document.getElementById(`wizStep${step}`).classList.add('active');
+        document.getElementById(`dot${step}`).classList.add('active');
+    }
+
+    function finishWizard() {
+        const teamName = document.getElementById('wizTeamName').value || "New Team";
+        
+        // 1. Add to Sidebar Dropdown
+        const dropdown = document.getElementById('contextDropdown');
+        const divider = dropdown.querySelector('div[style*="height:1px"]');
+        
+        const newBtn = document.createElement('div');
+        newBtn.className = 'nav-btn';
+        newBtn.innerText = teamName;
+        newBtn.onclick = function() { setContext(teamName); };
+        
+        // Insert before the divider so it shows with other teams
+        dropdown.insertBefore(newBtn, divider);
+
+        // 2. Switch Context
+        setContext(teamName);
+        
+        // 3. Close & Toast
+        closeModals();
+        showToast(`Team "${teamName}" Created`);
+        
+        // 4. Add Kickoff Event
+        const kDate = document.getElementById('wizDate').value || getTodayString();
+        const kTime = document.getElementById('wizTime').value || "09:00";
+        events.push({
+            id: Date.now(),
+            title: `${teamName} Kickoff`,
+            start: kDate, startTime: kTime, end: kDate, endTime: "10:00",
+            type: "Team Launch", color: "#10b981"
+        });
+        localStorage.setItem('kairosEvents', JSON.stringify(events));
+        renderAgenda();
+        renderCal();
+    }
+
     // --- CALL REDIRECTION LOGIC ---
     function initiateCall(type) {
-        // Swap content to loader
         document.getElementById('startCallContent').style.display = 'none';
         document.getElementById('preCallLoader').style.display = 'block';
         document.getElementById('connText').innerText = `Securing ${type} channel...`;
         
-        // Simulate delay then redirect
         setTimeout(() => {
             window.location.href = 'meeting_room.html';
-        }, 2500);
+            closeModals();
+            showToast('Redirecting to call...');
+        }, 2000);
     }
 
     // --- SCHEDULE & EDIT ---
@@ -704,7 +862,6 @@
             const modal = document.getElementById('scheduleModal');
             const title = document.getElementById('schedModalTitle');
             const btn = document.getElementById('schedBtnText');
-            // Default to REAL today
             const now = getTodayString();
             
             document.getElementById('schedStartDate').value = now;
@@ -736,7 +893,6 @@
 
     function saveEvent() {
         const name = document.getElementById('schedName').value || "New Meeting";
-        // Directly grab string values: "YYYY-MM-DD"
         const startD = document.getElementById('schedStartDate').value;
         const startT = document.getElementById('schedStartTime').value;
         const endD = document.getElementById('schedEndDate').value;
@@ -777,11 +933,28 @@
         }
     }
 
+    // FIXED: Photo Upload Logic
+    function triggerPhotoUpload() {
+        document.getElementById('photoInput').click();
+    }
+    function handlePhotoUpload(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const imgTag = `<img src="${e.target.result}" style="width:100%; height:100%; object-fit:cover;">`;
+                document.getElementById('profilePreview').innerHTML = imgTag;
+                document.getElementById('dockAvatar').innerHTML = imgTag;
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
     function saveProfile() {
         currentUser.name = document.getElementById('profName').value;
         currentUser.email = document.getElementById('profEmail').value;
         document.getElementById('dockName').innerText = currentUser.name;
-        document.getElementById('dockAvatar').innerHTML = `<span>${currentUser.name.charAt(0)}</span>`;
+        // Avatar is updated via handlePhotoUpload immediately
         closeModals();
         showToast('Profile Saved');
     }
@@ -815,11 +988,10 @@
     // --- RENDERING ---
     function renderAgenda() {
         const list = document.getElementById('agendaList');
-        if(!list) return; // Guard clause in case element is missing
+        if(!list) return;
         
         list.innerHTML = '';
         const today = getTodayString();
-        // Dynamic Filter: Shows only REAL TODAY'S events
         const todaysEvents = events.filter(e => e.start === today).sort((a,b) => a.startTime.localeCompare(b.startTime));
         
         if(todaysEvents.length === 0) {
@@ -846,7 +1018,6 @@
             const el = document.createElement('div'); el.className='day-name'; el.innerText=d; grid.appendChild(el);
         });
         
-        // DYNAMIC YEAR CALCULATION
         const currentYear = new Date().getFullYear();
         const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
         const startDay = new Date(currentYear, currentMonth, 1).getDay();
@@ -854,12 +1025,10 @@
         for(let i=0; i<startDay; i++) { const el = document.createElement('div'); el.className='day-cell faded'; grid.appendChild(el); }
         for(let i=1; i<=daysInMonth; i++) {
             const el = document.createElement('div');
-            // DYNAMIC TODAY HIGHLIGHT
             const isToday = (i === new Date().getDate() && currentMonth === new Date().getMonth() && currentYear === new Date().getFullYear());
             el.className = `day-cell ${isToday ? 'today' : ''}`;
             el.innerHTML = `<div>${i}</div>`;
             
-            // Render Dots for events matching this specific day string
             const dayString = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
             events.filter(e => e.start === dayString).forEach(ev => {
                 const chip = document.createElement('div');
@@ -942,13 +1111,13 @@
         "fontSize": 14,
         "renderHTML": true,
         "botMessage": {
-          "backgroundColor": "#262626", /* Soft Charcoal for better readability */
+          "backgroundColor": "#262626", 
           "textColor": "#e5e7eb",
           "showAvatar": true,
           "avatarSrc": "https://www.svgrepo.com/show/529481/chat-round-dots.svg"
         },
         "userMessage": {
-          "backgroundColor": "#ffffff", /* Crisp White for standard look */
+          "backgroundColor": "#ffffff", 
           "textColor": "#000000",
           "showAvatar": false
         },
@@ -958,7 +1127,7 @@
           "textColor": "#ffffff",
           "sendButtonColor": "#ffffff",
           "maxChars": 200,
-          "borderRadius": 20, /* Pill shape */
+          "borderRadius": 20, 
           "sendButtonBorderRadius": 20
         },
         "uploadsConfig": {
