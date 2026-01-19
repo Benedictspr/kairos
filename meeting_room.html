@@ -8,8 +8,6 @@
 <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
 <script>
-    // --- THEME PERSISTENCE ---
-    // Apply theme immediately to prevent flash
     const savedTheme = localStorage.getItem('kairosTheme') || 'dark';
     document.documentElement.setAttribute('data-theme', savedTheme);
 </script>
@@ -23,10 +21,11 @@
         --text-primary: #ffffff;
         --text-secondary: #888888;
         --surface-hover: rgba(255, 255, 255, 0.08);
-        --glass: rgba(17, 17, 17, 0.85);
+        --glass: rgba(17, 17, 17, 0.9);
         --tile-bg: #1a1a1a;
         --chat-bubble-me: #222;
-        --modal-bg: #111;
+        --modal-bg: #1a1a1a;
+        --sheet-bg: #1a1a1a;
     }
 
     :root[data-theme="light"] {
@@ -36,14 +35,16 @@
         --text-primary: #111827;
         --text-secondary: #6b7280;
         --surface-hover: rgba(0, 0, 0, 0.05);
-        --glass: rgba(255, 255, 255, 0.85);
-        --tile-bg: #222; /* Video tiles stay dark for contrast */
+        --glass: rgba(255, 255, 255, 0.9);
+        --tile-bg: #222;
         --chat-bubble-me: #e5e7eb;
         --modal-bg: #ffffff;
+        --sheet-bg: #ffffff;
     }
 
     :root {
         --accent: #10b981;
+        --ai-blue: #3b82f6;
         --danger: #ef4444;
         --warning: #f59e0b;
     }
@@ -55,17 +56,24 @@
     header {
         height: 60px; padding: 0 20px; display: flex; justify-content: space-between; align-items: center;
         border-bottom: 1px solid var(--border); background: var(--bg-panel); z-index: 10;
-        flex-shrink: 0; transition: background 0.3s;
+        flex-shrink: 0;
     }
-    .meeting-info h1 { font-family: 'Space Grotesk'; font-size: 16px; font-weight: 700; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+    .meeting-info { cursor: pointer; }
+    .meeting-info h1 { font-family: 'Space Grotesk'; font-size: 16px; font-weight: 700; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; display: flex; align-items: center; gap: 6px; }
+    .meeting-info h1:hover { color: var(--text-secondary); }
     .meeting-meta { font-size: 11px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
+    
     .rec-badge { 
         display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-secondary); 
-        padding: 4px 8px; border-radius: 4px; background: rgba(125,125,125,0.1);
+        padding: 4px 10px; border-radius: 20px; background: rgba(125,125,125,0.1); transition: 0.3s; cursor: pointer;
     }
-    .rec-badge.active { color: var(--danger); background: rgba(239,68,68,0.1); font-weight: 600; }
-    .rec-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
-    .rec-badge.active .rec-dot { animation: pulse 1.5s infinite; }
+    .rec-badge.active { 
+        color: #fff; 
+        background: linear-gradient(135deg, var(--ai-blue), var(--accent)); 
+        font-weight: 600; 
+        box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+    }
+    .rec-dot { font-size: 12px; }
 
     /* --- MAIN STAGE --- */
     .stage-container { flex: 1; display: flex; overflow: hidden; position: relative; }
@@ -86,11 +94,16 @@
     }
     .video-tile.speaking { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(16,185,129,0.3); }
     
-    /* Mock Video Content */
+    /* Live Video Element */
+    .live-video {
+        width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); /* Mirror effect */
+    }
+
     .tile-avatar { width: 80px; height: 80px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; color: #888; }
+    
     .tile-overlay {
         position: absolute; bottom: 12px; left: 12px; right: 12px;
-        display: flex; justify-content: space-between; align-items: flex-end;
+        display: flex; justify-content: space-between; align-items: flex-end; z-index: 5;
     }
     .user-nametag {
         background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); color: #fff;
@@ -105,7 +118,6 @@
     .att-bar { width: 40px; height: 3px; background: rgba(255,255,255,0.2); border-radius: 2px; overflow: hidden; }
     .att-fill { height: 100%; background: var(--accent); transition: width 0.5s ease, background 0.5s; }
 
-    /* Visual Badges (Hand Raise) */
     .status-badge {
         position: absolute; top: 12px; right: 12px;
         background: var(--warning); color: #000;
@@ -116,7 +128,6 @@
     }
     .status-badge.active { transform: scale(1); }
 
-    /* AI Tile Special Styling */
     .ai-tile { background: radial-gradient(circle at center, #0f2e23 0%, #000 100%); }
     .ai-visualizer { display: flex; gap: 4px; align-items: center; height: 40px; }
     .ai-bar { width: 6px; background: var(--accent); border-radius: 4px; animation: wave 1s ease-in-out infinite; }
@@ -124,7 +135,6 @@
     .ai-bar:nth-child(3) { animation-delay: 0.2s; height: 80%; }
     .ai-bar:nth-child(4) { animation-delay: 0.3s; height: 40%; }
     
-    /* Reaction Layer */
     .reaction-layer {
         position: absolute; bottom: 100px; right: 20px; width: 100px; height: 300px;
         pointer-events: none; overflow: hidden; z-index: 100;
@@ -134,6 +144,16 @@
         animation: floatUp 2s ease-out forwards; opacity: 0;
     }
 
+    #captionsOverlay {
+        position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
+        background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+        padding: 12px 24px; border-radius: 12px;
+        color: #fff; font-size: 14px; font-weight: 500;
+        text-align: center; max-width: 80%; display: none; z-index: 40;
+        pointer-events: none;
+    }
+    #captionsOverlay.active { display: block; }
+
     /* --- SIDEBAR --- */
     .sidebar {
         width: 320px; background: var(--bg-panel); border-left: 1px solid var(--border);
@@ -142,55 +162,42 @@
     }
     .sidebar.collapsed { width: 0; border: none; overflow: hidden; }
     
-    .sidebar-tabs { display: flex; border-bottom: 1px solid var(--border); overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .sidebar-tabs::-webkit-scrollbar { display: none; }
-    .tab-btn { flex: 1; min-width: 60px; padding: 14px; font-size: 12px; font-weight: 600; color: var(--text-secondary); cursor: pointer; text-align: center; border-bottom: 2px solid transparent; white-space: nowrap; }
-    .tab-btn:hover { background: var(--surface-hover); color: var(--text-primary); }
+    .sidebar-tabs { display: flex; border-bottom: 1px solid var(--border); overflow-x: auto; }
+    .tab-btn { flex: 1; padding: 14px; font-size: 12px; font-weight: 600; color: var(--text-secondary); cursor: pointer; text-align: center; border-bottom: 2px solid transparent; }
     .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
 
     .sidebar-content { flex: 1; overflow-y: auto; padding: 16px; display: none; }
     .sidebar-content.active { display: block; }
 
-    /* Polls */
     .poll-card { background: var(--surface-hover); padding: 16px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 16px; }
-    .poll-question { font-size: 13px; font-weight: 600; margin-bottom: 12px; }
-    .poll-option { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-radius: 8px; background: rgba(125,125,125,0.1); margin-bottom: 6px; cursor: pointer; border: 1px solid transparent; transition: 0.2s; }
-    .poll-option:hover { border-color: var(--text-secondary); }
+    .poll-question { font-size: 12px; font-weight: 600; margin-bottom: 12px; }
+    .poll-option { display: flex; justify-content: space-between; padding: 8px; border-radius: 8px; background: rgba(125,125,125,0.1); margin-bottom: 6px; cursor: pointer; border: 1px solid transparent; }
     .poll-option.selected { border-color: var(--accent); background: rgba(16,185,129,0.1); }
-    .poll-bar-bg { height: 4px; background: rgba(125,125,125,0.1); border-radius: 2px; margin-top: 4px; overflow: hidden; }
     .poll-bar-fill { height: 100%; background: var(--accent); width: 0%; transition: 1s ease; }
-
-    /* Agenda Items */
-    .agenda-item { display: flex; gap: 10px; padding: 10px; border-radius: 8px; margin-bottom: 8px; align-items: flex-start; transition: 0.2s; }
+    
+    .agenda-item { display: flex; gap: 10px; padding: 10px; border-radius: 8px; margin-bottom: 8px; align-items: flex-start; cursor: pointer; }
     .agenda-item:hover { background: var(--surface-hover); }
-    .chk-box { width: 16px; height: 16px; border: 1px solid var(--text-secondary); border-radius: 4px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: transparent; }
+    .chk-box { width: 16px; height: 16px; border: 1px solid var(--text-secondary); border-radius: 4px; display: flex; align-items: center; justify-content: center; color: transparent; }
     .chk-box.checked { background: var(--accent); border-color: var(--accent); color: #000; }
-    .agenda-text { font-size: 13px; line-height: 1.4; }
+    .agenda-text { font-size: 12px; line-height: 1.4; font-weight: 500; }
     .agenda-text.done { text-decoration: line-through; color: var(--text-secondary); }
-
-    /* Transcript */
+    
     .transcript-entry { margin-bottom: 12px; font-size: 12px; }
     .ts-meta { display: flex; justify-content: space-between; margin-bottom: 4px; color: var(--text-secondary); font-size: 10px; font-family: 'JetBrains Mono'; }
-    .ts-text { line-height: 1.5; color: var(--text-secondary); }
-    :root[data-theme="dark"] .ts-text { color: #ddd; }
+    .ts-text { color: var(--text-secondary); line-height: 1.5; }
     .ai-note { border-left: 2px solid var(--accent); padding-left: 10px; margin: 10px 0; font-style: italic; color: var(--accent); font-size: 12px; }
-
-    /* Chat */
     .chat-msg { margin-bottom: 12px; }
-    .chat-header { display: flex; gap: 8px; align-items: baseline; margin-bottom: 4px; }
-    .chat-name { font-size: 11px; font-weight: 700; }
-    .chat-time { font-size: 10px; color: var(--text-secondary); }
-    .chat-bubble { background: var(--chat-bubble-me); padding: 8px 12px; border-radius: 8px; font-size: 12px; line-height: 1.4; display: inline-block; color: var(--text-primary); }
+    .chat-header { display: flex; gap: 8px; margin-bottom: 4px; font-size: 11px; }
+    .chat-bubble { background: var(--chat-bubble-me); padding: 8px 12px; border-radius: 8px; font-size: 12px; display: inline-block; color: var(--text-primary); }
     .chat-input-area { padding: 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; background: var(--bg-panel); }
-    
+
     /* --- CONTROLS --- */
     .control-bar {
         height: 70px; display: flex; justify-content: center; align-items: center; gap: 12px;
         position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
         background: var(--glass); backdrop-filter: blur(16px);
         padding: 0 16px; border-radius: 24px; border: 1px solid rgba(125,125,125,0.2);
-        z-index: 50; box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-        max-width: 90%;
+        z-index: 50; box-shadow: 0 20px 40px rgba(0,0,0,0.2); max-width: 90%;
     }
 
     .ctrl-btn {
@@ -211,39 +218,86 @@
     }
     .ctrl-btn:hover .tooltip { opacity: 1; top: -40px; }
 
-    /* Reactions Menu (Mini) */
-    .reactions-menu {
-        position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%) scale(0.9);
-        background: #222; border-radius: 50px; padding: 8px; display: flex; gap: 8px;
-        opacity: 0; pointer-events: none; transition: 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 200;
+    /* --- BOTTOM SHEETS --- */
+    .sheet-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.6); z-index: 2000; opacity: 0; pointer-events: none; transition: 0.3s;
     }
-    .reactions-menu.active { opacity: 1; pointer-events: all; transform: translateX(-50%) scale(1); }
-    .reaction-btn { font-size: 20px; cursor: pointer; padding: 8px; border-radius: 50%; transition: 0.2s; }
-    .reaction-btn:hover { background: rgba(255,255,255,0.1); transform: scale(1.2); }
+    .sheet-overlay.active { opacity: 1; pointer-events: all; }
+    
+    .bottom-sheet {
+        position: absolute; bottom: 0; left: 0; width: 100%; 
+        background: var(--sheet-bg); border-top-left-radius: 24px; border-top-right-radius: 24px;
+        transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.1, 0.7, 0.1, 1);
+        padding: 24px 16px; border-top: 1px solid var(--border);
+        display: flex; flex-direction: column; gap: 24px;
+        box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+    }
+    .sheet-overlay.active .bottom-sheet { transform: translateY(0); }
+    .sheet-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: -10px auto 10px auto; }
 
-    /* --- TOAST --- */
+    .sheet-reaction-row { display: flex; justify-content: space-between; align-items: center; padding: 0 10px; }
+    .sheet-reaction { font-size: 28px; cursor: pointer; transition: 0.2s; padding: 8px; border-radius: 50%; }
+    .sheet-reaction:hover { background: var(--surface-hover); transform: scale(1.2); }
+    
+    .sheet-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; text-align: center; }
+    .sheet-opt { display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; }
+    .sheet-opt-icon { 
+        width: 50px; height: 50px; border-radius: 16px; background: var(--bg-main); 
+        border: 1px solid var(--border); display: flex; align-items: center; justify-content: center;
+        font-size: 24px; color: var(--text-primary); transition: 0.2s;
+    }
+    .sheet-opt:hover .sheet-opt-icon { background: var(--surface-hover); border-color: var(--text-secondary); }
+    .sheet-opt span { font-size: 11px; font-weight: 500; color: var(--text-secondary); }
+
+    /* --- MODALS --- */
+    .info-modal {
+        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
+        background: var(--modal-bg); width: 90%; max-width: 350px;
+        border-radius: 20px; border: 1px solid var(--border); padding: 24px;
+        z-index: 3000; opacity: 0; pointer-events: none; transition: 0.3s;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    }
+    .info-modal.active { opacity: 1; pointer-events: all; transform: translate(-50%, -50%) scale(1); }
+    .info-header { font-family: 'Space Grotesk'; font-size: 18px; font-weight: 700; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+    .info-row { margin-bottom: 16px; }
+    .info-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; display: block; }
+    .info-val { font-size: 14px; font-weight: 400; color: var(--text-primary); font-family: 'Inter'; letter-spacing: 0.2px; }
+    .copy-btn-large { width: 100%; background: var(--surface-hover); border: 1px solid var(--border); padding: 12px; border-radius: 12px; color: var(--text-primary); font-weight: 600; cursor: pointer; margin-bottom: 16px; }
+
+    /* SETTINGS & AI */
+    .settings-list-container { display: flex; flex-direction: column; gap: 4px; }
+    .setting-item {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 16px; background: transparent; color: var(--text-primary);
+        font-size: 14px; font-weight: 500; cursor: pointer; border-radius: 12px;
+        transition: 0.2s;
+    }
+    .setting-item:hover { background: var(--surface-hover); }
+    .setting-item i { color: var(--text-secondary); }
+
+    .privacy-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
+    .privacy-icon { width: 40px; height: 40px; background: var(--bg-main); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--accent); border: 1px solid var(--border); }
+    .privacy-disclaimer { font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px; }
+
+    /* TOAST */
     #toast {
         position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-20px);
         background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-primary);
         padding: 10px 20px; border-radius: 50px; font-weight: 500; font-size: 12px;
-        opacity: 0; transition: 0.3s; z-index: 2000; display: flex; align-items: center; gap: 10px;
+        opacity: 0; transition: 0.3s; z-index: 4000; display: flex; align-items: center; gap: 10px;
         box-shadow: 0 10px 30px rgba(0,0,0,0.2); pointer-events: none;
     }
     #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
     #toast img { width: 20px; height: 20px; border-radius: 50%; }
 
-    /* --- ANIMATIONS --- */
+    /* ANIMATIONS */
     @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
     @keyframes wave { 0%, 100% { height: 10%; } 50% { height: 100%; } }
-    @keyframes floatUp { 
-        0% { transform: translateY(0) scale(0.5); opacity: 0; } 
-        20% { opacity: 1; transform: translateY(-20px) scale(1.2); }
-        100% { transform: translateY(-200px) scale(1); opacity: 0; } 
-    }
+    @keyframes floatUp { 0% { transform: translateY(0) scale(0.5); opacity: 0; } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { transform: translateY(-200px) scale(1); opacity: 0; } }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-    /* --- MOBILE RESPONSIVE --- */
+    /* MOBILE */
     @media (max-width: 768px) {
         .stage-container { flex-direction: column; }
         .video-grid { display: flex; flex-direction: column; padding: 12px; padding-bottom: 100px; overflow-y: auto; height: 100%; }
@@ -255,12 +309,15 @@
         .ctrl-btn { width: 40px; height: 40px; font-size: 18px; }
         .tooltip { display: none; }
         .ai-tile { min-height: 150px; }
+        .sheet-grid { grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .sheet-opt-icon { width: 44px; height: 44px; font-size: 20px; }
     }
 
-    /* --- END MODAL --- */
+    /* END MODAL */
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(8px); opacity: 0; transition: opacity 0.5s; }
     .modal-overlay.visible { opacity: 1; }
     .modal-box { background: var(--modal-bg); border: 1px solid var(--border); padding: 30px; border-radius: 20px; width: 400px; text-align: center; box-shadow: 0 30px 60px rgba(0,0,0,0.5); transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    .modal-box.list-mode { text-align: left; padding: 20px; width: 350px; }
     .modal-overlay.visible .modal-box { transform: scale(1); }
     
     .summary-preview { text-align: left; background: var(--surface-hover); padding: 15px; border-radius: 10px; font-size: 12px; margin: 20px 0; color: var(--text-secondary); border-left: 2px solid var(--accent); display: none; }
@@ -275,18 +332,23 @@
     <span id="toastMsg">Alice raised hand</span>
 </div>
 
+<div id="captionsOverlay">
+    <div style="font-size:10px; opacity:0.7; margin-bottom:4px;" id="captionSpeaker">Alice (Translated to English)</div>
+    <span id="captionText">We really need to approve the budget by tomorrow.</span>
+</div>
+
 <header>
-    <div class="meeting-info">
-        <h1>Q1 Product Roadmap Review</h1>
+    <div class="meeting-info" onclick="openMeetingInfo()">
+        <h1>Q1 Product Roadmap Review <i class="ph-bold ph-caret-down" style="font-size:12px; color:var(--text-secondary)"></i></h1>
         <div class="meeting-meta">
             <span id="timer">00:00:00</span>
             <span>•</span>
             <span style="color:var(--accent)">Live</span>
         </div>
     </div>
-    <div class="rec-badge active">
-        <div class="rec-dot"></div>
-        <span>REC</span>
+    <div class="rec-badge active" title="AI Companion Active" onclick="openAiPrivacy()">
+        <div class="rec-dot"><i class="ph-fill ph-sparkle"></i></div>
+        <span>Smart REC</span>
     </div>
 </header>
 
@@ -406,23 +468,18 @@
     </div>
 </div>
 
-<div class="reactions-menu" id="reactionMenu">
-    <div class="reaction-btn" onclick="sendReaction('👍')">👍</div>
-    <div class="reaction-btn" onclick="sendReaction('❤️')">❤️</div>
-    <div class="reaction-btn" onclick="sendReaction('🎉')">🎉</div>
-    <div class="reaction-btn" onclick="sendReaction('👏')">👏</div>
-</div>
-
 <div class="control-bar">
-    <div class="ctrl-btn" onclick="toggleState(this, 'mute')">
-        <i class="ph-fill ph-microphone"></i><div class="tooltip">Mute</div>
+    <div class="ctrl-btn danger" onclick="toggleState(this, 'mute')" id="muteBtn">
+        <i class="ph-fill ph-microphone-slash"></i><div class="tooltip">Unmute</div>
     </div>
-    <div class="ctrl-btn" onclick="toggleState(this, 'video')">
-        <i class="ph-fill ph-video-camera"></i><div class="tooltip">Video</div>
+    <div class="ctrl-btn" onclick="toggleState(this, 'video')" id="videoBtn">
+        <i class="ph-fill ph-video-camera-slash"></i><div class="tooltip">Start Video</div>
     </div>
-    <div class="ctrl-btn warn" onclick="toggleHand(this)">
+    
+    <div class="ctrl-btn warn" onclick="toggleHand(this)" id="handBtnMain">
         <i class="ph-bold ph-hand-waving"></i><div class="tooltip">Raise Hand</div>
     </div>
+
     <div class="ctrl-btn" onclick="toggleReactionMenu()">
         <i class="ph-bold ph-smiley"></i><div class="tooltip">React</div>
     </div>
@@ -433,8 +490,160 @@
         <i class="ph-bold ph-chats-circle"></i><div class="tooltip">Sidebar</div>
     </div>
     
+    <div class="ctrl-btn" onclick="toggleMoreMenu()">
+        <i class="ph-bold ph-dots-three"></i><div class="tooltip">More</div>
+    </div>
+    
     <div class="ctrl-btn danger" onclick="endCall()">
         <i class="ph-bold ph-phone-disconnect"></i><div class="tooltip">End</div>
+    </div>
+</div>
+
+<div class="sheet-overlay" id="reactionOverlay" onclick="toggleReactionMenu()">
+    <div class="bottom-sheet" style="height:auto;" onclick="event.stopPropagation()">
+        <div class="sheet-handle"></div>
+        <div class="sheet-reaction-row" style="padding-bottom:20px;">
+            <div class="sheet-reaction" onclick="sendReaction('👍')">👍</div>
+            <div class="sheet-reaction" onclick="sendReaction('❤️')">❤️</div>
+            <div class="sheet-reaction" onclick="sendReaction('👏')">👏</div>
+            <div class="sheet-reaction" onclick="sendReaction('🎉')">🎉</div>
+            <div class="sheet-reaction" onclick="sendReaction('😂')">😂</div>
+            <div class="sheet-reaction" onclick="sendReaction('😮')">😮</div>
+        </div>
+    </div>
+</div>
+
+<div class="sheet-overlay" id="moreMenuOverlay" onclick="toggleMoreMenu()">
+    <div class="bottom-sheet" onclick="event.stopPropagation()">
+        <div class="sheet-handle"></div>
+        <div class="sheet-grid">
+            <div class="sheet-opt" onclick="showToast('Recording Started')">
+                <div class="sheet-opt-icon"><i class="ph-bold ph-record"></i></div>
+                <span>Record</span>
+            </div>
+            <div class="sheet-opt" onclick="toggleCaptions()">
+                <div class="sheet-opt-icon"><i class="ph-bold ph-closed-captioning"></i></div>
+                <span>Show CC</span>
+            </div>
+            <div class="sheet-opt" onclick="showToast('Screen Share Started')">
+                <div class="sheet-opt-icon"><i class="ph-bold ph-share-network"></i></div>
+                <span>Share</span>
+            </div>
+            <div class="sheet-opt" onclick="toggleSidebar(); toggleMoreMenu();">
+                <div class="sheet-opt-icon"><i class="ph-bold ph-notepad"></i></div>
+                <span>Notes</span>
+            </div>
+            <div class="sheet-opt" onclick="showToast('No apps installed')">
+                <div class="sheet-opt-icon"><i class="ph-bold ph-squares-four"></i></div>
+                <span>Apps</span>
+            </div>
+            <div class="sheet-opt" onclick="showToast('Audio Disconnected')">
+                <div class="sheet-opt-icon"><i class="ph-bold ph-plugs"></i></div>
+                <span>Disconnect</span>
+            </div>
+            <div class="sheet-opt" onclick="openSettings()">
+                <div class="sheet-opt-icon"><i class="ph-bold ph-gear"></i></div>
+                <span>Settings</span>
+            </div>
+            <div class="sheet-opt" onclick="openMeetingInfo()">
+                <div class="sheet-opt-icon"><i class="ph-bold ph-info"></i></div>
+                <span>Meeting Info</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="info-modal" id="meetingInfoModal">
+    <div class="info-header">
+        <span id="modalMeetingTitle">Town Hall Meeting</span>
+        <i class="ph-bold ph-x" style="cursor:pointer;" onclick="openMeetingInfo()"></i>
+    </div>
+    
+    <button class="copy-btn-large" onclick="copyMeetingLink()">
+        Copy meeting link
+    </button>
+
+    <div class="info-row">
+        <span class="info-label">Meeting ID</span>
+        <span class="info-val">994 1873 8045</span>
+    </div>
+    
+    <div class="info-row">
+        <span class="info-label">Passcode</span>
+        <span class="info-val">813668</span>
+    </div>
+    
+    <div class="info-row">
+        <span class="info-label">Host</span>
+        <span class="info-val">Benedict Adurosakin</span>
+    </div>
+    
+    <div class="info-row">
+        <span class="info-label">Participant ID</span>
+        <span class="info-val">4600689</span>
+    </div>
+    
+    <div style="font-size:10px; color:var(--accent); display:flex; align-items:center; gap:6px; margin-top:20px;">
+        <i class="ph-fill ph-shield-check"></i> Encryption: Enhanced
+    </div>
+</div>
+
+<div class="modal-overlay" id="settingsModal">
+    <div class="modal-box list-mode">
+        <div class="info-header">
+            <span>Settings</span>
+            <i class="ph-bold ph-x" style="cursor:pointer;" onclick="closeSettings()"></i>
+        </div>
+        <div class="settings-list-container">
+            <div class="setting-item" onclick="showToast('Meeting Settings Opened')">
+                <span><i class="ph-bold ph-sliders-horizontal" style="margin-right:8px;"></i> Meeting settings</span>
+                <i class="ph-bold ph-caret-right"></i>
+            </div>
+            <div class="setting-item" onclick="showToast('Backgrounds Gallery')">
+                <span><i class="ph-bold ph-image" style="margin-right:8px;"></i> Virtual background</span>
+                <i class="ph-bold ph-caret-right"></i>
+            </div>
+            <div class="setting-item" onclick="showToast('Filters Applied')">
+                <span><i class="ph-bold ph-magic-wand" style="margin-right:8px;"></i> Video filters</span>
+                <i class="ph-bold ph-caret-right"></i>
+            </div>
+            <div class="setting-item" onclick="showToast('Avatars Loading...')">
+                <span><i class="ph-bold ph-user-circle" style="margin-right:8px;"></i> Avatars</span>
+                <i class="ph-bold ph-caret-right"></i>
+            </div>
+            <div class="setting-item" onclick="showToast('Audio Devices')">
+                <span><i class="ph-bold ph-headphones" style="margin-right:8px;"></i> Audio</span>
+                <i class="ph-bold ph-caret-right"></i>
+            </div>
+            <div class="setting-item" onclick="toggleCaptions()">
+                <span><i class="ph-bold ph-closed-captioning" style="margin-right:8px;"></i> Captions and translation</span>
+                <i class="ph-bold ph-caret-right"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="aiPrivacyModal">
+    <div class="modal-box list-mode" style="border-left: 3px solid var(--accent);">
+        <div class="info-header">
+            <span style="font-size:16px;">Apps that access meeting content</span>
+            <i class="ph-bold ph-x" style="cursor:pointer;" onclick="closeAiPrivacy()"></i>
+        </div>
+        
+        <div class="privacy-header">
+            <div class="privacy-icon"><i class="ph-bold ph-sparkle"></i></div>
+            <div>
+                <div style="font-size:13px; font-weight:700; color:var(--text-primary); margin-bottom:2px;">KAIROS - AI Meeting Agent</div>
+                <div style="font-size:11px; color:var(--text-secondary); margin-bottom:2px;">Benedict's Notetaker (Kairos.ai) (guest)</div>
+                <div style="font-size:10px; color:#888;">Accesses: Audio, Video, Chat, Files</div>
+            </div>
+        </div>
+
+        <p class="privacy-disclaimer">
+            Kairos AI features have been enabled in this meeting. Below you can see the content accessed by features in this meeting. 
+            <br><br>
+            <a href="#" style="color:var(--ai-blue); text-decoration:none;">Learn more about how your data is handled.</a>
+        </p>
     </div>
 </div>
 
@@ -470,6 +679,11 @@
 </div>
 
 <script>
+    // --- INIT ---
+    // Sync header title to modal
+    const mainTitle = document.querySelector('header h1').innerText;
+    document.getElementById('modalMeetingTitle').innerText = mainTitle;
+
     // --- RESPONSIVE INIT ---
     if(window.innerWidth <= 768) {
         document.getElementById('mobSidebarHeader').style.display = 'flex';
@@ -486,7 +700,6 @@
     }, 1000);
 
     // --- LIVE SIMULATION ---
-    // Simulate Attention Span
     setInterval(() => {
         const setAttention = (id) => {
             const val = Math.floor(Math.random() * (100 - 60 + 1) + 60);
@@ -500,7 +713,6 @@
         setAttention('att-2');
     }, 3000);
 
-    // Simulate AI Transcript
     const transcriptData = [
         { speaker: "Alice", text: "I've uploaded the new designs." },
         { speaker: "John", text: "Looking at them now. The navigation looks clean." },
@@ -527,6 +739,12 @@
         }
         feed.appendChild(el);
         feed.scrollTop = feed.scrollHeight;
+        
+        if(document.getElementById('captionsOverlay').classList.contains('active') && data.type !== 'ai') {
+            document.getElementById('captionSpeaker').innerText = data.speaker + (data.speaker !== 'Me' ? " (Translated to English)" : "");
+            document.getElementById('captionText').innerText = data.text;
+        }
+
         transIndex++;
         setTimeout(addTranscript, Math.random() * 3000 + 2000);
     }
@@ -539,7 +757,6 @@
             c.style.display = 'none';
             c.classList.remove('active');
         });
-        
         event.target.classList.add('active');
         const content = document.getElementById(`tab-${tabName}`);
         content.style.display = tabName === 'chat' ? 'flex' : 'block';
@@ -565,67 +782,151 @@
         }
     }
 
-    function toggleState(btn, type) {
-        btn.classList.toggle('active');
-        const icon = btn.querySelector('i');
+    // --- REAL-TIME MEDIA LOGIC ---
+    let localStream = null;
+
+    async function toggleState(btn, type) {
         if(type === 'mute') {
-            icon.className = btn.classList.contains('active') ? 'ph-fill ph-microphone-slash' : 'ph-fill ph-microphone';
-            btn.classList.toggle('danger');
+            // Logic: Button is DANGER (red) when muted. ACTIVE (green) when on.
+            if(btn.classList.contains('danger')) {
+                // UNMUTE REQUEST
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    // Success
+                    btn.classList.remove('danger');
+                    btn.classList.add('active');
+                    btn.querySelector('i').className = 'ph-fill ph-microphone';
+                    showToast('Microphone Active');
+                    // Stop tracks immediately to avoid feedback in this mockup, 
+                    // in real app you'd attach to WebRTC peer connection
+                    stream.getTracks().forEach(track => track.stop());
+                } catch(err) {
+                    showToast('Microphone Access Denied');
+                }
+            } else {
+                // MUTE
+                btn.classList.add('danger');
+                btn.classList.remove('active');
+                btn.querySelector('i').className = 'ph-fill ph-microphone-slash';
+                showToast('Microphone Muted');
+            }
         }
+        
         if(type === 'video') {
-            icon.className = btn.classList.contains('active') ? 'ph-fill ph-video-camera-slash' : 'ph-fill ph-video-camera';
+            const tileMe = document.getElementById('tile-me');
+            const avatar = tileMe.querySelector('.tile-avatar');
+            
+            if(!btn.classList.contains('active')) {
+                // START VIDEO
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    localStream = stream;
+                    
+                    const videoEl = document.createElement('video');
+                    videoEl.srcObject = stream;
+                    videoEl.autoplay = true;
+                    videoEl.muted = true; // Local video must be muted
+                    videoEl.playsInline = true;
+                    videoEl.className = 'live-video';
+                    
+                    tileMe.insertBefore(videoEl, tileMe.firstChild); // Insert behind overlays
+                    avatar.style.display = 'none';
+                    
+                    btn.classList.add('active');
+                    btn.querySelector('i').className = 'ph-fill ph-video-camera';
+                    showToast('Camera Active');
+                } catch(err) {
+                    showToast('Camera Access Denied');
+                }
+            } else {
+                // STOP VIDEO
+                if(localStream) {
+                    localStream.getTracks().forEach(track => track.stop());
+                    localStream = null;
+                }
+                const vid = tileMe.querySelector('video');
+                if(vid) vid.remove();
+                
+                avatar.style.display = 'flex';
+                btn.classList.remove('active');
+                btn.querySelector('i').className = 'ph-fill ph-video-camera-slash';
+                showToast('Camera Off');
+            }
         }
     }
 
-    // Raise Hand Logic
     function toggleHand(btn) {
-        btn.classList.toggle('active');
+        if(btn) btn.classList.toggle('active');
         const badge = document.getElementById('myHand');
-        if(btn.classList.contains('active')) {
+        if (badge.classList.contains('active')) {
+            badge.classList.remove('active');
+        } else {
             badge.classList.add('active');
             showToast('You raised your hand');
-        } else {
-            badge.classList.remove('active');
         }
+        document.getElementById('moreMenuOverlay').classList.remove('active');
     }
 
-    // Reactions
     function toggleReactionMenu() {
-        document.getElementById('reactionMenu').classList.toggle('active');
+        document.getElementById('moreMenuOverlay').classList.remove('active'); // Close other
+        const overlay = document.getElementById('reactionOverlay');
+        overlay.classList.toggle('active');
+    }
+
+    function toggleMoreMenu() {
+        document.getElementById('reactionOverlay').classList.remove('active'); // Close other
+        const overlay = document.getElementById('moreMenuOverlay');
+        overlay.classList.toggle('active');
+    }
+
+    function openMeetingInfo() {
+        document.getElementById('moreMenuOverlay').classList.remove('active');
+        const modal = document.getElementById('meetingInfoModal');
+        modal.classList.toggle('active');
+    }
+
+    function copyMeetingLink() {
+        navigator.clipboard.writeText("https://meet.kairos.ai/town-hall-2026");
+        showToast("Link copied to clipboard");
+        openMeetingInfo(); 
+    }
+    
+    function openAiPrivacy() {
+        const modal = document.getElementById('aiPrivacyModal');
+        modal.classList.add('visible');
+        modal.style.display = 'flex';
+    }
+    function closeAiPrivacy() {
+        const modal = document.getElementById('aiPrivacyModal');
+        modal.classList.remove('visible');
+        setTimeout(() => modal.style.display = 'none', 300);
     }
     
     function sendReaction(emoji) {
-        // Create floating element
-        const layer = document.getElementById('tile-me'); // Attach to self or grid
+        const layer = document.getElementById('tile-me'); 
         const el = document.createElement('div');
         el.className = 'floating-emoji';
         el.innerText = emoji;
-        // Randomize horizontal position slightly
         el.style.left = Math.random() * 60 + 20 + '%'; 
         
-        // Append to specific participant layer (Simulated for 'Alice')
         const target = document.getElementById('react-layer-1');
         if(target) target.appendChild(el);
         
         setTimeout(() => el.remove(), 2000);
-        document.getElementById('reactionMenu').classList.remove('active');
+        document.getElementById('reactionOverlay').classList.remove('active');
+        showToast(`Reacted with ${emoji}`);
     }
 
-    // Polls
     function vote(opt, percent) {
         const parent = opt.parentElement;
-        // Reset others
         parent.querySelectorAll('.poll-option').forEach(o => o.classList.remove('selected'));
         parent.querySelectorAll('.poll-bar-fill').forEach(b => b.style.width = '0%');
-        
-        // Select this
         opt.classList.add('selected');
         const bar = opt.nextElementSibling.querySelector('.poll-bar-fill');
         bar.style.width = percent + '%';
         opt.querySelector('span:last-child').innerText = '1 vote';
     }
 
-    // Chat
     function handleChat(e) { if(e.key === 'Enter') sendChat(); }
     function sendChat() {
         const input = document.getElementById('chatInput');
@@ -647,18 +948,39 @@
         setTimeout(() => t.classList.remove('show'), 3000);
     }
 
-    // --- END CALL LOGIC ---
+    function toggleCaptions() {
+        const cap = document.getElementById('captionsOverlay');
+        cap.classList.toggle('active');
+        const isActive = cap.classList.contains('active');
+        showToast(isActive ? 'Captions Enabled (Translating)' : 'Captions Disabled');
+        
+        document.getElementById('settingsModal').classList.remove('visible');
+        document.getElementById('moreMenuOverlay').classList.remove('active');
+        setTimeout(() => document.getElementById('settingsModal').style.display = 'none', 300);
+    }
+
+    function openSettings() {
+        toggleMoreMenu(); 
+        const modal = document.getElementById('settingsModal');
+        modal.style.display = 'flex';
+        setTimeout(() => modal.classList.add('visible'), 10);
+    }
+
+    function closeSettings() {
+        const modal = document.getElementById('settingsModal');
+        modal.classList.remove('visible');
+        setTimeout(() => modal.style.display = 'none', 300);
+    }
+
     function endCall() {
         const modal = document.getElementById('endModal');
         modal.style.display = 'flex';
-        // Force reflow for transition
         setTimeout(() => modal.classList.add('visible'), 10);
 
-        // Simulate AI Processing time
         setTimeout(() => {
             document.getElementById('processingState').style.display = 'none';
             document.getElementById('summaryState').style.display = 'block';
-        }, 2000); // 2 second delay
+        }, 2000);
     }
 </script>
 </body>
