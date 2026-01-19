@@ -15,7 +15,7 @@
 </script>
 
 <style>
-    /* --- SHARED VARIABLES (Exact Match to Index.html) --- */
+    /* --- SHARED VARIABLES --- */
     :root[data-theme="dark"] {
         --bg-main: #050505;
         --bg-panel: #0a0a0a;
@@ -73,7 +73,7 @@
     button { border: none; background: none; cursor: pointer; color: inherit; font-family: inherit; }
     .mobile-menu-btn { display: none; }
 
-    /* --- SIDEBAR (Exact Match) --- */
+    /* --- SIDEBAR --- */
     #sidebar {
         width: 240px; background: var(--bg-panel); border: 1px solid var(--border);
         border-radius: 20px; padding: 20px; display: flex; flex-direction: column;
@@ -129,14 +129,21 @@
     .user-avatar { width: 32px; height: 32px; background: #e5e7eb; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #111; font-size: 12px; overflow: hidden; }
     .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
 
-    /* --- VAULT SPECIFIC STYLES --- */
+    /* --- VIEW SECTIONS (SPA Logic) --- */
     #main {
         flex: 1; background: var(--bg-panel); border: 1px solid var(--border);
         border-radius: 20px; position: relative; overflow: hidden; display: flex; 
-        flex-direction: row; box-shadow: var(--shadow);
+        flex-direction: column; box-shadow: var(--shadow);
     }
+    
+    .view-section { display: none; flex: 1; flex-direction: column; height: 100%; width: 100%; }
+    .view-section.active { display: flex; }
 
-    .vault-sidebar { width: 320px; border-right: 1px solid var(--border); display: flex; flex-direction: column; background: var(--bg-panel); flex-shrink: 0; }
+    /* --- VAULT SPECIFIC STYLES --- */
+    /* Only apply these layout rules when in the vault view */
+    #view-vault { flex-direction: row; } 
+
+    .vault-sidebar { width: 320px; border-right: 1px solid var(--border); display: flex; flex-direction: column; background: var(--bg-panel); flex-shrink: 0; height: 100%; }
     .search-header { padding: 20px; border-bottom: 1px solid var(--border); }
     .search-box { position: relative; }
     .search-box input { width: 100%; background: var(--bg-main); border: 1px solid var(--border); padding: 10px 10px 10px 36px; border-radius: 10px; color: var(--text-primary); font-family: 'Inter', sans-serif; font-size: 12px; outline: none; }
@@ -152,8 +159,8 @@
     .tag-decision { background: rgba(255,255,255,0.1); color: var(--text-secondary); }
     .tag-conflict { background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.2); }
 
-    .vault-content { flex: 1; overflow-y: auto; padding: 30px; background: var(--bg-main); transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
-    
+    .vault-content { flex: 1; overflow-y: auto; padding: 30px; background: var(--bg-main); transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); height: 100%; }
+     
     .content-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
     .meeting-title { font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 700; margin-bottom: 4px; }
     .meeting-meta { font-size: 12px; color: var(--text-secondary); display: flex; gap: 8px; align-items: center; }
@@ -182,18 +189,88 @@
     /* ARTIFACTS */
     .summary-card { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 24px; }
     .section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
-    
+     
     .artifacts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     .decision-card { background: var(--accent-glow); border: 1px solid rgba(16,185,129,0.2); border-radius: 12px; padding: 14px; margin-bottom: 10px; }
     .decision-rejected { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.2); opacity: 0.8; }
     .action-row { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; }
-    
+     
     .transcript-box { margin-top: 24px; border-top: 1px solid var(--border); padding-top: 24px; }
     .transcript-line { display: flex; gap: 12px; margin-bottom: 12px; font-size: 13px; line-height: 1.5; }
     .speaker-label { min-width: 60px; color: var(--text-secondary); font-size: 11px; font-family: 'JetBrains Mono', monospace; text-align: right; }
     .highlight-text { background: var(--accent-glow); color: var(--text-primary); padding: 0 4px; border-radius: 2px; }
 
-    /* --- SHARED MODAL STYLES (Exact Match) --- */
+    /* --- TEAM CHAT & DOCS STYLES --- */
+    .view-header {
+        padding: 16px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--border);
+    }
+    .view-title { font-family: 'Space Grotesk'; font-size: 18px; font-weight: 700; }
+      
+    .pill-nav-container { padding: 10px 20px; overflow-x: auto; display: flex; gap: 8px; flex-shrink: 0; -webkit-overflow-scrolling: touch;}
+    .pill-nav {
+        padding: 6px 14px;
+        background: var(--surface-hover);
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: 0.2s;
+        white-space: nowrap;
+    }
+    .pill-nav.active { background: var(--accent); color: #000; }
+    .pill-nav.accent-pill { background: var(--accent-glow); color: var(--accent); }
+      
+    .content-list { padding: 0 20px; flex: 1; overflow-y: auto; }
+      
+    .docs-empty {
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        height: 100%; color: var(--text-secondary); gap: 16px;
+    }
+    .docs-icon { font-size: 48px; opacity: 0.5; }
+     
+    .doc-item {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 12px; border-bottom: 1px solid var(--border);
+        cursor: pointer; transition: 0.2s; border-radius: 8px;
+        margin-top: 4px;
+    }
+    .doc-item:hover { background: var(--surface-hover); }
+    .doc-info { display: flex; align-items: center; gap: 12px; }
+    .doc-icon { width: 32px; height: 32px; background: var(--accent-glow); color: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+
+    .chat-item {
+        display: flex; align-items: center; gap: 12px;
+        padding: 12px 0; border-bottom: 1px solid var(--border);
+        cursor: pointer; position: relative;
+    }
+    .chat-avatar { width: 40px; height: 40px; border-radius: 12px; background: #333; overflow: hidden; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; }
+    .vault-link-btn {
+        margin-left: auto;
+        width: 32px; height: 32px; border-radius: 50%;
+        background: var(--surface-hover); color: var(--text-secondary);
+        display: flex; align-items: center; justify-content: center;
+        transition: 0.2s;
+    }
+    .vault-link-btn:hover { background: var(--accent-glow); color: var(--accent); }
+
+    /* CHAT DETAILS STYLES */
+    .chat-bubble-row { display: flex; gap: 12px; margin-bottom: 16px; }
+    .chat-bubble-row.me { flex-direction: row-reverse; }
+    .chat-bubble { max-width: 70%; padding: 12px 16px; border-radius: 16px; font-size: 13px; line-height: 1.4; position: relative; }
+    .chat-bubble.them { background: var(--msg-in); color: var(--text-primary); border-top-left-radius: 4px; }
+    .chat-bubble.me { background: var(--msg-out); color: #000; border-top-right-radius: 4px; font-weight: 500; }
+    .msg-meta { font-size: 10px; color: var(--text-secondary); margin-top: 4px; text-align: right; }
+
+    /* FAB */
+    .fab-container { position: absolute; bottom: 80px; right: 20px; z-index: 50; }
+    .fab-docs-raised { position: absolute; bottom: 90px; right: 20px; }
+
+    /* --- SHARED MODAL STYLES --- */
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); z-index: 2500; opacity: 0; pointer-events: none; transition: 0.3s; display: flex; align-items: center; justify-content: center; }
     .modal-overlay.active { opacity: 1; pointer-events: all; }
     .modal-card { background: #111; color: #fff; width: 100%; max-width: 400px; border-radius: 24px; padding: 24px; border: 1px solid rgba(255,255,255,0.1); transform: scale(0.95); transition: 0.3s; box-shadow: 0 30px 60px rgba(0,0,0,0.5); display: flex; flex-direction: column; max-height: 90vh; overflow-y: auto; }
@@ -208,7 +285,7 @@
     .input-field { width: 100%; background: #1a1a1a; border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 12px; color: #fff; font-family: 'Inter', sans-serif; font-size: 14px; }
     .input-field:focus { border-color: #fff; }
     .date-row { display: flex; gap: 12px; }
-    
+     
     .btn-primary { width: 100%; padding: 12px; border-radius: 10px; background: var(--text-primary); color: var(--bg-main); font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform 0.2s; margin-top: 12px; flex-shrink: 0; }
     .btn-primary:hover { transform: translateY(-1px); }
 
@@ -244,12 +321,12 @@
     .member-info { display: flex; gap: 10px; align-items: center; }
     .member-avatar { width: 30px; height: 30px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #fff; }
 
-    /* SWIPEABLE PROFILE (Aligned with Index.html) */
+    /* SWIPEABLE PROFILE */
     .profile-swipe-container {
         display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 16px; padding-bottom: 10px; -webkit-overflow-scrolling: touch;
     }
     .profile-swipe-container::-webkit-scrollbar { display: none; }
-    
+     
     .profile-card-page {
         min-width: 100%; scroll-snap-align: center; background: #1a1a1a; border-radius: 20px; padding: 20px;
         border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column;
@@ -286,6 +363,9 @@
         #sidebar.active { transform: translateX(0); }
         .mobile-menu-btn { display: block; position: absolute; top: 16px; right: 16px; z-index: 2000; background: var(--surface-hover); border: none; padding: 8px; border-radius: 8px; color: var(--text-primary); font-size: 20px; }
         #main { border-radius: 0; border: none; height: 100dvh; display: block; position: relative; }
+        
+        #view-vault.active { display: flex; flex-direction: column; }
+        
         .vault-sidebar { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 10; transition: transform 0.3s ease; }
         .vault-content { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 20; transform: translateX(100%); padding: 20px; overflow-y: auto; -webkit-overflow-scrolling: touch; background: var(--bg-main); }
         .vault-content.active { transform: translateX(0); }
@@ -294,6 +374,9 @@
         .search-header { padding-top: 70px; padding-left: 20px; }
         .modal-card { width: 90%; }
         .input-field { font-size: 16px; }
+        
+        /* Ensure normal views scroll correctly on mobile */
+        #view-teamchat, #view-docs, #view-chat-detail { padding-top: 70px; }
     }
 </style>
 </head>
@@ -330,15 +413,15 @@
     </div>
     
     <a href="index.html" class="nav-btn"><i class="ph-duotone ph-squares-four"></i> Dashboard</a>
-    <a href="index.html" class="nav-btn"><i class="ph-duotone ph-chat-circle-dots"></i> Team Chat</a>
-    <a href="index.html" class="nav-btn"><i class="ph-duotone ph-file-text"></i> Docs</a>
+    <div class="nav-btn" id="nav-teamchat" onclick="switchView('teamchat')"><i class="ph-duotone ph-chat-circle-dots"></i> Team Chat</div>
+    <div class="nav-btn" id="nav-docs" onclick="switchView('docs')"><i class="ph-duotone ph-file-text"></i> Docs</div>
     <div class="nav-btn" onclick="openTeamModal()"><i class="ph-duotone ph-users"></i> Team Sync</div>
     
     <div class="nav-divider"></div>
     <div class="nav-label">External</div>
     
     <div class="nav-btn" onclick="initCalendarAuth()"><i class="ph-bold ph-google-logo"></i> Google Calendar</div>
-    <a href="#" class="nav-btn active"><i class="ph-bold ph-brain"></i> Memory Vault</a>
+    <div class="nav-btn active" id="nav-vault" onclick="switchView('vault')"><i class="ph-bold ph-brain"></i> Memory Vault</div>
     <div class="nav-btn" onclick="openMeetingHub()"><i class="ph-bold ph-video-camera"></i> Meetings</div>
 
     <div class="bottom-dock" onclick="openProfileModal()">
@@ -353,29 +436,97 @@
 </nav>
 
 <main id="main">
-    <div class="vault-sidebar" id="timelinePanel">
-        <div class="search-header">
-            <div style="font-family:'Space Grotesk'; font-weight:700; font-size:18px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
-                <span id="mobileTitle">Memory Vault</span>
-                <button onclick="toggleContextDropdown()" style="font-size:12px; background:var(--surface-hover); padding:4px 8px; border-radius:6px; display:none; color:var(--text-primary); border:none;" id="mobileCtxBtn">Design</button>
+    <div id="view-vault" class="view-section active">
+        <div class="vault-sidebar" id="timelinePanel">
+            <div class="search-header">
+                <div style="font-family:'Space Grotesk'; font-weight:700; font-size:18px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+                    <span id="mobileTitle">Memory Vault</span>
+                    <button onclick="toggleContextDropdown()" style="font-size:12px; background:var(--surface-hover); padding:4px 8px; border-radius:6px; display:none; color:var(--text-primary); border:none;" id="mobileCtxBtn">Design</button>
+                </div>
+                <div class="search-box">
+                    <i class="ph-bold ph-magnifying-glass"></i>
+                    <input type="text" placeholder="Search decisions..." onkeyup="filterMeetings(this.value)">
+                </div>
             </div>
-            <div class="search-box">
-                <i class="ph-bold ph-magnifying-glass"></i>
-                <input type="text" placeholder="Search decisions..." onkeyup="filterMeetings(this.value)">
+            <div class="meeting-list" id="meetingList"></div>
+        </div>
+
+        <div class="vault-content" id="vaultContentPanel">
+            <div class="mobile-back-btn" onclick="closeDetailView()">
+                <i class="ph-bold ph-arrow-left"></i> Back to timeline
+            </div>
+            <div id="vaultDetailContainer">
+                <div style="height:60vh; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--text-secondary); opacity:0.5;">
+                    <i class="ph-duotone ph-brain" style="font-size:48px; margin-bottom:16px;"></i>
+                    <p>Select a meeting to view artifacts</p>
+                </div>
             </div>
         </div>
-        <div class="meeting-list" id="meetingList"></div>
     </div>
 
-    <div class="vault-content" id="vaultContentPanel">
-        <div class="mobile-back-btn" onclick="closeDetailView()">
-            <i class="ph-bold ph-arrow-left"></i> Back to timeline
-        </div>
-        <div id="vaultDetailContainer">
-            <div style="height:60vh; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--text-secondary); opacity:0.5;">
-                <i class="ph-duotone ph-brain" style="font-size:48px; margin-bottom:16px;"></i>
-                <p>Select a meeting to view artifacts</p>
+    <div id="view-teamchat" class="view-section">
+        <div class="view-header">
+            <div class="view-title">Team Chat</div>
+            <div style="display:flex; gap:12px;">
+                 <button class="theme-toggle"><i class="ph-bold ph-magnifying-glass"></i></button>
+                 <button class="theme-toggle"><i class="ph-bold ph-dots-three"></i></button>
             </div>
+        </div>
+        <div class="pill-nav-container">
+            <div class="pill-nav active">All</div>
+            <div class="pill-nav">Mentions</div>
+            <div class="pill-nav">Chats</div>
+            <div class="pill-nav">Channels</div>
+            <div class="pill-nav">Meeting chat</div>
+        </div>
+        <div class="content-list" id="chatListContainer"></div>
+        <div class="fab-container">
+             <button class="btn-primary" onclick="openNewTeamWizard()" style="width:56px; height:56px; border-radius:50%; box-shadow:0 10px 30px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center;">
+                 <i class="ph-bold ph-plus" style="font-size:24px;"></i>
+             </button>
+        </div>
+    </div>
+
+    <div id="view-chat-detail" class="view-section">
+        <div class="view-header">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <button class="theme-toggle" onclick="closeChatDetail()"><i class="ph-bold ph-arrow-left"></i></button>
+                <div>
+                    <div class="view-title" id="chatDetailTitle" style="font-size:16px;">Chat Name</div>
+                    <div style="font-size:11px; color:var(--text-secondary);">Online</div>
+                </div>
+            </div>
+            <button class="theme-toggle"><i class="ph-bold ph-video-camera"></i></button>
+        </div>
+        <div class="content-list" id="chatDetailMessages" style="display:flex; flex-direction:column; padding-top:20px;">
+            </div>
+        <div style="padding:16px; background:var(--bg-panel); border-top:1px solid var(--border);">
+            <div style="display:flex; gap:8px;">
+                 <input type="text" class="input-field" placeholder="Type a message..." style="border-radius:20px;">
+                 <button class="btn-primary" style="width:46px; margin:0; border-radius:50%;"><i class="ph-bold ph-paper-plane-right"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-docs" class="view-section">
+        <div class="view-header">
+            <div class="view-title">Docs</div>
+            <div style="display:flex; gap:12px;">
+                 <button class="theme-toggle"><i class="ph-bold ph-magnifying-glass"></i></button>
+                 <button class="theme-toggle"><i class="ph-bold ph-bell"></i></button>
+            </div>
+        </div>
+        <div class="pill-nav-container">
+            <div class="pill-nav active accent-pill" onclick="filterDocs('all', this)">All</div>
+            <div class="pill-nav" onclick="filterDocs('recent', this)">Recent</div>
+            <div class="pill-nav" onclick="filterDocs('starred', this)">Starred</div>
+            <div class="pill-nav" onclick="filterDocs('shared', this)">Shared</div>
+        </div>
+        <div class="content-list" style="position:relative;" id="docsList"></div>
+        <div class="fab-docs-raised">
+             <button class="btn-primary" onclick="createNewDoc()" style="width:56px; height:56px; border-radius:50%; box-shadow:0 10px 30px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center; background:#10b981;">
+                 <i class="ph-bold ph-plus" style="font-size:24px; color:#000;"></i>
+             </button>
         </div>
     </div>
 </main>
@@ -417,6 +568,23 @@
             </button>
         </div>
         <button onclick="closeModals()" style="width:100%; margin-top:20px; padding:12px; color:#888;">Close</button>
+    </div>
+</div>
+
+<div id="newDocModal" class="modal-overlay">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3>Create New Document</h3>
+            <div class="close-btn" onclick="closeModals()"><i class="ph-bold ph-x"></i></div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Document Name</label>
+            <input type="text" id="newDocInput" class="input-field" placeholder="e.g. Q1 Marketing Plan" autofocus>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+            <button class="theme-toggle" style="width:auto; padding:0 16px; border:none;" onclick="closeModals()">Cancel</button>
+            <button class="btn-primary" style="width:auto; margin:0;" onclick="saveNewDoc()">Create</button>
+        </div>
     </div>
 </div>
 
@@ -536,8 +704,14 @@
         </div>
         <div class="form-group">
             <label class="form-label">Add Member</label>
+            <input type="text" id="newMemberInput" class="input-field" placeholder="Email or Phone Number">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Assign to Team</label>
             <div style="display:flex; gap:8px;">
-                <input type="text" id="newMemberInput" class="input-field" placeholder="Email or Phone Number">
+                <select id="teamSelector" class="input-field" style="appearance:none; cursor:pointer;">
+                    <option value="" disabled selected>Select Team...</option>
+                </select>
                 <button class="btn-primary" style="width:auto; margin:0;" onclick="addMember()">Add</button>
             </div>
         </div>
@@ -545,9 +719,12 @@
             <div class="team-member">
                 <div class="member-info">
                     <div class="member-avatar">A</div>
-                    <span style="font-size:13px; font-weight:600;">Alice Design</span>
+                    <div>
+                        <span style="font-size:13px; font-weight:600; display:block;">Alice Design</span>
+                        <span style="font-size:10px; color:var(--text-secondary);">Design Team</span>
+                    </div>
                 </div>
-                <div style="font-size:10px; color:#888;">In Call</div>
+                <div style="font-size:10px; color:#10b981;">Online</div>
             </div>
         </div>
     </div>
@@ -696,7 +873,166 @@
 </div>
 
 <script>
-    // --- UTILS ---
+    // --- CORE DATA (Matching Index.html) ---
+    const TEAMS = ['Personal Workspace', 'Design Team', 'Engineering'];
+    const CHATS = [
+        { id: 1, name: 'Personal Workspace', type: 'Self', msg: 'Draft: Project Alpha', time: '10:02' },
+        { id: 2, name: 'Design Team', type: 'Team', msg: 'Alice: New mockups ready?', time: '09:45' },
+        { id: 3, name: 'Engineering', type: 'Team', msg: 'System update scheduled.', time: 'Yesterday' }
+    ];
+    let DOCS = [
+        { name: "Project Proposal.docx", type: "word", date: "Today", tag: "recent" },
+        { name: "Q1 Budget.xlsx", type: "excel", date: "Yesterday", tag: "starred" },
+        { name: "Meeting Notes.txt", type: "text", date: "2 days ago", tag: "shared" }
+    ];
+    const MOCK_MESSAGES = {
+        1: [
+            { id: 101, text: "Remember to review the Project Alpha draft by noon.", sender: "me", time: "09:30" },
+            { id: 102, text: "Draft: Project Alpha attached.", sender: "me", time: "10:02" }
+        ],
+        2: [
+            { id: 201, text: "Hey team, how's the new UI coming along?", sender: "me", time: "09:00" },
+            { id: 202, text: "New mockups ready? We need them for the client call.", sender: "Alice Design", time: "09:45" }
+        ],
+        3: [
+            { id: 301, text: "Server maintenance at midnight.", sender: "DevOps", time: "Yesterday" },
+            { id: 302, text: "System update scheduled. No downtime expected.", sender: "Engineering", time: "Yesterday" }
+        ]
+    };
+
+    // --- VIEW SWITCHER ---
+    function switchView(viewName) {
+        document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+        const target = document.getElementById('view-' + viewName);
+        if(target) target.classList.add('active');
+        
+        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+        const navBtn = document.getElementById('nav-' + viewName);
+        if(navBtn) navBtn.classList.add('active');
+        
+        if(window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('active');
+    }
+
+    // --- CHAT LOGIC ---
+    function renderChatList() {
+        const list = document.getElementById('chatListContainer');
+        if(!list) return;
+        list.innerHTML = '';
+        CHATS.forEach(chat => {
+            const initial = chat.name.charAt(0);
+            const el = document.createElement('div');
+            el.className = 'chat-item';
+            el.onclick = function() { openChatDetail(chat.id); };
+            el.innerHTML = `
+                <div class="chat-avatar">${initial}</div>
+                <div style="flex:1">
+                    <div style="font-size:14px; font-weight:600; display:flex; justify-content:space-between;">
+                        ${chat.name} <span style="font-size:11px; font-weight:400; color:var(--text-secondary);">${chat.time}</span>
+                    </div>
+                    <div style="font-size:12px; color:var(--text-secondary);">${chat.msg}</div>
+                </div>
+                <a href="#" class="vault-link-btn" title="Open Memory Vault" onclick="event.stopPropagation(); switchView('vault');">
+                    <i class="ph-bold ph-brain"></i>
+                </a>
+            `;
+            list.appendChild(el);
+        });
+    }
+
+    function openChatDetail(chatId) {
+        const chat = CHATS.find(c => c.id == chatId);
+        if(!chat) return;
+        document.getElementById('chatDetailTitle').innerText = chat.name;
+        const msgList = document.getElementById('chatDetailMessages');
+        msgList.innerHTML = '';
+        const msgs = MOCK_MESSAGES[chatId] || [];
+        if (msgs.length === 0) {
+            msgList.innerHTML = `<div style="text-align:center; color:var(--text-secondary); font-size:12px; margin-top:20px;">No messages yet</div>`;
+        } else {
+            msgs.forEach(m => {
+                const isMe = m.sender === 'me';
+                const row = document.createElement('div');
+                row.className = `chat-bubble-row ${isMe ? 'me' : ''}`;
+                row.innerHTML = `
+                    <div class="chat-bubble ${isMe ? 'me' : 'them'}">
+                        ${!isMe ? `<div style="font-size:10px; opacity:0.7; margin-bottom:2px;">${m.sender}</div>` : ''}
+                        <div>${m.text}</div>
+                        <div class="msg-meta">${m.time}</div>
+                    </div>
+                `;
+                msgList.appendChild(row);
+            });
+        }
+        document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+        document.getElementById('view-chat-detail').classList.add('active');
+    }
+
+    function closeChatDetail() {
+        switchView('teamchat');
+    }
+
+    // --- DOCS LOGIC ---
+    function renderDocs(filterTag = 'all') {
+        const list = document.getElementById('docsList');
+        if(!list) return;
+        list.innerHTML = '';
+        const filtered = filterTag === 'all' ? DOCS : DOCS.filter(d => d.tag === filterTag);
+        if (filtered.length === 0) {
+            list.innerHTML = `
+                <div class="docs-empty">
+                    <div style="width:60px; height:80px; border:2px dashed var(--text-secondary); border-radius:8px; display:flex; align-items:center; justify-content:center;">
+                        <i class="ph-duotone ph-file-text docs-icon" style="font-size:32px; opacity:0.5; background:transparent;"></i>
+                    </div>
+                    <div>
+                        <div style="font-weight:600; margin-bottom:4px;">No files found</div>
+                        <div style="font-size:12px;">Create a new document to get started</div>
+                    </div>
+                </div>`;
+            return;
+        }
+        filtered.forEach(doc => {
+            const el = document.createElement('div');
+            el.className = 'doc-item';
+            el.innerHTML = `
+                <div class="doc-info">
+                    <div class="doc-icon"><i class="ph-bold ph-file-text"></i></div>
+                    <div>
+                        <div style="font-size:13px; font-weight:600;">${doc.name}</div>
+                        <div style="font-size:11px; color:var(--text-secondary);">${doc.date}</div>
+                    </div>
+                </div>
+                <i class="ph-bold ph-dots-three-vertical" style="color:var(--text-secondary)"></i>
+            `;
+            list.appendChild(el);
+        });
+    }
+
+    function filterDocs(tag, btn) {
+        document.querySelectorAll('#view-docs .pill-nav').forEach(p => p.classList.remove('active', 'accent-pill'));
+        btn.classList.add('active', 'accent-pill');
+        renderDocs(tag);
+    }
+
+    function createNewDoc() {
+        document.getElementById('newDocInput').value = '';
+        closeModals();
+        setTimeout(() => document.getElementById('newDocModal').classList.add('active'), 100);
+    }
+
+    function saveNewDoc() {
+        const name = document.getElementById('newDocInput').value;
+        if(name) {
+            DOCS.unshift({ name: name + (name.includes('.') ? '' : '.txt'), type: "text", date: "Just now", tag: "recent" });
+            renderDocs('recent');
+            document.querySelectorAll('#view-docs .pill-nav').forEach(p => p.classList.remove('active', 'accent-pill'));
+            const recBtn = document.querySelectorAll('#view-docs .pill-nav')[1];
+            if(recBtn) recBtn.classList.add('active', 'accent-pill'); 
+            showToast('Document Created');
+            closeModals();
+        }
+    }
+
+    // --- UTILS & CORE ---
     function showToast(msg) {
         const t = document.getElementById('toast');
         document.getElementById('toastMsg').innerText = msg;
@@ -754,7 +1090,6 @@
                 <p>Select a meeting to view artifacts</p>
             </div>`;
             
-        // If created a new team and it has data (like from kickoff), load that meeting. 
         if(database[ctx].length > 0) {
             loadMeeting(database[ctx][0].id);
         }
@@ -774,9 +1109,20 @@
     function openStartCallModal() { closeModals(); setTimeout(()=>document.getElementById('startCallModal').classList.add('active'), 100); }
     function openScheduleModal() { closeModals(); setTimeout(()=>document.getElementById('scheduleModal').classList.add('active'), 100); }
     function openDialPad() { closeModals(); setTimeout(()=>document.getElementById('dialPadModal').classList.add('active'), 100); }
-    function openTeamModal() { closeModals(); setTimeout(()=>document.getElementById('teamModal').classList.add('active'), 100); }
     function openProfileModal() { closeModals(); setTimeout(()=>document.getElementById('profileModal').classList.add('active'), 100); }
     function openLinkModal() { closeModals(); setTimeout(() => document.getElementById('linkModal').classList.add('active'), 100); }
+    
+    function openTeamModal() { 
+        closeModals(); 
+        const sel = document.getElementById('teamSelector');
+        sel.innerHTML = '<option value="" disabled selected>Select Team...</option>';
+        TEAMS.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t; opt.innerText = t;
+            sel.appendChild(opt);
+        });
+        setTimeout(() => document.getElementById('teamModal').classList.add('active'), 100); 
+    }
 
     // --- NEW TEAM WIZARD LOGIC ---
     function openNewTeamWizard() {
@@ -822,6 +1168,7 @@
 
     function finishWizard() {
         const teamName = document.getElementById('wizTeamName').value || "New Team";
+        TEAMS.push(teamName);
         
         // 1. Add to Sidebar Dropdown
         const dropdown = document.getElementById('contextDropdown');
@@ -832,7 +1179,7 @@
         newBtn.onclick = function() { setContext(teamName); };
         dropdown.insertBefore(newBtn, divider);
 
-        // 2. Add to Database with sample Kickoff meeting
+        // 2. Add to Database
         const kDate = document.getElementById('wizDate').value || "Today";
         database[teamName] = [
             {
@@ -842,7 +1189,7 @@
                 duration: "00 min",
                 type: "Video",
                 decisions: 0,
-                conflict: false,
+                conflict: false, 
                 summary: `Initial kickoff meeting for ${teamName}. Goals and members established.`,
                 attendees: [
                     { name: "Benedict", role: "Lead", join: "09:00", leave: "09:00", attention: 100 }
@@ -856,7 +1203,7 @@
         closeModals();
     }
 
-    // --- CALL REDIRECTION LOGIC (Synced) ---
+    // --- CALL REDIRECTION LOGIC ---
     function initiateCall(type) {
         document.getElementById('startCallContent').style.display = 'none';
         document.getElementById('preCallLoader').style.display = 'block';
@@ -954,6 +1301,7 @@
 
     function renderList(filterTerm = "") {
         const list = document.getElementById('meetingList');
+        if(!list) return;
         list.innerHTML = '';
         const data = database[currentCtx] || [];
         const filtered = data.filter(m => JSON.stringify(m).toLowerCase().includes(filterTerm.toLowerCase()));
@@ -984,7 +1332,8 @@
         activeMeetingId = id;
         renderList(); 
         
-        if(window.innerWidth <= 768) {
+        // Mobile Handling
+        if(window.innerWidth <= 768 && id) {
             document.getElementById('vaultContentPanel').classList.add('active');
             document.getElementById('sidebar').classList.remove('active');
         }
@@ -1117,15 +1466,18 @@
 
     function addMember() {
         const val = document.getElementById('newMemberInput').value;
-        if(val) {
-            const list = document.getElementById('teamList');
-            const el = document.createElement('div');
-            el.className = 'team-member';
-            el.innerHTML = `<div class="member-info"><div class="member-avatar">${val.charAt(0).toUpperCase()}</div><span style="font-size:13px; font-weight:600;">${val}</span></div><div style="font-size:10px; color:#10b981;">Invited</div>`;
-            list.appendChild(el);
-            document.getElementById('newMemberInput').value = "";
-            showToast('Invitation Sent');
-        }
+        const team = document.getElementById('teamSelector').value;
+        if(!val) { showToast('Please enter details'); return; }
+        if(!team) { showToast('Please select a team'); return; }
+        
+        const list = document.getElementById('teamList');
+        const el = document.createElement('div');
+        el.className = 'team-member';
+        el.innerHTML = `<div class="member-info"><div class="member-avatar">${val.charAt(0).toUpperCase()}</div><div><span style="font-size:13px; font-weight:600; display:block;">${val}</span><span style="font-size:10px; color:var(--text-secondary);">${team}</span></div></div><div style="font-size:10px; color:#10b981;">Invited</div>`;
+        list.appendChild(el);
+        document.getElementById('newMemberInput').value = "";
+        document.getElementById('teamSelector').selectedIndex = 0;
+        showToast(`Invited to ${team}`);
     }
 
     function initCalendarAuth() {
@@ -1151,6 +1503,8 @@
         document.getElementById('mobileCtxBtn').style.display = 'block';
     }
     renderList();
+    renderChatList();
+    renderDocs();
     if(window.innerWidth > 768) loadMeeting(201); 
 
 </script>
