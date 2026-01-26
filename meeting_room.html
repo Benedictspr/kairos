@@ -6,6 +6,7 @@
 <title>KAIROS | Live Session</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/@phosphor-icons/web"></script>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
 <script>
     const savedTheme = localStorage.getItem('kairosTheme') || 'dark';
@@ -418,13 +419,11 @@
 </header>
 
 <div class="stage-container">
-    <!-- PiP Window -->
     <div id="pipWindow">
         <div class="pip-avatar">J</div>
         <div style="position: absolute; bottom: 8px; left: 8px; font-size: 10px; font-weight: 600; color: #fff;">John Dev</div>
     </div>
 
-    <!-- Whiteboard -->
     <div id="whiteboardContainer">
         <div class="wb-toolbar">
             <div class="wb-btn active" onclick="selectTool('pen')"><i class="ph-bold ph-pencil-simple"></i></div>
@@ -442,7 +441,6 @@
         </div>
     </div>
 
-    <!-- Video Grid -->
     <div class="video-grid" id="grid">
         <div class="video-tile" id="tile-me">
             <div class="tile-top-overlay">
@@ -455,7 +453,6 @@
             </div>
         </div>
 
-        <!-- Participants with Attention Metrics & Maximize Btn -->
         <div class="video-tile">
             <div class="tile-top-overlay">
                 <div class="tile-btn" onclick="toggleMaximize(this.parentElement.parentElement)"><i class="ph-bold ph-arrows-out-simple"></i></div>
@@ -498,92 +495,7 @@
                 </div>
             </div>
         </div>
-        
-        <div class="video-tile">
-            <div class="tile-top-overlay">
-                <div class="tile-btn" onclick="toggleMaximize(this.parentElement.parentElement)"><i class="ph-bold ph-arrows-out-simple"></i></div>
-            </div>
-            <div class="tile-avatar" style="background: #9333ea; color: #fff;">M</div>
-            <div class="tile-overlay">
-                <div class="user-nametag">Mike</div>
-                <div class="attention-metric">
-                    <div class="att-label">Focus</div>
-                    <div class="att-bar"><div class="att-fill" style="width: 60%; background: #f59e0b;"></div></div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="video-tile">
-            <div class="tile-top-overlay">
-                <div class="tile-btn" onclick="toggleMaximize(this.parentElement.parentElement)"><i class="ph-bold ph-arrows-out-simple"></i></div>
-            </div>
-            <div class="tile-avatar" style="background: #16a34a; color: #fff;">D</div>
-            <div class="tile-overlay">
-                <div class="user-nametag">David</div>
-                <div class="attention-metric">
-                    <div class="att-label">Focus</div>
-                    <div class="att-bar"><div class="att-fill" style="width: 95%;"></div></div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="video-tile">
-            <div class="tile-top-overlay">
-                <div class="tile-btn" onclick="toggleMaximize(this.parentElement.parentElement)"><i class="ph-bold ph-arrows-out-simple"></i></div>
-            </div>
-            <div class="tile-avatar" style="background: #dc2626; color: #fff;">E</div>
-            <div class="tile-overlay">
-                <div class="user-nametag">Emma</div>
-                <div class="attention-metric">
-                    <div class="att-label">Focus</div>
-                    <div class="att-bar"><div class="att-fill" style="width: 40%; background: #ef4444;"></div></div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="video-tile">
-            <div class="tile-top-overlay">
-                <div class="tile-btn" onclick="toggleMaximize(this.parentElement.parentElement)"><i class="ph-bold ph-arrows-out-simple"></i></div>
-            </div>
-            <div class="tile-avatar" style="background: #ca8a04; color: #fff;">O</div>
-            <div class="tile-overlay">
-                <div class="user-nametag">Olivia</div>
-                <div class="attention-metric">
-                    <div class="att-label">Focus</div>
-                    <div class="att-bar"><div class="att-fill" style="width: 80%;"></div></div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="video-tile">
-            <div class="tile-top-overlay">
-                <div class="tile-btn" onclick="toggleMaximize(this.parentElement.parentElement)"><i class="ph-bold ph-arrows-out-simple"></i></div>
-            </div>
-            <div class="tile-avatar" style="background: #0891b2; color: #fff;">R</div>
-            <div class="tile-overlay">
-                <div class="user-nametag">Robert</div>
-                <div class="attention-metric">
-                    <div class="att-label">Focus</div>
-                    <div class="att-bar"><div class="att-fill" style="width: 70%; background: #f59e0b;"></div></div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="video-tile">
-            <div class="tile-top-overlay">
-                <div class="tile-btn" onclick="toggleMaximize(this.parentElement.parentElement)"><i class="ph-bold ph-arrows-out-simple"></i></div>
-            </div>
-            <div class="tile-avatar" style="background: #4f46e5; color: #fff;">L</div>
-            <div class="tile-overlay">
-                <div class="user-nametag">Linda</div>
-                <div class="attention-metric">
-                    <div class="att-label">Focus</div>
-                    <div class="att-bar"><div class="att-fill" style="width: 92%;"></div></div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Overflow Tile -->
+
         <div class="video-tile overflow-tile" onclick="openParticipantList()">
             <span>+4</span>
             <span style="font-size:10px; font-weight:500;">Others</span>
@@ -633,10 +545,6 @@
                 <div class="chk-box"><i class="ph-bold ph-check"></i></div>
                 <div class="agenda-text">Confirm tech stack migration</div>
             </div>
-            <div class="agenda-item" onclick="toggleCheck(this)">
-                <div class="chk-box"><i class="ph-bold ph-check"></i></div>
-                <div class="agenda-text">Budget approval for Sparky Solutions</div>
-            </div>
         </div>
 
         <div id="tab-polls" class="sidebar-content">
@@ -647,23 +555,11 @@
                     <span style="font-size:10px; color:var(--text-secondary);">0 votes</span>
                 </div>
                 <div class="poll-bar-bg"><div class="poll-bar-fill"></div></div>
-                
-                <div class="poll-option" style="margin-top:10px;" onclick="vote(this, 30)">
-                    <span style="font-size:12px;">Vue 3</span>
-                    <span style="font-size:10px; color:var(--text-secondary);">0 votes</span>
-                </div>
-                <div class="poll-bar-bg"><div class="poll-bar-fill"></div></div>
             </div>
-            <button style="width:100%; padding:10px; border:1px dashed var(--text-secondary); color:var(--text-secondary); border-radius:8px; font-size:12px; cursor:pointer;">+ Create New Poll</button>
         </div>
 
         <div id="tab-chat" class="sidebar-content" style="display:none; flex-direction:column; height:100%;">
-            <div style="flex:1; overflow-y:auto;" id="chat-feed">
-                <div class="chat-msg">
-                    <div class="chat-header"><span class="chat-name">Alice</span> <span class="chat-time">10:02</span></div>
-                    <div class="chat-bubble" style="background:var(--surface-hover); color:var(--text-primary);">Can you share the Figma link?</div>
-                </div>
-            </div>
+            <div style="flex:1; overflow-y:auto;" id="chat-feed"></div>
             <div class="chat-input-area">
                 <input type="text" placeholder="Type a message..." class="input-field" style="flex:1; background:var(--bg-main); border:1px solid var(--border); padding:10px; border-radius:20px; color:var(--text-primary);" id="chatInput" onkeypress="handleChat(event)">
                 <button style="color:var(--accent); background:none; border:none; font-size:18px;" onclick="sendChat()"><i class="ph-fill ph-paper-plane-right"></i></button>
@@ -679,29 +575,19 @@
     <div class="ctrl-btn" onclick="toggleState(this, 'video')" id="videoBtn">
         <i class="ph-fill ph-video-camera-slash"></i><div class="tooltip">Start Video</div>
     </div>
-    
     <div class="ctrl-btn warn" onclick="toggleHand(this)" id="handBtnMain">
         <i class="ph-bold ph-hand-waving"></i><div class="tooltip">Raise Hand</div>
     </div>
-
     <div class="ctrl-btn" onclick="toggleReactionMenu()">
         <i class="ph-bold ph-smiley"></i><div class="tooltip">React</div>
     </div>
-    
     <div class="ctrl-btn" onclick="toggleWhiteboard()" id="wbBtn">
         <i class="ph-bold ph-chalkboard-teacher"></i><div class="tooltip">Whiteboard</div>
     </div>
-    
     <div style="width:1px; height:24px; background:var(--text-secondary); opacity:0.3; margin:0 4px;"></div>
-    
     <div class="ctrl-btn active" onclick="toggleSidebar()">
         <i class="ph-bold ph-chats-circle"></i><div class="tooltip">Sidebar</div>
     </div>
-    
-    <div class="ctrl-btn" onclick="toggleMoreMenu()">
-        <i class="ph-bold ph-dots-three"></i><div class="tooltip">More</div>
-    </div>
-    
     <div class="ctrl-btn danger" onclick="endCall()">
         <i class="ph-bold ph-phone-disconnect"></i><div class="tooltip">End</div>
     </div>
@@ -715,166 +601,6 @@
             <div class="sheet-reaction" onclick="sendReaction('❤️')">❤️</div>
             <div class="sheet-reaction" onclick="sendReaction('👏')">👏</div>
             <div class="sheet-reaction" onclick="sendReaction('🎉')">🎉</div>
-            <div class="sheet-reaction" onclick="sendReaction('😂')">😂</div>
-            <div class="sheet-reaction" onclick="sendReaction('😮')">😮</div>
-        </div>
-    </div>
-</div>
-
-<div class="sheet-overlay" id="moreMenuOverlay" onclick="toggleMoreMenu()">
-    <div class="bottom-sheet" onclick="event.stopPropagation()">
-        <div class="sheet-handle"></div>
-        <div class="sheet-grid">
-            <div class="sheet-opt" onclick="showToast('Recording Started')">
-                <div class="sheet-opt-icon"><i class="ph-bold ph-record"></i></div>
-                <span>Record</span>
-            </div>
-            <div class="sheet-opt" onclick="toggleCaptions()">
-                <div class="sheet-opt-icon"><i class="ph-bold ph-closed-captioning"></i></div>
-                <span>Show CC</span>
-            </div>
-            <div class="sheet-opt" onclick="showToast('Screen Share Started')">
-                <div class="sheet-opt-icon"><i class="ph-bold ph-share-network"></i></div>
-                <span>Share</span>
-            </div>
-            <div class="sheet-opt" onclick="toggleSidebar(); toggleMoreMenu();">
-                <div class="sheet-opt-icon"><i class="ph-bold ph-notepad"></i></div>
-                <span>Notes</span>
-            </div>
-            <div class="sheet-opt" onclick="showToast('No apps installed')">
-                <div class="sheet-opt-icon"><i class="ph-bold ph-squares-four"></i></div>
-                <span>Apps</span>
-            </div>
-            <div class="sheet-opt" onclick="showToast('Audio Disconnected')">
-                <div class="sheet-opt-icon"><i class="ph-bold ph-plugs"></i></div>
-                <span>Disconnect</span>
-            </div>
-            <div class="sheet-opt" onclick="openSettings()">
-                <div class="sheet-opt-icon"><i class="ph-bold ph-gear"></i></div>
-                <span>Settings</span>
-            </div>
-            <div class="sheet-opt" onclick="openMeetingInfo()">
-                <div class="sheet-opt-icon"><i class="ph-bold ph-info"></i></div>
-                <span>Meeting Info</span>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="info-modal" id="meetingInfoModal">
-    <div class="info-header">
-        <span id="modalMeetingTitle">Town Hall Meeting</span>
-        <i class="ph-bold ph-x" style="cursor:pointer;" onclick="openMeetingInfo()"></i>
-    </div>
-    
-    <button class="copy-btn-large" onclick="copyMeetingLink()">
-        Copy meeting link
-    </button>
-
-    <div class="info-row">
-        <span class="info-label">Meeting ID</span>
-        <span class="info-val">994 1873 8045</span>
-    </div>
-    
-    <div class="info-row">
-        <span class="info-label">Passcode</span>
-        <span class="info-val">813668</span>
-    </div>
-    
-    <div class="info-row">
-        <span class="info-label">Host</span>
-        <span class="info-val">Benedict Adurosakin</span>
-    </div>
-    
-    <div class="info-row">
-        <span class="info-label">Participant ID</span>
-        <span class="info-val">4600689</span>
-    </div>
-    
-    <div style="font-size:10px; color:var(--accent); display:flex; align-items:center; gap:6px; margin-top:20px;">
-        <i class="ph-fill ph-shield-check"></i> Encryption: Enhanced
-    </div>
-</div>
-
-<div class="modal-overlay" id="participantsModal">
-    <div class="modal-box list-mode">
-        <div class="info-header">
-            <span>Participants (<span id="pCount">16</span>)</span>
-            <i class="ph-bold ph-x" style="cursor:pointer;" onclick="closeParticipantList()"></i>
-        </div>
-        
-        <button id="muteAllBtn" class="copy-btn-large" style="margin-bottom:12px; background:rgba(239,68,68,0.1); color:var(--danger); border-color:var(--danger); display:flex; align-items:center; justify-content:center; gap:8px;" onclick="toggleMuteAll()">
-            <i class="ph-bold ph-microphone-slash"></i> Mute All
-        </button>
-
-        <div class="participant-list" id="fullParticipantList">
-            <!-- Dynamic list -->
-        </div>
-    </div>
-</div>
-
-<div class="modal-overlay" id="settingsModal">
-    <div class="modal-box list-mode">
-        <div class="info-header">
-            <span>Settings</span>
-            <i class="ph-bold ph-x" style="cursor:pointer;" onclick="closeSettings()"></i>
-        </div>
-        <div class="settings-list-container">
-            <div class="setting-item" onclick="showToast('Meeting Settings Opened')">
-                <span><i class="ph-bold ph-sliders-horizontal" style="margin-right:8px;"></i> Meeting settings</span>
-                <i class="ph-bold ph-caret-right"></i>
-            </div>
-            <div class="setting-item" onclick="showToast('Backgrounds Gallery')">
-                <span><i class="ph-bold ph-image" style="margin-right:8px;"></i> Virtual background</span>
-                <i class="ph-bold ph-caret-right"></i>
-            </div>
-            <div class="setting-item" onclick="showToast('Filters Applied')">
-                <span><i class="ph-bold ph-magic-wand" style="margin-right:8px;"></i> Video filters</span>
-                <i class="ph-bold ph-caret-right"></i>
-            </div>
-            <div class="setting-item" onclick="showToast('Avatars Loading...')">
-                <span><i class="ph-bold ph-user-circle" style="margin-right:8px;"></i> Avatars</span>
-                <i class="ph-bold ph-caret-right"></i>
-            </div>
-            <div class="setting-item" onclick="showToast('Audio Devices')">
-                <span><i class="ph-bold ph-headphones" style="margin-right:8px;"></i> Audio</span>
-                <i class="ph-bold ph-caret-right"></i>
-            </div>
-            <div class="setting-item" onclick="toggleCaptions()">
-                <span><i class="ph-bold ph-closed-captioning" style="margin-right:8px;"></i> Captions and translation</span>
-                <i class="ph-bold ph-caret-right"></i>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal-overlay" id="aiPrivacyModal">
-    <div class="modal-box list-mode" style="border-left: 3px solid var(--accent);">
-        <div class="info-header">
-            <span style="font-size:16px;">Apps that access meeting content</span>
-            <i class="ph-bold ph-x" style="cursor:pointer;" onclick="closeAiPrivacy()"></i>
-        </div>
-        
-        <div class="privacy-header">
-            <div class="privacy-icon"><i class="ph-bold ph-sparkle"></i></div>
-            <div>
-                <div style="font-size:13px; font-weight:700; color:var(--text-primary); margin-bottom:2px;">KAIROS - AI Meeting Agent</div>
-                <div style="font-size:11px; color:var(--text-secondary); margin-bottom:2px;">Benedict's Notetaker (Kairos.ai) (guest)</div>
-                <div style="font-size:10px; color:#888;">Accesses: Audio, Video, Chat, Files</div>
-            </div>
-        </div>
-
-        <p class="privacy-disclaimer">
-            Kairos AI features have been enabled in this meeting. Below you can see the content accessed by features in this meeting. 
-            <br><br>
-            <a href="#" style="color:var(--ai-blue); text-decoration:none;">Learn more about how your data is handled.</a>
-        </p>
-
-        <!-- Centered Enable AI Companion Button -->
-        <div style="display:flex; justify-content:center; margin-top: 20px; border-top: 1px solid var(--border); padding-top: 20px;">
-            <button id="aiToggleBtn" class="active" onclick="toggleAiCompanion(this)" style="background:var(--accent); color:black; font-weight:600; padding:10px 20px; border-radius:30px; border:none; cursor:pointer; font-family:'Inter'; display:flex; align-items:center; gap:8px; transition:0.3s;">
-                <i class="ph-bold ph-toggle-left"></i> <span>AI Companion On</span>
-            </button>
         </div>
     </div>
 </div>
@@ -884,44 +610,46 @@
         <div id="processingState" class="processing-view">
             <div class="spinner"></div>
             <h3 style="font-family:'Space Grotesk'; font-size:16px;">KAIROS is organizing memory...</h3>
-            <p style="font-size:12px; color:var(--text-secondary);">Analyzing decision points and actions.</p>
         </div>
-
         <div id="summaryState" style="display:none;">
             <i class="ph-duotone ph-check-circle" style="font-size: 48px; color: var(--accent); margin-bottom: 16px;"></i>
             <h2 style="font-family:'Space Grotesk'; margin-bottom:8px;">Meeting Ended</h2>
-            
-            <div class="summary-preview" style="display:block;">
-                <div style="font-weight:700; margin-bottom:6px; color:var(--text-primary);">AI Summary:</div>
-                • Tech stack migration ratified (Next.js 14).<br>
-                • Action Item: Benedict to email Sparky Solutions.<br>
-                • Alice to update Figma by EOD.
-            </div>
-            
-            <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:20px;">
-                <i class="ph-bold ph-envelope-simple" style="color:var(--text-secondary)"></i>
-                <span style="font-size:12px; color:var(--text-secondary);">Sending recap to all participants...</span>
-            </div>
-
-            <button onclick="window.location.href='index.html'" style="background:var(--text-primary); color:var(--bg-main); width:100%; padding:12px; border-radius:10px; font-weight:600; cursor:pointer; border:none; transition:0.2s;">
-                Return to Command Center
-            </button>
+            <button onclick="location.reload()" style="background:var(--text-primary); color:var(--bg-main); width:100%; padding:12px; border-radius:10px; font-weight:600; cursor:pointer; border:none;">Return</button>
         </div>
     </div>
 </div>
 
 <script>
-    // --- INIT ---
-    // Sync header title to modal
-    const mainTitle = document.querySelector('header h1').innerText;
-    document.getElementById('modalMeetingTitle').innerText = mainTitle;
+    // --- 1. SOCKET.IO SETUP ---
+    // Change this to your Render URL: https://your-app.onrender.com
+    const SOCKET_URL = "https://your-app-name.onrender.com"; 
+    const socket = io(SOCKET_URL, { transports: ["websocket"] });
+    const roomId = "town-hall-2026";
 
-    // --- RESPONSIVE INIT ---
-    if(window.innerWidth <= 768) {
-        document.getElementById('mobSidebarHeader').style.display = 'flex';
-    }
+    socket.on('connect', () => {
+        console.log("KAIROS Connected:", socket.id);
+        socket.emit('join-room', roomId);
+    });
 
-    // --- TIMER LOGIC ---
+    // Handle Incoming Chats
+    socket.on('receive-chat', (data) => {
+        const feed = document.getElementById('chat-feed');
+        const el = document.createElement('div');
+        el.className = 'chat-msg';
+        const isMe = data.sender === "Benedict";
+        el.innerHTML = `
+            <div class="chat-header">
+                <span class="chat-name">${data.sender}</span> 
+                <span class="chat-time">${data.time}</span>
+            </div>
+            <div class="chat-bubble" style="background:${isMe ? 'var(--accent)' : 'var(--surface-hover)'}; color:${isMe ? '#000' : 'var(--text-primary)'};">
+                ${data.text}
+            </div>`;
+        feed.appendChild(el);
+        feed.scrollTop = feed.scrollHeight;
+    });
+
+    // --- 2. UI LOGIC (PRESERVED) ---
     let seconds = 0;
     setInterval(() => {
         seconds++;
@@ -931,628 +659,105 @@
         document.getElementById('timer').innerText = `${h}:${m}:${s}`;
     }, 1000);
 
-    // --- LIVE SIMULATION: RANDOM SPEAKER MOVEMENT ---
-    setInterval(() => {
-        // Clear all speakers
-        const allTiles = document.querySelectorAll('.video-tile');
-        allTiles.forEach(t => t.classList.remove('speaking'));
-        
-        // "Me" status handled by microphone (see toggleState)
-        // If "Me" is muted/not speaking, we can simulate others.
-        // We will simulate activity regardless of Me for others.
-        
-        const participants = document.querySelectorAll('.video-tile:not(#tile-me):not(.ai-tile)');
-        
-        // Random chance for: 0 speakers (30%), 1 speaker (50%), 2 speakers (20%)
-        const rand = Math.random();
-        
-        if (rand > 0.3) {
-            // Pick a random participant
-            const idx = Math.floor(Math.random() * participants.length);
-            participants[idx].classList.add('speaking');
-            
-            // Chance for a second speaker (interruption/overlap)
-            if (rand > 0.8) {
-                const idx2 = (idx + 1) % participants.length;
-                participants[idx2].classList.add('speaking');
-            }
-        }
-        
-        // Re-apply "Me" speaking if mic is active and speech detected (handled by events generally, 
-        // but let's ensure we don't accidentally clear it if we want persistent logic. 
-        // Actually, the interval clears ALL. We need to respect "Me" state if managed elsewhere.
-        // Simple fix: if #tile-me has a flag 'isSpeaking', re-add class.
-        const myTile = document.getElementById('tile-me');
-        if (myTile.dataset.isSpeaking === "true") {
-            myTile.classList.add('speaking');
-        }
-
-        // Simulate attention metrics
-        const setAttention = (id) => {
-            const val = Math.floor(Math.random() * (100 - 60 + 1) + 60);
-            const el = document.getElementById(id);
-            if(el) {
-                el.style.width = `${val}%`;
-                el.style.backgroundColor = val > 80 ? '#10b981' : (val > 50 ? '#f59e0b' : '#ef4444');
-            }
-        };
-        setAttention('att-1');
-        setAttention('att-2');
-    }, 2000); // Faster updates for liveliness
-
-    // --- REAL SPEECH TO TEXT (CAPTIONS) & SPEAKER DETECTION ---
-    let recognition;
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = 'en-US';
-
-        recognition.onstart = () => {
-            document.getElementById('tile-me').dataset.isSpeaking = "true";
-            document.getElementById('tile-me').classList.add('speaking');
-        };
-        
-        recognition.onend = () => {
-            document.getElementById('tile-me').dataset.isSpeaking = "false";
-            document.getElementById('tile-me').classList.remove('speaking');
-            // If mic is still active (unmuted), restart recognition to keep listening
-            const muteBtn = document.getElementById('muteBtn');
-            if (muteBtn.classList.contains('active')) {
-                try { recognition.start(); } catch(e){}
-            }
-        };
-
-        recognition.onresult = (event) => {
-            // Keep green box active during result processing
-            document.getElementById('tile-me').dataset.isSpeaking = "true";
-            document.getElementById('tile-me').classList.add('speaking');
-            
-            // Clear it after a short delay of silence (simulation of VAD end)
-            clearTimeout(window.speechTimeout);
-            window.speechTimeout = setTimeout(() => {
-                document.getElementById('tile-me').dataset.isSpeaking = "false";
-            }, 2000);
-
-            let finalTranscript = '';
-            for (let i = event.resultIndex; i < event.results.length; ++i) {
-                if (event.results[i].isFinal) {
-                    finalTranscript += event.results[i][0].transcript;
-                }
-            }
-            if (finalTranscript) {
-                // Update Overlay
-                const capOverlay = document.getElementById('captionsOverlay');
-                if(capOverlay.classList.contains('active')) {
-                     document.getElementById('captionSpeaker').innerText = "Me (Live)";
-                     document.getElementById('captionText').innerText = finalTranscript;
-                }
-                
-                // Add to sidebar
-                addTranscriptEntry("Me", finalTranscript, true);
-            }
-        };
-        
-        recognition.onerror = (e) => { 
-            console.log("Speech error", e); 
-            document.getElementById('tile-me').dataset.isSpeaking = "false";
-        };
-    }
-
-    // SIMULATED TRANSCRIPT (Backfill)
-    const transcriptData = [
-        { speaker: "Alice", text: "I've uploaded the new designs." },
-        { speaker: "John", text: "Looking at them now. The navigation looks clean." },
-        { speaker: "KAIROS", text: "Note: Design approval consensus detected.", type: "ai" },
-        { speaker: "Benedict", text: "Let's move to the budget item." },
-        { speaker: "John", text: "We need 20% more for the server costs." }
-    ];
-    let transIndex = 0;
+    function handleChat(e) { if(e.key === 'Enter') sendChat(); }
     
-    function addTranscriptEntry(speaker, text, isMe = false) {
-        const feed = document.getElementById('transcript-feed');
-        const el = document.createElement('div');
-        const now = Date.now();
+    function sendChat() {
+        const input = document.getElementById('chatInput');
+        const text = input.value;
+        if(!text) return;
         
-        if (speaker === "KAIROS") {
-             el.innerHTML = `<div class="ai-note"><i class="ph-bold ph-sparkle"></i> ${text}</div>`;
-        } else {
-            el.className = 'transcript-entry';
-            el.innerHTML = `
-                <div class="ts-meta">
-                    <span>${speaker}</span> 
-                    <span class="ts-time" data-timestamp="${now}">Just now</span>
-                </div>
-                <div class="ts-text" style="${isMe ? 'color:#fff;' : ''}">${text}</div>
-            `;
-        }
-        feed.appendChild(el);
-        feed.scrollTop = feed.scrollHeight;
-    }
-
-    function addTranscript() {
-        if(transIndex >= transcriptData.length) return;
-        const data = transcriptData[transIndex];
-        
-        addTranscriptEntry(data.speaker, data.text);
-        
-        if(document.getElementById('captionsOverlay').classList.contains('active') && data.type !== 'ai') {
-            document.getElementById('captionSpeaker').innerText = data.speaker + (data.speaker !== 'Me' ? " (Translated to English)" : "");
-            document.getElementById('captionText').innerText = data.text;
-        }
-
-        transIndex++;
-        setTimeout(addTranscript, Math.random() * 5000 + 4000);
-    }
-    setTimeout(addTranscript, 1000);
-
-    // --- TIME AGO UPDATER ---
-    setInterval(() => {
-        document.querySelectorAll('.ts-time').forEach(el => {
-            const ts = parseInt(el.dataset.timestamp);
-            const diff = Math.floor((Date.now() - ts) / 1000);
-            
-            if (diff < 60) {
-                el.innerText = 'Just now';
-            } else {
-                const mins = Math.floor(diff / 60);
-                el.innerText = `${mins} min${mins > 1 ? 's' : ''} ago`;
-            }
+        socket.emit('send-chat', {
+            roomId: roomId,
+            text: text,
+            sender: "Benedict"
         });
-    }, 10000); // Check every 10s
-
-    // --- INTERACTIONS ---
-    function switchTab(tabName) {
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.sidebar-content').forEach(c => {
-            c.style.display = 'none';
-            c.classList.remove('active');
-        });
-        event.target.classList.add('active');
-        const content = document.getElementById(`tab-${tabName}`);
-        content.style.display = tabName === 'chat' ? 'flex' : 'block';
-        setTimeout(() => content.classList.add('active'), 10);
+        
+        input.value = '';
     }
-
-    function toggleCheck(el) {
-        const box = el.querySelector('.chk-box');
-        const text = el.querySelector('.agenda-text');
-        if(box.classList.contains('checked')) {
-            box.classList.remove('checked'); text.classList.remove('done');
-        } else {
-            box.classList.add('checked'); text.classList.add('done');
-        }
-    }
-
-    function toggleSidebar() {
-        const sb = document.getElementById('sidebar');
-        if(window.innerWidth <= 768) {
-            sb.classList.toggle('mobile-active');
-        } else {
-            sb.classList.toggle('collapsed');
-        }
-    }
-
-    // --- REAL-TIME MEDIA LOGIC ---
-    let localStream = null;
 
     async function toggleState(btn, type) {
         if(type === 'mute') {
             if(btn.classList.contains('danger')) {
-                // UNMUTE
                 try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    btn.classList.remove('danger');
-                    btn.classList.add('active');
+                    await navigator.mediaDevices.getUserMedia({ audio: true });
+                    btn.classList.replace('danger', 'active');
                     btn.querySelector('i').className = 'ph-fill ph-microphone';
                     showToast('Microphone Active');
-                    stream.getTracks().forEach(track => track.stop());
-                    
-                    if(recognition) {
-                        try { recognition.start(); } catch(e) {}
-                    }
-                } catch(err) {
-                    showToast('Microphone Access Denied');
-                }
+                } catch(e) { showToast('Mic Denied'); }
             } else {
-                // MUTE
-                btn.classList.add('danger');
-                btn.classList.remove('active');
+                btn.classList.replace('active', 'danger');
                 btn.querySelector('i').className = 'ph-fill ph-microphone-slash';
-                showToast('Microphone Muted');
-                
-                // Explicitly stop speaking status
-                const myTile = document.getElementById('tile-me');
-                myTile.dataset.isSpeaking = "false";
-                myTile.classList.remove('speaking');
-
-                if(recognition) {
-                     try { recognition.stop(); } catch(e) {}
-                }
+                showToast('Muted');
             }
         }
         
         if(type === 'video') {
             const tileMe = document.getElementById('tile-me');
-            const avatar = tileMe.querySelector('.tile-avatar');
-            
             if(!btn.classList.contains('active')) {
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                    localStream = stream;
                     const videoEl = document.createElement('video');
                     videoEl.srcObject = stream;
-                    videoEl.autoplay = true;
-                    videoEl.muted = true;
-                    videoEl.playsInline = true;
+                    videoEl.autoplay = true; videoEl.muted = true; videoEl.playsInline = true;
                     videoEl.className = 'live-video';
                     tileMe.insertBefore(videoEl, tileMe.firstChild);
-                    avatar.style.display = 'none';
+                    tileMe.querySelector('.tile-avatar').style.display = 'none';
                     btn.classList.add('active');
                     btn.querySelector('i').className = 'ph-fill ph-video-camera';
-                    showToast('Camera Active');
-                } catch(err) {
-                    showToast('Camera Access Denied');
-                }
+                } catch(e) { showToast('Cam Denied'); }
             } else {
-                if(localStream) {
-                    localStream.getTracks().forEach(track => track.stop());
-                    localStream = null;
-                }
                 const vid = tileMe.querySelector('video');
                 if(vid) vid.remove();
-                avatar.style.display = 'flex';
+                tileMe.querySelector('.tile-avatar').style.display = 'flex';
                 btn.classList.remove('active');
                 btn.querySelector('i').className = 'ph-fill ph-video-camera-slash';
-                showToast('Camera Off');
             }
         }
     }
 
-    function toggleHand(btn) {
-        if(btn) btn.classList.toggle('active');
-        const badge = document.getElementById('myHand');
-        if (badge.classList.contains('active')) {
-            badge.classList.remove('active');
-        } else {
-            badge.classList.add('active');
-            showToast('You raised your hand');
-        }
-        document.getElementById('moreMenuOverlay').classList.remove('active');
-    }
-
-    function toggleReactionMenu() {
-        document.getElementById('moreMenuOverlay').classList.remove('active');
-        const overlay = document.getElementById('reactionOverlay');
-        overlay.classList.toggle('active');
-    }
-
-    function toggleMoreMenu() {
-        document.getElementById('reactionOverlay').classList.remove('active');
-        const overlay = document.getElementById('moreMenuOverlay');
-        overlay.classList.toggle('active');
-    }
-
-    function openMeetingInfo() {
-        document.getElementById('moreMenuOverlay').classList.remove('active');
-        const modal = document.getElementById('meetingInfoModal');
-        modal.classList.toggle('active');
-    }
-
-    function copyMeetingLink() {
-        const text = "https://meet.kairos.ai/town-hall-2026";
-        const textArea = document.createElement("textarea");
-        textArea.value = text;
-        document.body.appendChild(textArea);
-        textArea.select();
-        try {
-            document.execCommand('copy');
-            showToast("Link copied to clipboard");
-        } catch (err) {
-            console.error('Fallback: Oops, unable to copy', err);
-            showToast("Failed to copy link");
-        }
-        document.body.removeChild(textArea);
-        openMeetingInfo(); 
-    }
+    // Whiteboard Logic
+    let isWhiteboardOpen = false;
+    const canvas = document.getElementById('wbCanvas');
+    const ctx = canvas.getContext('2d');
     
-    function openAiPrivacy() {
-        const modal = document.getElementById('aiPrivacyModal');
-        modal.classList.add('visible');
-        modal.style.display = 'flex';
-    }
-    function closeAiPrivacy() {
-        const modal = document.getElementById('aiPrivacyModal');
-        modal.classList.remove('visible');
-        setTimeout(() => modal.style.display = 'none', 300);
-    }
-    
-    function toggleAiCompanion(btn) {
-        const badge = document.getElementById('smartRecBadge');
-        // If active, turn off. If inactive, turn on.
-        // We use the class 'active' to track state more reliably.
-        const isActive = btn.classList.contains('active');
-
-        if (!isActive) {
-             // Turn ON
-             btn.classList.add('active');
-             btn.style.backgroundColor = 'var(--accent)';
-             btn.style.color = 'black';
-             btn.innerHTML = '<i class="ph-bold ph-toggle-left"></i> <span>AI Companion On</span>';
-             
-             badge.style.display = 'flex';
-             setTimeout(() => badge.classList.add('active'), 10);
-             showToast('AI Companion Enabled');
-        } else {
-             // Turn OFF
-             btn.classList.remove('active');
-             btn.style.backgroundColor = 'var(--surface-hover)';
-             btn.style.color = 'var(--text-secondary)';
-             btn.innerHTML = '<i class="ph-bold ph-toggle-right"></i> <span>AI Companion Off</span>';
-             
-             badge.classList.remove('active');
-             setTimeout(() => badge.style.display = 'none', 300); // wait for fade out if we had one, or just hide
-             showToast('AI Companion Disabled');
-        }
-    }
-    
-    function sendReaction(emoji) {
-        const layer = document.getElementById('tile-me'); 
-        const el = document.createElement('div');
-        el.className = 'floating-emoji';
-        el.innerText = emoji;
-        el.style.left = Math.random() * 60 + 20 + '%'; 
-        
-        const target = document.getElementById('react-layer-1');
-        if(target) target.appendChild(el);
-        
-        setTimeout(() => el.remove(), 2000);
-        document.getElementById('reactionOverlay').classList.remove('active');
-        showToast(`Reacted with ${emoji}`);
+    function toggleWhiteboard() {
+        isWhiteboardOpen = !isWhiteboardOpen;
+        const wb = document.getElementById('whiteboardContainer');
+        const grid = document.getElementById('grid');
+        wb.classList.toggle('active');
+        grid.classList.toggle('hidden');
+        if(isWhiteboardOpen) resizeCanvas();
     }
 
-    function vote(opt, percent) {
-        const parent = opt.parentElement;
-        parent.querySelectorAll('.poll-option').forEach(o => o.classList.remove('selected'));
-        parent.querySelectorAll('.poll-bar-fill').forEach(b => b.style.width = '0%');
-        opt.classList.add('selected');
-        const bar = opt.nextElementSibling.querySelector('.poll-bar-fill');
-        bar.style.width = percent + '%';
-        opt.querySelector('span:last-child').innerText = '1 vote';
+    function resizeCanvas() {
+        canvas.width = canvas.parentElement.offsetWidth;
+        canvas.height = canvas.parentElement.offsetHeight;
+        ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.lineCap = 'round';
     }
 
-    function handleChat(e) { if(e.key === 'Enter') sendChat(); }
-    function sendChat() {
-        const input = document.getElementById('chatInput');
-        const text = input.value;
-        if(!text) return;
-        const feed = document.getElementById('chat-feed');
-        const el = document.createElement('div');
-        el.className = 'chat-msg';
-        el.innerHTML = `<div class="chat-header"><span class="chat-name">Me</span> <span class="chat-time">Now</span></div><div class="chat-bubble" style="background:var(--accent); color:#000;">${text}</div>`;
-        feed.appendChild(el);
-        input.value = '';
-        feed.scrollTop = feed.scrollHeight;
-    }
-
+    // Helper functions
     function showToast(msg) {
         const t = document.getElementById('toast');
         document.getElementById('toastMsg').innerText = msg;
         t.classList.add('show');
         setTimeout(() => t.classList.remove('show'), 3000);
     }
-
-    function toggleCaptions() {
-        const cap = document.getElementById('captionsOverlay');
-        cap.classList.toggle('active');
-        const isActive = cap.classList.contains('active');
-        showToast(isActive ? 'Captions Enabled (Translating)' : 'Captions Disabled');
-        
-        document.getElementById('settingsModal').classList.remove('visible');
-        document.getElementById('moreMenuOverlay').classList.remove('active');
-        setTimeout(() => document.getElementById('settingsModal').style.display = 'none', 300);
-    }
-
-    function openSettings() {
-        toggleMoreMenu(); 
-        const modal = document.getElementById('settingsModal');
-        modal.style.display = 'flex';
-        setTimeout(() => modal.classList.add('visible'), 10);
-    }
-
-    function closeSettings() {
-        const modal = document.getElementById('settingsModal');
-        modal.classList.remove('visible');
-        setTimeout(() => modal.style.display = 'none', 300);
-    }
     
-    /* --- PARTICIPANTS LIST LOGIC --- */
-    const allParticipants = [
-        { name: "Benedict (Host)", role: "Host", avatar: "Me" },
-        { name: "Alice Design", role: "Guest", avatar: "A" },
-        { name: "John Dev", role: "Member", avatar: "J" },
-        { name: "Sarah", role: "Guest", avatar: "S" },
-        { name: "Mike", role: "Member", avatar: "M" },
-        { name: "David", role: "Guest", avatar: "D" },
-        { name: "Emma", role: "Member", avatar: "E" },
-        { name: "Olivia", role: "Member", avatar: "O" },
-        { name: "Robert", role: "Guest", avatar: "R" },
-        { name: "Linda", role: "Member", avatar: "L" },
-        { name: "Paul", role: "Guest", avatar: "P" },
-        { name: "Kevin", role: "Guest", avatar: "K" },
-        { name: "Nancy", role: "Member", avatar: "N" },
-        { name: "George", role: "Guest", avatar: "G" },
-        { name: "Hannah", role: "Member", avatar: "H" },
-        { name: "Ian", role: "Guest", avatar: "I" }
-    ];
-
-    let allMuted = false;
-
-    function openParticipantList() {
-        const modal = document.getElementById('participantsModal');
-        const list = document.getElementById('fullParticipantList');
-        document.getElementById('pCount').innerText = allParticipants.length;
-        
-        list.innerHTML = ''; // clear
-        
-        allParticipants.forEach(p => {
-            const el = document.createElement('div');
-            el.className = 'p-item';
-            const isMuted = allMuted || Math.random() > 0.7; 
-            const micIcon = isMuted ? 'ph-microphone-slash' : 'ph-microphone';
-            
-            el.innerHTML = `
-                <div class="p-info">
-                    <div class="p-avatar" style="background:#333;">${p.avatar}</div> 
-                    ${p.name}
-                </div>
-                <div class="p-controls">
-                    <i class="ph-fill ${micIcon}"></i> 
-                    <i class="ph-fill ph-video-camera${Math.random() > 0.5 ? '-slash' : ''}"></i>
-                </div>
-            `;
-            list.appendChild(el);
-        });
-
-        modal.style.display = 'flex';
-        setTimeout(() => modal.classList.add('visible'), 10);
-    }
-    
-    function closeParticipantList() {
-        const modal = document.getElementById('participantsModal');
-        modal.classList.remove('visible');
-        setTimeout(() => modal.style.display = 'none', 300);
-    }
-
-    function toggleMuteAll() {
-        const btn = document.getElementById('muteAllBtn');
-        const list = document.getElementById('fullParticipantList');
-        
-        allMuted = !allMuted;
-        
-        if(allMuted) {
-            btn.innerHTML = '<i class="ph-bold ph-microphone"></i> Unmute All';
-            btn.style.color = 'var(--accent)';
-            btn.style.background = 'rgba(16,185,129,0.1)';
-            btn.style.borderColor = 'var(--accent)';
-            showToast('All participants muted');
-        } else {
-            btn.innerHTML = '<i class="ph-bold ph-microphone-slash"></i> Mute All';
-            btn.style.color = 'var(--danger)';
-            btn.style.background = 'rgba(239,68,68,0.1)';
-            btn.style.borderColor = 'var(--danger)';
-            showToast('All participants unmuted');
-        }
-        
-        const icons = list.querySelectorAll('.ph-microphone, .ph-microphone-slash');
-        icons.forEach(i => {
-            i.className = allMuted ? 'ph-fill ph-microphone-slash' : 'ph-fill ph-microphone';
-        });
-    }
-
-    /* --- WHITEBOARD --- */
-    let isWhiteboardOpen = false;
-    const canvas = document.getElementById('wbCanvas');
-    const ctx = canvas.getContext('2d');
-    let isDrawing = false;
-    let currentTool = 'pen';
-    
-    function resizeCanvas() {
-        const container = document.getElementById('canvasArea');
-        canvas.width = container.offsetWidth;
-        canvas.height = container.offsetHeight;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = '#000';
-    }
-
-    function toggleWhiteboard() {
-        const wb = document.getElementById('whiteboardContainer');
-        const grid = document.getElementById('grid');
-        const pip = document.getElementById('pipWindow');
-        const btn = document.getElementById('wbBtn');
-        
-        isWhiteboardOpen = !isWhiteboardOpen;
-        
-        if(isWhiteboardOpen) {
-            wb.classList.add('active');
-            grid.classList.add('hidden');
-            pip.classList.add('active');
-            btn.classList.add('active');
-            resizeCanvas();
-        } else {
-            wb.classList.remove('active');
-            grid.classList.remove('hidden');
-            pip.classList.remove('active');
-            btn.classList.remove('active');
-        }
-    }
-    
-    function selectTool(tool) {
-        currentTool = tool;
-        document.querySelectorAll('.wb-btn').forEach(b => b.classList.remove('active'));
-        if(tool === 'pen') {
-            document.querySelector('.wb-btn:nth-child(1)').classList.add('active');
-            ctx.globalCompositeOperation = 'source-over';
-            ctx.lineWidth = 3;
-        } else if(tool === 'eraser') {
-            document.querySelector('.wb-btn:nth-child(2)').classList.add('active');
-            ctx.globalCompositeOperation = 'destination-out';
-            ctx.lineWidth = 20;
-        }
-    }
-    
-    function clearBoard() {
-        ctx.clearRect(0,0, canvas.width, canvas.height);
-    }
-    
-    // Drawing Logic
-    canvas.addEventListener('mousedown', startDraw);
-    canvas.addEventListener('mousemove', draw);
-    canvas.addEventListener('mouseup', stopDraw);
-    canvas.addEventListener('mouseout', stopDraw);
-    
-    function startDraw(e) {
-        isDrawing = true;
-        draw(e);
-    }
-    function draw(e) {
-        if(!isDrawing) return;
-        const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        
-        ctx.lineTo(x, y);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-    }
-    function stopDraw() {
-        isDrawing = false;
-        ctx.beginPath();
-    }
-    
-    /* --- MAXIMIZE TILE --- */
-    function toggleMaximize(tile) {
-        if(tile.classList.contains('maximized')) {
-            tile.classList.remove('maximized');
-        } else {
-            document.querySelectorAll('.video-tile').forEach(t => t.classList.remove('maximized'));
-            tile.classList.add('maximized');
-        }
-    }
-
-    function endCall() {
-        const modal = document.getElementById('endModal');
-        modal.style.display = 'flex';
-        setTimeout(() => modal.classList.add('visible'), 10);
-
+    function toggleSidebar() { document.getElementById('sidebar').classList.toggle('collapsed'); }
+    function toggleReactionMenu() { document.getElementById('reactionOverlay').classList.toggle('active'); }
+    function endCall() { 
+        document.getElementById('endModal').style.display = 'flex';
         setTimeout(() => {
             document.getElementById('processingState').style.display = 'none';
             document.getElementById('summaryState').style.display = 'block';
         }, 2000);
+    }
+    
+    function switchTab(tab) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.sidebar-content').forEach(c => c.style.display = 'none');
+        event.target.classList.add('active');
+        document.getElementById(`tab-${tab}`).style.display = (tab === 'chat' ? 'flex' : 'block');
     }
 </script>
 </body>
