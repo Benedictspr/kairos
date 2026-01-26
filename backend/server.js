@@ -5,6 +5,12 @@ const { Server } = require('socket.io');
 const app = express();
 const server = http.createServer(app);
 
+// --- KEEP-ALIVE / HEALTH CHECK ROUTE ---
+// This prevents Render from marking the service as timed out
+app.get('/', (req, res) => {
+    res.status(200).send('KAIROS Signaling Server is live and healthy.');
+});
+
 // Enable CORS so your frontend can connect
 const io = new Server(server, {
     cors: {
@@ -13,7 +19,7 @@ const io = new Server(server, {
     }
 });
 
-const rooms = {}; // Structure: { roomId: [socketId1, socketId2] }
+const rooms = {}; 
 
 io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
@@ -25,10 +31,8 @@ io.on('connection', (socket) => {
         if (!rooms[roomId]) rooms[roomId] = [];
         rooms[roomId].push(socket.id);
 
-        // Tell everyone else in the room a new user joined
         socket.to(roomId).emit('user-joined', socket.id);
         
-        // Send the list of existing users to the newcomer
         const otherUsers = rooms[roomId].filter(id => id !== socket.id);
         socket.emit('all-users', otherUsers);
         
@@ -36,7 +40,6 @@ io.on('connection', (socket) => {
     });
 
     // --- WEBRTC SIGNALING ---
-    // Relay Offer from Caller to Receiver
     socket.on('offer', (data) => {
         io.to(data.to).emit('offer', {
             from: socket.id,
@@ -44,7 +47,6 @@ io.on('connection', (socket) => {
         });
     });
 
-    // Relay Answer from Receiver to Caller
     socket.on('answer', (data) => {
         io.to(data.to).emit('answer', {
             from: socket.id,
@@ -52,7 +54,6 @@ io.on('connection', (socket) => {
         });
     });
 
-    // Relay ICE Candidates (Network info)
     socket.on('ice-candidate', (data) => {
         io.to(data.to).emit('ice-candidate', {
             from: socket.id,
@@ -62,7 +63,6 @@ io.on('connection', (socket) => {
 
     // --- CHAT LOGIC ---
     socket.on('send-chat', (data) => {
-        // Broadcast message to everyone in the room (including sender)
         io.to(data.roomId).emit('receive-chat', {
             text: data.text,
             sender: data.sender,
