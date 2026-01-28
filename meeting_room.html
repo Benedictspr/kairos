@@ -67,10 +67,9 @@
         /* DYNAMIC SPEAKING INDICATOR */
         .video-tile.speaking { border-color: var(--accent); box-shadow: 0 0 20px rgba(16,185,129,0.2); }
         
-        .live-video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-        .remote-video-placeholder { width: 100%; height: 100%; object-fit: cover; background: linear-gradient(45deg, #222, #333); display:flex; align-items:center; justify-content:center; color:#555; font-size:10px; }
+        .live-video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); background: #000; }
         
-        .tile-avatar { width: 80px; height: 80px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; font-size: 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .tile-avatar { width: 80px; height: 80px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; font-size: 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); position: absolute; z-index: 2; }
         
         .tile-overlay { position: absolute; bottom: 12px; left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: flex-end; z-index: 5; pointer-events: none; }
         .user-nametag { background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); padding: 6px 10px; border-radius: 6px; font-size: 13px; font-weight: 500; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
@@ -247,28 +246,54 @@
 
 <script>
     /**
-     * KAIROS CORE: REAL-TIME COLLABORATION ENGINE
-     * Uses BroadcastChannel to simulate P2P networking across tabs for a single-file demo.
+     * KAIROS CORE: WEBRTC & SOCKET ARCHITECTURE
+     * Implements a Serverless Mesh Network using BroadcastChannel for signaling.
+     * Mocks a Socket.IO interface to maintain standard event-driven architecture.
      */
 
-    // --- IDENTITY & STATE ---
-    const myId = sessionStorage.getItem('kairos_id') || crypto.randomUUID();
-    let myName = sessionStorage.getItem('kairos_name');
+    // --- MOCK SOCKET.IO INTERFACE ---
+    // Simulates a socket server using BroadcastChannel for signaling between tabs
+    class MockSocket {
+        constructor() {
+            this.bus = new BroadcastChannel('kairos_v4_signaling');
+            this.listeners = {};
+            this.id = sessionStorage.getItem('kairos_id') || crypto.randomUUID();
+            sessionStorage.setItem('kairos_id', this.id);
+            
+            this.bus.onmessage = (e) => {
+                const { event, data, senderId } = e.data;
+                if (senderId === this.id) return; // Ignore self
+                if (this.listeners[event]) {
+                    this.listeners[event].forEach(cb => cb(data, senderId));
+                }
+            };
+        }
 
-    // Safe Initialization of Name
-    if (!myName) {
-        myName = prompt("Enter your name to join:", "Guest " + Math.floor(Math.random()*100));
-        // Guard against cancel or empty input
-        if (!myName) myName = "Guest " + Math.floor(Math.random()*1000);
+        on(event, callback) {
+            if (!this.listeners[event]) this.listeners[event] = [];
+            this.listeners[event].push(callback);
+        }
+
+        emit(event, data) {
+            this.bus.postMessage({ event, data, senderId: this.id });
+        }
     }
     
-    sessionStorage.setItem('kairos_id', myId);
+    // Initialize "Socket"
+    const socket = new MockSocket();
+    const myId = socket.id;
+
+    // --- IDENTITY & STATE ---
+    let myName = sessionStorage.getItem('kairos_name');
+    if (!myName) {
+        myName = prompt("Enter your name to join:", "Guest " + Math.floor(Math.random()*100));
+        if (!myName) myName = "Guest " + Math.floor(Math.random()*1000);
+    }
     sessionStorage.setItem('kairos_name', myName);
 
-    // Initial State
     const state = {
         me: { id: myId, name: myName, speaking: false, focusScore: 0, cam: false, mic: false },
-        participants: {}, // Map<id, user>
+        participants: {}, // Map<id, {info, stream}>
         agenda: [
             { id: 1, text: "Review Q1 Roadmap", done: false, keywords: ["roadmap", "q1", "review", "plan"] },
             { id: 2, text: "Approve Budget", done: false, keywords: ["budget", "money", "cost", "approve", "finance"] },
@@ -279,96 +304,172 @@
         isAiActive: true,
         captionsEnabled: true
     };
+    
+    state.participants[myId] = { info: state.me, stream: null };
 
-    // Initialize Self in Participants Map
-    state.participants[myId] = state.me;
-
-    // --- P2P NETWORKING (BROADCAST CHANNEL) ---
-    const bus = new BroadcastChannel('kairos_meet_v2');
-
-    bus.onmessage = (event) => {
-        const { type, payload } = event.data;
-        switch(type) {
-            case 'JOIN':
-                handlePeerJoin(payload);
-                break;
-            case 'UPDATE_PEER':
-                state.participants[payload.id] = { ...state.participants[payload.id], ...payload };
-                renderParticipants();
-                break;
-            case 'SYNC_STATE': // Received full state from host
-                mergeState(payload);
-                break;
-            case 'CHAT':
-                addChatMessage(payload.sender, payload.text, false);
-                break;
-            case 'TRANSCRIPT':
-                handleRemoteTranscript(payload);
-                break;
-            case 'AGENDA_UPDATE':
-                state.agenda = payload;
-                renderAgenda();
-                break;
-            case 'POLL_UPDATE':
-                state.polls = payload;
-                renderPolls();
-                break;
-            case 'TITLE_UPDATE':
-                document.getElementById('meetingTitle').innerText = payload;
-                document.title = "KAIROS | " + payload;
-                break;
-        }
+    // --- WEBRTC CONFIGURATION ---
+    const rtcConfig = {
+        iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+        ]
     };
-
-    function broadcast(type, payload) {
-        bus.postMessage({ type, payload });
-    }
-
-    function handlePeerJoin(peer) {
-        if (!state.participants[peer.id]) {
-            state.participants[peer.id] = peer;
-            showToast(`${peer.name} joined`);
-            // If I am older (lexicographically), I send my state to sync them
-            broadcast('SYNC_STATE', { 
-                participants: state.participants, 
-                agenda: state.agenda,
-                polls: state.polls,
-                title: document.getElementById('meetingTitle').innerText
-            });
-            renderParticipants();
-        }
-    }
-
-    function mergeState(remoteState) {
-        state.participants = { ...state.participants, ...remoteState.participants };
-        state.agenda = remoteState.agenda;
-        state.polls = remoteState.polls;
-        document.getElementById('meetingTitle').innerText = remoteState.title;
-        renderParticipants();
-        renderAgenda();
-        renderPolls();
-    }
+    const peers = {}; // Map<peerId, RTCPeerConnection>
+    let localStream = null;
 
     // --- INITIALIZATION ---
-    document.addEventListener('DOMContentLoaded', () => {
-        broadcast('JOIN', state.me); // Announce self
+    document.addEventListener('DOMContentLoaded', async () => {
+        // Start Local Media
+        try {
+            localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+            state.participants[myId].stream = localStream;
+            
+            // Mute local audio feedback
+            localStream.getAudioTracks()[0].enabled = false; 
+            localStream.getVideoTracks()[0].enabled = false;
+        } catch(e) {
+            console.warn("Media devices not found, starting without media", e);
+        }
+        
         renderParticipants();
         renderAgenda();
         startTimer();
         initAudioAnalysis();
         initSpeechRecognition();
         
-        // Initial title sync
+        // Announce presence via Socket
+        socket.emit('join', state.me);
+        
         document.title = "KAIROS | " + document.getElementById('meetingTitle').innerText;
     });
 
-    // --- PARTICIPANT UI LOGIC (OPTIMIZED RENDER) ---
+    // --- SOCKET EVENT HANDLERS (SIGNALING) ---
+    
+    // 1. Peer Joins
+    socket.on('join', async (peerInfo, senderId) => {
+        if(!state.participants[senderId]) {
+            showToast(`${peerInfo.name} joined`);
+            addPeerToState(peerInfo);
+            
+            // Create Peer Connection (Initiator)
+            const pc = createPeerConnection(senderId);
+            
+            // Add local tracks
+            if(localStream) {
+                localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+            }
+            
+            // Create Offer
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            
+            socket.emit('signal', { target: senderId, type: 'offer', sdp: offer });
+            
+            // Sync State (Host/Older peer responsibility)
+            socket.emit('sync_state', { 
+                target: senderId,
+                participants: Object.keys(state.participants).map(k => state.participants[k].info),
+                agenda: state.agenda,
+                polls: state.polls,
+                title: document.getElementById('meetingTitle').innerText
+            });
+        }
+    });
+
+    // 2. WebRTC Signaling (Offer/Answer/Candidate)
+    socket.on('signal', async (data, senderId) => {
+        if (data.target && data.target !== myId) return; // Ignore if not for me
+
+        let pc = peers[senderId];
+        if (!pc) {
+             pc = createPeerConnection(senderId);
+             if(localStream) {
+                localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+             }
+        }
+
+        if (data.type === 'offer') {
+            await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            socket.emit('signal', { target: senderId, type: 'answer', sdp: answer });
+        } else if (data.type === 'answer') {
+            await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+        } else if (data.type === 'candidate') {
+            if (data.candidate) {
+                await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+            }
+        }
+    });
+
+    // 3. State Synchronization
+    socket.on('sync_state', (data) => {
+        if(data.target && data.target !== myId) return;
+        
+        // Merge Participants
+        data.participants.forEach(p => {
+            if(p.id !== myId) addPeerToState(p);
+        });
+        
+        state.agenda = data.agenda;
+        state.polls = data.polls;
+        document.getElementById('meetingTitle').innerText = data.title;
+        renderParticipants();
+        renderAgenda();
+        renderPolls();
+    });
+
+    // 4. Updates & Chat
+    socket.on('update_peer', (info) => {
+        if(state.participants[info.id]) {
+            state.participants[info.id].info = { ...state.participants[info.id].info, ...info };
+            renderParticipants();
+        }
+    });
+
+    socket.on('chat', (data) => addChatMessage(data.sender, data.text, false));
+    socket.on('transcript', (data) => handleRemoteTranscript(data));
+    socket.on('agenda_update', (data) => { state.agenda = data; renderAgenda(); });
+    socket.on('poll_update', (data) => { state.polls = data; renderPolls(); });
+    socket.on('title_update', (data) => { document.getElementById('meetingTitle').innerText = data; });
+
+    // --- WEBRTC FUNCTIONS ---
+    function createPeerConnection(peerId) {
+        const pc = new RTCPeerConnection(rtcConfig);
+        peers[peerId] = pc;
+
+        pc.onicecandidate = (event) => {
+            if (event.candidate) {
+                socket.emit('signal', { target: peerId, type: 'candidate', candidate: event.candidate });
+            }
+        };
+
+        pc.ontrack = (event) => {
+            // Received remote stream
+            if (state.participants[peerId]) {
+                state.participants[peerId].stream = event.streams[0];
+                renderParticipants();
+            }
+        };
+        
+        return pc;
+    }
+
+    function addPeerToState(info) {
+        if(!state.participants[info.id]) {
+            state.participants[info.id] = { info: info, stream: null };
+            renderParticipants();
+        }
+    }
+
+    // --- PARTICIPANT UI LOGIC (EFFICIENT UPDATE) ---
     function renderParticipants() {
         const grid = document.getElementById('videoGrid');
         const list = Object.values(state.participants);
         document.getElementById('participantCount').innerText = list.length;
 
-        list.forEach(p => {
+        list.forEach(pData => {
+            const p = pData.info;
             const isMe = p.id === myId;
             let tile = document.getElementById(`tile-${p.id}`);
             
@@ -376,51 +477,50 @@
             const avatarBg = stringToColor(p.name);
 
             if (!tile) {
-                // CREATE (Only runs once per user)
+                // CREATE TILE
                 tile = document.createElement('div');
                 tile.className = `video-tile ${p.speaking ? 'speaking' : ''}`;
                 tile.id = `tile-${p.id}`;
                 
-                let content = `
+                tile.innerHTML = `
                     <div class="tile-avatar" style="background:${avatarBg}">${initials}</div>
-                    <div class="user-nametag" style="position:absolute; bottom:12px; left:12px; right:12px; display:flex; justify-content:space-between; align-items:flex-end; z-index:5; pointer-events:none;">
-                         <div style="background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); padding:6px 10px; border-radius:6px;">${p.name} ${isMe ? '(You)' : ''}</div>
-                         <div class="attention-metric">
+                    <video class="live-video" id="video-${p.id}" autoplay playsinline muted></video>
+                    <div class="tile-overlay">
+                        <div class="user-nametag">${p.name} ${isMe ? '(You)' : ''}</div>
+                        <div class="attention-metric">
                             <div class="att-label">Contribution</div>
                             <div class="att-bar"><div class="att-fill" style="width: ${p.focusScore}%"></div></div>
                         </div>
                     </div>
                 `;
-                
-                if (isMe) {
-                     content += `<video class="live-video" id="localVideo" autoplay muted playsinline style="display:${p.cam ? 'block' : 'none'}"></video>`;
-                } else {
-                     content += `<div class="remote-video-placeholder" style="display:${p.cam ? 'flex' : 'none'}">REMOTE VIDEO</div>`;
-                }
-
-                tile.innerHTML = content;
                 grid.appendChild(tile);
-                
-                if(isMe) attachLocalVideo();
             } else {
-                // UPDATE (Runs efficiently on state change)
+                // UPDATE TILE
                 if (p.speaking) tile.classList.add('speaking');
                 else tile.classList.remove('speaking');
-                
                 const bar = tile.querySelector('.att-fill');
                 if(bar) bar.style.width = `${p.focusScore}%`;
-                
+            }
+
+            // STREAM HANDLING
+            const videoEl = document.getElementById(`video-${p.id}`);
+            const avatarEl = tile.querySelector('.tile-avatar');
+            
+            if (videoEl) {
                 if (isMe) {
-                    const v = tile.querySelector('#localVideo');
-                    const a = tile.querySelector('.tile-avatar');
-                    if(v) v.style.display = p.cam ? 'block' : 'none';
-                    if(a) a.style.display = p.cam ? 'none' : 'flex';
+                    // Local Stream
+                    if (localStream && videoEl.srcObject !== localStream) videoEl.srcObject = localStream;
+                    videoEl.style.display = p.cam ? 'block' : 'none';
+                    videoEl.muted = true; // Always mute self
                 } else {
-                    const rv = tile.querySelector('.remote-video-placeholder');
-                    const a = tile.querySelector('.tile-avatar');
-                    if(rv) rv.style.display = p.cam ? 'flex' : 'none';
-                    if(a) a.style.display = p.cam ? 'none' : 'flex';
+                    // Remote Stream
+                    if (pData.stream && videoEl.srcObject !== pData.stream) videoEl.srcObject = pData.stream;
+                    videoEl.style.display = (p.cam && pData.stream) ? 'block' : 'none';
+                    videoEl.muted = false; // Hear others
                 }
+                
+                // Toggle Avatar based on video visibility
+                avatarEl.style.display = (videoEl.style.display === 'block') ? 'none' : 'flex';
             }
         });
     }
@@ -429,26 +529,16 @@
     let audioCtx, analyser;
     
     async function initAudioAnalysis() {
+        if(!localStream) return;
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-            window.localStream = stream; // Store for toggling
-            
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             analyser = audioCtx.createAnalyser();
-            const source = audioCtx.createMediaStreamSource(stream);
+            const source = audioCtx.createMediaStreamSource(localStream);
             source.connect(analyser);
             analyser.fftSize = 512;
-            
             checkAudioLevel();
         } catch (err) {
-            console.error("Mic access denied or ignored", err);
-        }
-    }
-
-    function attachLocalVideo() {
-        const videoEl = document.getElementById('localVideo');
-        if(videoEl && window.localStream) {
-            videoEl.srcObject = window.localStream;
+            console.error("Audio Analysis failed", err);
         }
     }
 
@@ -456,9 +546,7 @@
 
     function checkAudioLevel() {
         if(!analyser || !state.me.mic) {
-            if(state.me.speaking) {
-                updateMyStatus({ speaking: false });
-            }
+            if(state.me.speaking) updateMyStatus({ speaking: false });
             requestAnimationFrame(checkAudioLevel);
             return;
         }
@@ -466,15 +554,12 @@
         const dataArray = new Uint8Array(analyser.frequencyBinCount);
         analyser.getByteFrequencyData(dataArray);
         const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+        const isSpeaking = average > 25; 
         
-        const isSpeaking = average > 25; // Threshold
-        
-        // Immediate status update for Speaking indicator
         if (state.me.speaking !== isSpeaking) {
             updateMyStatus({ speaking: isSpeaking });
         }
 
-        // Throttled Focus Score Update (Prevents flooding)
         if (isSpeaking) {
             state.me.focusScore = Math.min(100, state.me.focusScore + 0.05);
             if (Date.now() - lastFocusUpdate > 1000) {
@@ -482,14 +567,13 @@
                 lastFocusUpdate = Date.now();
             }
         }
-
         requestAnimationFrame(checkAudioLevel);
     }
 
     function updateMyStatus(updates) {
         state.me = { ...state.me, ...updates };
-        state.participants[myId] = state.me;
-        broadcast('UPDATE_PEER', state.me);
+        state.participants[myId].info = state.me;
+        socket.emit('update_peer', state.me);
         renderParticipants();
     }
 
@@ -498,7 +582,8 @@
         document.getElementById('micBtn').classList.toggle('active', !state.me.mic);
         document.getElementById('micBtn').innerHTML = state.me.mic ? '<i class="ph-fill ph-microphone"></i>' : '<i class="ph-fill ph-microphone-slash"></i>';
         updateMyStatus({ mic: state.me.mic });
-        if(window.localStream) window.localStream.getAudioTracks()[0].enabled = state.me.mic;
+        
+        if(localStream) localStream.getAudioTracks()[0].enabled = state.me.mic;
     }
 
     function toggleCam() {
@@ -506,9 +591,9 @@
         document.getElementById('camBtn').classList.toggle('active', !state.me.cam);
         document.getElementById('camBtn').innerHTML = state.me.cam ? '<i class="ph-fill ph-video-camera"></i>' : '<i class="ph-fill ph-video-camera-slash"></i>';
         updateMyStatus({ cam: state.me.cam });
-        if(window.localStream) window.localStream.getVideoTracks()[0].enabled = state.me.cam;
-        // Re-attach if we just turned it on and DOM needs refresh
-        if(state.me.cam) setTimeout(attachLocalVideo, 100);
+        
+        if(localStream) localStream.getVideoTracks()[0].enabled = state.me.cam;
+        renderParticipants(); // Trigger re-render to toggle video/avatar
     }
 
     // --- AI TRANSCRIPTION & AGENDA LOGIC ---
@@ -520,45 +605,37 @@
         recognition.lang = 'en-US';
 
         recognition.onresult = (event) => {
-            if(!state.me.mic) return; // Only process if mic is logically on
+            if(!state.me.mic) return;
 
             let interim = '';
             for (let i = event.resultIndex; i < event.results.length; ++i) {
                 if (event.results[i].isFinal) {
                     const text = event.results[i][0].transcript;
                     handleTranscriptEvent(state.me.name, text, true);
-                    broadcast('TRANSCRIPT', { sender: state.me.name, text: text, isFinal: true });
+                    socket.emit('transcript', { sender: state.me.name, text: text, isFinal: true });
                 } else {
                     interim += event.results[i][0].transcript;
                 }
             }
             if(interim) {
                 showCaptions(state.me.name, interim);
-                broadcast('TRANSCRIPT', { sender: state.me.name, text: interim, isFinal: false });
+                socket.emit('transcript', { sender: state.me.name, text: interim, isFinal: false });
             }
         };
         recognition.start();
     }
 
     function handleRemoteTranscript(data) {
-        if(data.isFinal) {
-            handleTranscriptEvent(data.sender, data.text, false);
-        } else {
-            showCaptions(data.sender, data.text);
-        }
+        if(data.isFinal) handleTranscriptEvent(data.sender, data.text, false);
+        else showCaptions(data.sender, data.text);
     }
 
     function handleTranscriptEvent(user, text, isLocal) {
-        // 1. Add to Transcript History
         const entry = { user, text, time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) };
         state.transcript.push(entry);
         updateTranscriptUI(entry);
 
-        // 2. AI Logic (Only Host runs this to prevent conflicts, OR simply run on all and sync result)
-        // For simplicity in P2P, we let the client processing the text check for matches on their own local copy
-        if (state.isAiActive) {
-            analyzeTextForAgenda(text);
-        }
+        if (state.isAiActive) analyzeTextForAgenda(text);
     }
 
     function analyzeTextForAgenda(text) {
@@ -570,8 +647,6 @@
                 item.done = true;
                 changed = true;
                 showToast(`AI: Agenda "${item.text}" marked complete.`);
-                
-                // Highlight UI temporarily
                 setTimeout(() => {
                     const el = document.querySelectorAll('.agenda-item')[state.agenda.indexOf(item)];
                     if(el) el.classList.add('ai-detected');
@@ -581,7 +656,7 @@
 
         if(changed) {
             renderAgenda();
-            broadcast('AGENDA_UPDATE', state.agenda); // Sync with others
+            socket.emit('agenda_update', state.agenda);
         }
     }
 
@@ -591,7 +666,6 @@
         document.getElementById('captionSpeaker').innerText = speaker;
         document.getElementById('captionText').innerText = text;
         overlay.classList.add('active');
-        
         clearTimeout(window.captionTimeout);
         window.captionTimeout = setTimeout(() => overlay.classList.remove('active'), 4000);
     }
@@ -624,16 +698,11 @@
     function addAgendaItem() {
         const input = document.getElementById('newAgendaInput');
         if(!input.value.trim()) return;
-        const newItem = {
-            id: Date.now(),
-            text: input.value,
-            done: false,
-            keywords: input.value.toLowerCase().split(' ')
-        };
+        const newItem = { id: Date.now(), text: input.value, done: false, keywords: input.value.toLowerCase().split(' ') };
         state.agenda.push(newItem);
         input.value = '';
         renderAgenda();
-        broadcast('AGENDA_UPDATE', state.agenda);
+        socket.emit('agenda_update', state.agenda);
     }
 
     function handleAgendaInput(e) { if(e.key === 'Enter') addAgendaItem(); }
@@ -643,7 +712,7 @@
         if(item) {
             item.done = !item.done;
             renderAgenda();
-            broadcast('AGENDA_UPDATE', state.agenda);
+            socket.emit('agenda_update', state.agenda);
         }
     }
 
@@ -655,7 +724,6 @@
             const el = document.createElement('div');
             el.className = 'poll-card';
             let html = `<div class="poll-question">${poll.question}</div>`;
-            
             poll.options.forEach((opt, optIndex) => {
                 const pct = poll.total > 0 ? Math.round((opt.votes / poll.total) * 100) : 0;
                 html += `
@@ -676,22 +744,14 @@
         const input = document.getElementById('newPollInput');
         const txt = input.value.trim();
         if(!txt) return;
-        
-        // Simple poll creation syntax: "Question? Yes, No"
         let parts = txt.split('?');
         let question = parts[0] + '?';
         let options = parts[1] ? parts[1].split(',').map(s => s.trim()) : ['Yes', 'No'];
-        
-        const newPoll = {
-            question,
-            options: options.map(o => ({ text: o, votes: 0 })),
-            total: 0,
-            active: true
-        };
+        const newPoll = { question, options: options.map(o => ({ text: o, votes: 0 })), total: 0, active: true };
         state.polls.unshift(newPoll);
         input.value = '';
         renderPolls();
-        broadcast('POLL_UPDATE', state.polls);
+        socket.emit('poll_update', state.polls);
     }
     
     function handlePollInput(e) { if(e.key === 'Enter') createPoll(); }
@@ -701,7 +761,7 @@
         poll.options[optIndex].votes++;
         poll.total++;
         renderPolls();
-        broadcast('POLL_UPDATE', state.polls);
+        socket.emit('poll_update', state.polls);
     }
 
     // --- CHAT ---
@@ -710,7 +770,7 @@
         const input = document.getElementById('chatInput');
         if(!input.value.trim()) return;
         addChatMessage(state.me.name, input.value, true);
-        broadcast('CHAT', { sender: state.me.name, text: input.value });
+        socket.emit('chat', { sender: state.me.name, text: input.value });
         input.value = '';
     }
     function addChatMessage(sender, text, isMe) {
@@ -729,17 +789,15 @@
     function broadcastTitleUpdate() {
         const t = document.getElementById('meetingTitle').innerText;
         document.title = "KAIROS | " + t;
-        broadcast('TITLE_UPDATE', t);
+        socket.emit('title_update', t);
     }
 
     function switchTab(tab) {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.sidebar-content').forEach(c => c.classList.remove('active'));
         document.querySelectorAll('.sidebar-content').forEach(c => c.style.display = 'none');
-        
         const btn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.innerText.toLowerCase().includes(tab.split(' ')[0]));
         if(btn) btn.classList.add('active');
-
         const content = document.getElementById(`tab-${tab}`);
         content.style.display = 'flex';
         setTimeout(() => content.classList.add('active'), 10);
@@ -769,7 +827,7 @@
     }
 
     function stringToColor(str) {
-        if (!str) return '#333'; // Safety fallback
+        if (!str) return '#333';
         let hash = 0;
         for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
         const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
@@ -778,9 +836,8 @@
 
     function showToast(msg) {
         const t = document.createElement('div');
-        t.innerText = msg;
-        t.style.cssText = "position:fixed; top:80px; left:50%; transform:translateX(-50%); background:var(--bg-panel); color:var(--text-primary); padding:10px 20px; border-radius:30px; border:1px solid var(--border); z-index:9999; box-shadow:0 10px 30px rgba(0,0,0,0.5); font-size:12px; font-weight:500; display:flex; align-items:center; gap:8px;";
         t.innerHTML = `<i class="ph-fill ph-info"></i> ${msg}`;
+        t.style.cssText = "position:fixed; top:80px; left:50%; transform:translateX(-50%); background:var(--bg-panel); color:var(--text-primary); padding:10px 20px; border-radius:30px; border:1px solid var(--border); z-index:9999; box-shadow:0 10px 30px rgba(0,0,0,0.5); font-size:12px; font-weight:500; display:flex; align-items:center; gap:8px;";
         document.body.appendChild(t);
         setTimeout(() => t.remove(), 3000);
     }
@@ -790,54 +847,32 @@
         const container = document.getElementById('aiSummaryContent');
         container.innerHTML = '';
         
-        // 1. Generate Summary from Actual Transcript
         let decisions = [];
         let actions = [];
-        let discussion = [];
-
-        // Heuristic Parsing
+        
         state.transcript.forEach(t => {
             const txt = t.text.toLowerCase();
-            if (txt.includes("agree") || txt.includes("decided") || txt.includes("approved")) {
-                decisions.push(t.text);
-            } else if (txt.includes("will") || txt.includes("task") || txt.includes("todo")) {
-                actions.push(t.text);
-            } else if (txt.length > 20) {
-                discussion.push(t.text);
-            }
+            if (txt.includes("agree") || txt.includes("decided") || txt.includes("approved")) decisions.push(t.text);
+            else if (txt.includes("will") || txt.includes("task") || txt.includes("todo")) actions.push(t.text);
         });
 
-        // HTML Generation
         const createBlock = (title, items, icon) => {
             if(items.length === 0) return '';
-            return `
-                <div class="summary-block">
-                    <div class="summary-title"><i class="ph-bold ${icon}"></i> ${title}</div>
-                    ${items.slice(0, 4).map(i => `<div class="summary-item"><span class="summary-bullet">•</span> ${i}</div>`).join('')}
-                </div>
-            `;
+            return `<div class="summary-block"><div class="summary-title"><i class="ph-bold ${icon}"></i> ${title}</div>${items.slice(0, 4).map(i => `<div class="summary-item"><span class="summary-bullet">•</span> ${i}</div>`).join('')}</div>`;
         };
 
         let html = '';
         html += createBlock('Decisions Made', decisions, 'ph-check-circle');
         html += createBlock('Action Items', actions, 'ph-list-checks');
-        
-        // Add Agenda Status
         const doneAgenda = state.agenda.filter(a => a.done).map(a => a.text);
         html += createBlock('Completed Agenda', doneAgenda, 'ph-calendar-check');
         
-        // Fallback
         if (html === '') html = `<div class="summary-block"><div class="summary-item">No significant discussion points detected.</div></div>`;
 
         container.innerHTML = html;
-
-        // Show Modal
         const modal = document.getElementById('endModal');
         modal.style.display = 'flex';
         setTimeout(() => modal.classList.add('visible'), 10);
-        
-        // Simulate Email
-        console.log("Sending Meeting Recap Email to:", Object.values(state.participants).map(p=>p.name));
     }
 </script>
 </body>
