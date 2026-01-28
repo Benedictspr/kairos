@@ -68,6 +68,8 @@
         .video-tile.speaking { border-color: var(--accent); box-shadow: 0 0 20px rgba(16,185,129,0.2); }
         
         .live-video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+        .remote-video-placeholder { width: 100%; height: 100%; object-fit: cover; background: linear-gradient(45deg, #222, #333); display:flex; align-items:center; justify-content:center; color:#555; font-size:10px; }
+        
         .tile-avatar { width: 80px; height: 80px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; font-size: 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
         
         .tile-overlay { position: absolute; bottom: 12px; left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: flex-end; z-index: 5; pointer-events: none; }
@@ -360,52 +362,66 @@
         document.title = "KAIROS | " + document.getElementById('meetingTitle').innerText;
     });
 
-    // --- PARTICIPANT UI LOGIC ---
+    // --- PARTICIPANT UI LOGIC (OPTIMIZED RENDER) ---
     function renderParticipants() {
         const grid = document.getElementById('videoGrid');
         const list = Object.values(state.participants);
         document.getElementById('participantCount').innerText = list.length;
 
-        // Diffing logic could go here, but full re-render is fine for this demo
-        grid.innerHTML = '';
-        
         list.forEach(p => {
             const isMe = p.id === myId;
-            const tile = document.createElement('div');
-            tile.className = `video-tile ${p.speaking ? 'speaking' : ''}`;
-            tile.id = `tile-${p.id}`;
+            let tile = document.getElementById(`tile-${p.id}`);
             
-            // Generate avatar color
-            const avatarBg = stringToColor(p.name);
             const initials = (p.name || "GU").split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
-            
-            // Video Element (Only for self if cam on, else avatar)
-            let content = `
-                <div class="tile-avatar" style="background:${avatarBg}; display:${p.cam && isMe ? 'none' : 'flex'}">${initials}</div>
-            `;
-            
-            if (isMe) {
-                 content += `<video class="live-video" id="localVideo" autoplay muted playsinline style="display:${p.cam ? 'block' : 'none'}"></video>`;
-            } else if (p.cam) {
-                // Simulate remote video with a placeholder gradient or active style
-                // In real app, this would be a WebRTC stream
-                content += `<div class="live-video" style="background: linear-gradient(45deg, #222, #333); display:flex; align-items:center; justify-content:center; color:#555; font-size:10px;">REMOTE VIDEO</div>`;
-            }
+            const avatarBg = stringToColor(p.name);
 
-            tile.innerHTML = `
-                ${content}
-                <div class="tile-overlay">
-                    <div class="user-nametag">${p.name} ${isMe ? '(You)' : ''}</div>
-                    <div class="attention-metric">
-                        <div class="att-label">Contribution</div>
-                        <div class="att-bar"><div class="att-fill" style="width: ${p.focusScore}%"></div></div>
+            if (!tile) {
+                // CREATE (Only runs once per user)
+                tile = document.createElement('div');
+                tile.className = `video-tile ${p.speaking ? 'speaking' : ''}`;
+                tile.id = `tile-${p.id}`;
+                
+                let content = `
+                    <div class="tile-avatar" style="background:${avatarBg}">${initials}</div>
+                    <div class="user-nametag" style="position:absolute; bottom:12px; left:12px; right:12px; display:flex; justify-content:space-between; align-items:flex-end; z-index:5; pointer-events:none;">
+                         <div style="background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); padding:6px 10px; border-radius:6px;">${p.name} ${isMe ? '(You)' : ''}</div>
+                         <div class="attention-metric">
+                            <div class="att-label">Contribution</div>
+                            <div class="att-bar"><div class="att-fill" style="width: ${p.focusScore}%"></div></div>
+                        </div>
                     </div>
-                </div>
-            `;
-            grid.appendChild(tile);
-            
-            // Re-attach stream if it's me and just re-rendered
-            if(isMe && p.cam) attachLocalVideo();
+                `;
+                
+                if (isMe) {
+                     content += `<video class="live-video" id="localVideo" autoplay muted playsinline style="display:${p.cam ? 'block' : 'none'}"></video>`;
+                } else {
+                     content += `<div class="remote-video-placeholder" style="display:${p.cam ? 'flex' : 'none'}">REMOTE VIDEO</div>`;
+                }
+
+                tile.innerHTML = content;
+                grid.appendChild(tile);
+                
+                if(isMe) attachLocalVideo();
+            } else {
+                // UPDATE (Runs efficiently on state change)
+                if (p.speaking) tile.classList.add('speaking');
+                else tile.classList.remove('speaking');
+                
+                const bar = tile.querySelector('.att-fill');
+                if(bar) bar.style.width = `${p.focusScore}%`;
+                
+                if (isMe) {
+                    const v = tile.querySelector('#localVideo');
+                    const a = tile.querySelector('.tile-avatar');
+                    if(v) v.style.display = p.cam ? 'block' : 'none';
+                    if(a) a.style.display = p.cam ? 'none' : 'flex';
+                } else {
+                    const rv = tile.querySelector('.remote-video-placeholder');
+                    const a = tile.querySelector('.tile-avatar');
+                    if(rv) rv.style.display = p.cam ? 'flex' : 'none';
+                    if(a) a.style.display = p.cam ? 'none' : 'flex';
+                }
+            }
         });
     }
 
@@ -425,7 +441,7 @@
             
             checkAudioLevel();
         } catch (err) {
-            console.error("Mic access denied", err);
+            console.error("Mic access denied or ignored", err);
         }
     }
 
@@ -435,6 +451,8 @@
             videoEl.srcObject = window.localStream;
         }
     }
+
+    let lastFocusUpdate = 0;
 
     function checkAudioLevel() {
         if(!analyser || !state.me.mic) {
@@ -451,14 +469,18 @@
         
         const isSpeaking = average > 25; // Threshold
         
+        // Immediate status update for Speaking indicator
         if (state.me.speaking !== isSpeaking) {
             updateMyStatus({ speaking: isSpeaking });
         }
 
+        // Throttled Focus Score Update (Prevents flooding)
         if (isSpeaking) {
-            // Increase focus score roughly based on speaking time
             state.me.focusScore = Math.min(100, state.me.focusScore + 0.05);
-            updateMyStatus({ focusScore: state.me.focusScore }); // Throttle this in prod
+            if (Date.now() - lastFocusUpdate > 1000) {
+                updateMyStatus({ focusScore: state.me.focusScore });
+                lastFocusUpdate = Date.now();
+            }
         }
 
         requestAnimationFrame(checkAudioLevel);
@@ -485,6 +507,8 @@
         document.getElementById('camBtn').innerHTML = state.me.cam ? '<i class="ph-fill ph-video-camera"></i>' : '<i class="ph-fill ph-video-camera-slash"></i>';
         updateMyStatus({ cam: state.me.cam });
         if(window.localStream) window.localStream.getVideoTracks()[0].enabled = state.me.cam;
+        // Re-attach if we just turned it on and DOM needs refresh
+        if(state.me.cam) setTimeout(attachLocalVideo, 100);
     }
 
     // --- AI TRANSCRIPTION & AGENDA LOGIC ---
