@@ -1,879 +1,2969 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
+
 <html lang="en" data-theme="dark">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KAIROS | Intelligent Workspace</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
-    <script>
-        const savedTheme = localStorage.getItem('kairosTheme') || 'dark';
-        document.documentElement.setAttribute('data-theme', savedTheme);
-    </script>
+<meta charset="UTF-8">
 
-    <style>
-        /* --- CORE THEME & RESET --- */
-        :root[data-theme="dark"] {
-            --bg-main: #000000; --bg-panel: #111111; --border: rgba(255, 255, 255, 0.1);
-            --text-primary: #ffffff; --text-secondary: #888888; --surface-hover: rgba(255, 255, 255, 0.08);
-            --glass: rgba(17, 17, 17, 0.9); --tile-bg: #1a1a1a; --chat-bubble-me: #222;
-            --modal-bg: #1a1a1a; --sheet-bg: #1a1a1a;
-        }
-        :root[data-theme="light"] {
-            --bg-main: #f0f2f5; --bg-panel: #ffffff; --border: rgba(0, 0, 0, 0.1);
-            --text-primary: #111827; --text-secondary: #6b7280; --surface-hover: rgba(0, 0, 0, 0.05);
-            --glass: rgba(255, 255, 255, 0.9); --tile-bg: #222; --chat-bubble-me: #e5e7eb;
-            --modal-bg: #ffffff; --sheet-bg: #ffffff;
-        }
-        :root {
-            --accent: #10b981; --ai-blue: #3b82f6; --danger: #ef4444; --warning: #f59e0b;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; -webkit-tap-highlight-color: transparent; }
-        body { background-color: var(--bg-main); color: var(--text-primary); font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; display: flex; flex-direction: column; transition: background 0.3s; }
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-        /* --- LAYOUT --- */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-thumb { background: rgba(125, 125, 125, 0.2); border-radius: 10px; }
-        
-        header {
-            height: 60px; padding: 0 20px; display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 1px solid var(--border); background: var(--bg-panel); z-index: 10;
-        }
-        .meeting-info h1 { font-family: 'Space Grotesk'; font-size: 16px; font-weight: 700; cursor: text; border-bottom: 1px dashed transparent; transition: 0.2s; }
-        .meeting-info h1:hover, .meeting-info h1:focus { border-bottom-color: var(--text-secondary); }
-        
-        .rec-badge { 
-            display: flex; align-items: center; gap: 6px; font-size: 11px; padding: 4px 10px; border-radius: 20px; 
-            background: rgba(125,125,125,0.1); color: var(--text-secondary); cursor: pointer; transition: 0.3s;
-        }
-        .rec-badge.active { background: linear-gradient(135deg, var(--ai-blue), var(--accent)); color: #fff; font-weight: 600; box-shadow: 0 0 10px rgba(59, 130, 246, 0.3); }
+<title>KAIROS | Live Session</title>
 
-        .stage-container { flex: 1; display: flex; overflow: hidden; position: relative; }
-        
-        /* --- VIDEO GRID --- */
-        .video-grid {
-            flex: 1; padding: 16px; display: grid; gap: 12px;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            grid-auto-rows: minmax(200px, 1fr);
-            align-content: center; overflow-y: auto;
-        }
-        .video-tile {
-            background: var(--tile-bg); border-radius: 12px; position: relative; overflow: hidden;
-            border: 2px solid transparent; display: flex; align-items: center; justify-content: center;
-            transition: all 0.2s ease;
-        }
-        /* DYNAMIC SPEAKING INDICATOR */
-        .video-tile.speaking { border-color: var(--accent); box-shadow: 0 0 20px rgba(16,185,129,0.2); }
-        
-        .live-video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); background: #000; }
-        
-        .tile-avatar { width: 80px; height: 80px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; font-size: 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); position: absolute; z-index: 2; }
-        
-        .tile-overlay { position: absolute; bottom: 12px; left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: flex-end; z-index: 5; pointer-events: none; }
-        .user-nametag { background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); padding: 6px 10px; border-radius: 6px; font-size: 13px; font-weight: 500; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
-        
-        /* FOCUS MONITOR */
-        .attention-metric { background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); padding: 4px 8px; border-radius: 6px; display: flex; flex-direction: column; gap: 3px; min-width: 60px; }
-        .att-label { font-size: 9px; color: #ccc; text-transform: uppercase; font-weight: 700; }
-        .att-bar { width: 100%; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; overflow: hidden; }
-        .att-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.5s ease; }
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 
-        /* --- SIDEBAR --- */
-        .sidebar { width: 340px; background: var(--bg-panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; transition: 0.3s; position: relative; z-index: 60; transform: translateX(0); }
-        .sidebar.collapsed { width: 0; border: none; overflow: hidden; }
-        .sidebar-tabs { display: flex; border-bottom: 1px solid var(--border); }
-        .tab-btn { flex: 1; padding: 14px; font-size: 12px; font-weight: 600; color: var(--text-secondary); cursor: pointer; text-align: center; border-bottom: 2px solid transparent; transition: 0.2s; }
-        .tab-btn:hover { background: var(--surface-hover); }
-        .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); background: rgba(16,185,129,0.05); }
-        .sidebar-content { flex: 1; overflow-y: auto; padding: 16px; display: none; }
-        .sidebar-content.active { display: flex; flex-direction: column; }
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
-        /* AGENDA STYLES */
-        .agenda-input-group { display: flex; gap: 8px; margin-bottom: 16px; }
-        .agenda-input { flex: 1; background: var(--surface-hover); border: 1px solid var(--border); padding: 10px; border-radius: 8px; color: var(--text-primary); font-size: 13px; transition: 0.2s; }
-        .agenda-input:focus { border-color: var(--accent); }
-        .add-btn { background: var(--accent); color: #000; border: none; border-radius: 8px; width: 36px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
-        .add-btn:hover { filter: brightness(1.1); }
-        
-        .agenda-item { display: flex; gap: 12px; padding: 12px; border-radius: 8px; margin-bottom: 8px; align-items: flex-start; cursor: pointer; transition: 0.2s; border: 1px solid transparent; background: rgba(255,255,255,0.02); }
-        .agenda-item:hover { background: var(--surface-hover); border-color: var(--border); }
-        .agenda-item.ai-detected { background: rgba(16,185,129,0.1); border-color: var(--accent); animation: pulse-green 2s infinite; }
-        
-        @keyframes pulse-green { 0% { border-color: var(--accent); } 50% { border-color: transparent; } 100% { border-color: var(--accent); } }
-
-        .chk-box { width: 18px; height: 18px; border: 1px solid var(--text-secondary); border-radius: 5px; display: flex; align-items: center; justify-content: center; color: transparent; flex-shrink: 0; transition: 0.2s; }
-        .chk-box.checked { background: var(--accent); border-color: var(--accent); color: #000; }
-        .agenda-text { font-size: 13px; line-height: 1.4; font-weight: 500; flex: 1; }
-        .agenda-text.done { text-decoration: line-through; color: var(--text-secondary); }
-
-        /* POLL STYLES */
-        .poll-card { background: var(--surface-hover); border-radius: 12px; padding: 16px; margin-bottom: 16px; border: 1px solid var(--border); }
-        .poll-question { font-weight: 600; font-size: 14px; margin-bottom: 12px; }
-        .poll-option { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font-size: 13px; cursor: pointer; position: relative; }
-        .poll-bar-bg { position: absolute; left: 0; top: 4px; bottom: 4px; background: rgba(16,185,129,0.1); border-radius: 4px; z-index: 0; transition: width 0.3s; }
-        .poll-meta { font-size: 11px; color: var(--text-secondary); margin-top: 8px; display: flex; justify-content: space-between; }
-
-        /* TRANSCRIPT STYLES */
-        .transcript-entry { margin-bottom: 16px; font-size: 13px; border-left: 2px solid transparent; padding-left: 10px; animation: fade-in 0.3s ease; }
-        .transcript-entry.highlight { border-left-color: var(--accent); }
-        .ts-meta { display: flex; justify-content: space-between; margin-bottom: 4px; color: var(--text-secondary); font-size: 11px; font-family: 'JetBrains Mono'; }
-        .ts-text { color: var(--text-secondary); line-height: 1.6; }
-        @keyframes fade-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* CONTROLS */
-        .control-bar { height: 70px; display: flex; justify-content: center; align-items: center; gap: 12px; position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--glass); backdrop-filter: blur(16px); padding: 0 16px; border-radius: 24px; border: 1px solid rgba(125,125,125,0.2); z-index: 50; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
-        .ctrl-btn { width: 44px; height: 44px; border-radius: 14px; background: #333; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; transition: 0.2s; position: relative; }
-        .ctrl-btn:hover { background: #444; transform: translateY(-2px); }
-        .ctrl-btn.active { background: var(--accent); color: #000; }
-        .ctrl-btn.danger { background: var(--danger); }
-
-        /* CAPTIONS OVERLAY */
-        #captionsOverlay { position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); padding: 16px 24px; border-radius: 16px; color: #fff; font-size: 16px; font-weight: 500; text-align: center; max-width: 70%; display: none; z-index: 40; pointer-events: none; transition: 0.2s; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-        #captionsOverlay.active { display: block; animation: pop-up 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        @keyframes pop-up { from { transform: translateX(-50%) scale(0.9); opacity: 0; } to { transform: translateX(-50%) scale(1); opacity: 1; } }
-
-        /* MODALS */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(8px); opacity: 0; transition: opacity 0.3s; }
-        .modal-overlay.visible { opacity: 1; }
-        .modal-box { background: var(--modal-bg); border: 1px solid var(--border); padding: 30px; border-radius: 20px; width: 500px; box-shadow: 0 30px 60px rgba(0,0,0,0.5); max-height: 90vh; display: flex; flex-direction: column; }
-        
-        .summary-list { margin-top: 15px; font-size: 14px; color: var(--text-secondary); overflow-y: auto; flex: 1; padding-right: 8px; }
-        .summary-block { margin-bottom: 16px; background: var(--surface-hover); padding: 12px; border-radius: 8px; border-left: 3px solid var(--accent); }
-        .summary-title { font-weight: 700; color: var(--text-primary); margin-bottom: 6px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .summary-item { margin-bottom: 4px; display: flex; gap: 8px; line-height: 1.5; }
-        .summary-bullet { color: var(--accent); font-weight: bold; }
-
-        @media (max-width: 768px) {
-            .stage-container { flex-direction: column; }
-            .sidebar { position: fixed; width: 100%; height: 100%; transform: translateY(100%); }
-            .sidebar.active-mobile { transform: translateY(0); }
-            .control-bar { width: 90%; height: 60px; bottom: 20px; }
-        }
-    </style>
-</head>
-<body>
-
-<header>
-    <div class="meeting-info">
-        <h1 id="meetingTitle" contenteditable="true" onblur="broadcastTitleUpdate()">Design Sync: Q1 Roadmap</h1>
-        <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
-            <span id="participantCount">1</span> Participants • <span id="timer" style="font-family:'JetBrains Mono'">00:00:00</span>
-        </div>
-    </div>
-    <div class="rec-badge active" id="aiStatus" onclick="toggleAI()">
-        <i class="ph-fill ph-sparkle"></i> <span>AI Active</span>
-    </div>
-</header>
-
-<div class="stage-container">
-    <div class="video-grid" id="videoGrid">
-        <!-- Dynamic Tiles Inserted Here -->
-    </div>
-
-    <div id="captionsOverlay">
-        <div id="captionSpeaker" style="font-size:12px; opacity:0.8; margin-bottom:4px; color:var(--accent); font-weight:600;"></div>
-        <span id="captionText"></span>
-    </div>
-
-    <div class="sidebar" id="sidebar">
-        <div class="sidebar-tabs">
-            <div class="tab-btn active" onclick="switchTab('agenda')">Agenda</div>
-            <div class="tab-btn" onclick="switchTab('polls')">Polls</div>
-            <div class="tab-btn" onclick="switchTab('notes')">AI Notes</div>
-            <div class="tab-btn" onclick="switchTab('chat')">Chat</div>
-        </div>
-
-        <div id="tab-agenda" class="sidebar-content active">
-            <div class="agenda-input-group">
-                <input type="text" id="newAgendaInput" class="agenda-input" placeholder="Add agenda item..." onkeypress="handleAgendaInput(event)">
-                <button class="add-btn" onclick="addAgendaItem()"><i class="ph-bold ph-plus"></i></button>
-            </div>
-            <div id="agendaList"></div>
-        </div>
-
-        <div id="tab-polls" class="sidebar-content" style="display:none;">
-             <div class="agenda-input-group">
-                <input type="text" id="newPollInput" class="agenda-input" placeholder="Create a poll..." onkeypress="handlePollInput(event)">
-                <button class="add-btn" onclick="createPoll()"><i class="ph-bold ph-plus"></i></button>
-            </div>
-            <div id="pollList"></div>
-        </div>
-
-        <div id="tab-notes" class="sidebar-content" style="display:none;">
-            <div style="font-size:10px; color:var(--text-secondary); margin-bottom:10px; text-align:center; text-transform:uppercase; letter-spacing:1px; font-weight:700;">Live Transcript</div>
-            <div id="transcriptFeed"></div>
-        </div>
-
-        <div id="tab-chat" class="sidebar-content" style="display:none;">
-            <div style="flex:1; overflow-y:auto; padding-bottom:10px;" id="chatFeed"></div>
-            <div style="margin-top:auto; display:flex; gap:8px;">
-                <input type="text" id="chatInput" class="agenda-input" placeholder="Message everyone..." onkeypress="handleChat(event)">
-                <button class="add-btn" onclick="sendChat()" style="width:40px;"><i class="ph-fill ph-paper-plane-right"></i></button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="control-bar">
-    <div class="ctrl-btn" id="micBtn" onclick="toggleMic()"><i class="ph-fill ph-microphone"></i></div>
-    <div class="ctrl-btn" id="camBtn" onclick="toggleCam()"><i class="ph-fill ph-video-camera"></i></div>
-    <div class="ctrl-btn" onclick="toggleCaptions()" id="captionBtn"><i class="ph-bold ph-closed-captioning"></i></div>
-    <div class="ctrl-btn" onclick="toggleSidebar()"><i class="ph-bold ph-sidebar-simple"></i></div>
-    <div class="ctrl-btn danger" onclick="endMeeting()"><i class="ph-bold ph-phone-disconnect"></i></div>
-</div>
-
-<div class="modal-overlay" id="endModal">
-    <div class="modal-box">
-        <div style="text-align:center;">
-            <i class="ph-duotone ph-check-circle" style="font-size: 56px; color: var(--accent); margin-bottom: 16px;"></i>
-            <h2 style="font-family:'Space Grotesk'; margin-bottom:8px;">Meeting Ended</h2>
-            <p style="font-size:13px; color:var(--text-secondary);">An AI-generated summary has been emailed to all participants.</p>
-        </div>
-        
-        <div style="margin:20px 0; flex:1; overflow:hidden; display:flex; flex-direction:column;">
-            <div class="summary-list" id="aiSummaryContent">
-                <!-- AI Summary Injected Here -->
-            </div>
-        </div>
-
-        <button onclick="location.reload()" style="width:100%; padding:14px; background:var(--text-primary); color:var(--bg-main); border:none; border-radius:12px; font-weight:600; cursor:pointer; font-size:14px;">
-            Close & Start New
-        </button>
-    </div>
-</div>
 
 <script>
-    /**
-     * KAIROS CORE: WEBRTC & SOCKET ARCHITECTURE
-     * Implements a Serverless Mesh Network using BroadcastChannel for signaling.
-     * Mocks a Socket.IO interface to maintain standard event-driven architecture.
-     */
 
-    // --- MOCK SOCKET.IO INTERFACE ---
-    // Simulates a socket server using BroadcastChannel for signaling between tabs
-    class MockSocket {
-        constructor() {
-            this.bus = new BroadcastChannel('kairos_v4_signaling');
-            this.listeners = {};
-            this.id = sessionStorage.getItem('kairos_id') || crypto.randomUUID();
-            sessionStorage.setItem('kairos_id', this.id);
-            
-            this.bus.onmessage = (e) => {
-                const { event, data, senderId } = e.data;
-                if (senderId === this.id) return; // Ignore self
-                if (this.listeners[event]) {
-                    this.listeners[event].forEach(cb => cb(data, senderId));
-                }
-            };
-        }
+    const savedTheme = localStorage.getItem('kairosTheme') || 'dark';
 
-        on(event, callback) {
-            if (!this.listeners[event]) this.listeners[event] = [];
-            this.listeners[event].push(callback);
-        }
+    document.documentElement.setAttribute('data-theme', savedTheme);
 
-        emit(event, data) {
-            this.bus.postMessage({ event, data, senderId: this.id });
-        }
+</script>
+
+
+
+<style>
+
+    /* --- THEME VARIABLES --- */
+
+    :root[data-theme="dark"] {
+
+        --bg-main: #000000;
+
+        --bg-panel: #111111;
+
+        --border: rgba(255, 255, 255, 0.1);
+
+        --text-primary: #ffffff;
+
+        --text-secondary: #888888;
+
+        --surface-hover: rgba(255, 255, 255, 0.08);
+
+        --glass: rgba(17, 17, 17, 0.9);
+
+        --tile-bg: #1a1a1a;
+
+        --chat-bubble-me: #222;
+
+        --modal-bg: #1a1a1a;
+
+        --sheet-bg: #1a1a1a;
+
     }
-    
-    // Initialize "Socket"
-    const socket = new MockSocket();
-    const myId = socket.id;
 
-    // --- IDENTITY & STATE ---
-    let myName = sessionStorage.getItem('kairos_name');
-    if (!myName) {
-        myName = prompt("Enter your name to join:", "Guest " + Math.floor(Math.random()*100));
-        if (!myName) myName = "Guest " + Math.floor(Math.random()*1000);
+
+
+    :root[data-theme="light"] {
+
+        --bg-main: #f0f2f5;
+
+        --bg-panel: #ffffff;
+
+        --border: rgba(0, 0, 0, 0.1);
+
+        --text-primary: #111827;
+
+        --text-secondary: #6b7280;
+
+        --surface-hover: rgba(0, 0, 0, 0.05);
+
+        --glass: rgba(255, 255, 255, 0.9);
+
+        --tile-bg: #222;
+
+        --chat-bubble-me: #e5e7eb;
+
+        --modal-bg: #ffffff;
+
+        --sheet-bg: #ffffff;
+
     }
-    sessionStorage.setItem('kairos_name', myName);
 
-    const state = {
-        me: { id: myId, name: myName, speaking: false, focusScore: 0, cam: false, mic: false },
-        participants: {}, // Map<id, {info, stream}>
-        agenda: [
-            { id: 1, text: "Review Q1 Roadmap", done: false, keywords: ["roadmap", "q1", "review", "plan"] },
-            { id: 2, text: "Approve Budget", done: false, keywords: ["budget", "money", "cost", "approve", "finance"] },
-            { id: 3, text: "Discuss Tech Stack", done: false, keywords: ["tech stack", "react", "nextjs", "database", "code"] }
-        ],
-        polls: [],
-        transcript: [],
-        isAiActive: true,
-        captionsEnabled: true
-    };
+
+
+    :root {
+
+        --accent: #10b981;
+
+        --ai-blue: #3b82f6;
+
+        --danger: #ef4444;
+
+        --warning: #f59e0b;
+
+    }
+
+
+
+    * { box-sizing: border-box; margin: 0; padding: 0; outline: none; -webkit-tap-highlight-color: transparent; }
+
+    body { background-color: var(--bg-main); color: var(--text-primary); font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; display: flex; flex-direction: column; transition: background 0.3s, color 0.3s; }
+
+
+
+    /* --- SCROLLBARS --- */
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+
+    ::-webkit-scrollbar-track { background: transparent; }
+
+    ::-webkit-scrollbar-thumb { background: rgba(125, 125, 125, 0.2); border-radius: 10px; }
+
+    ::-webkit-scrollbar-thumb:hover { background: rgba(125, 125, 125, 0.4); }
+
+
+
+    /* --- HEADER --- */
+
+    header {
+
+        height: 60px; padding: 0 20px; display: flex; justify-content: space-between; align-items: center;
+
+        border-bottom: 1px solid var(--border); background: var(--bg-panel); z-index: 10;
+
+        flex-shrink: 0;
+
+    }
+
+    .meeting-info { cursor: pointer; }
+
+    .meeting-info h1 { font-family: 'Space Grotesk'; font-size: 16px; font-weight: 700; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; display: flex; align-items: center; gap: 6px; }
+
+    .meeting-info h1:hover { color: var(--text-secondary); }
+
+    .meeting-meta { font-size: 11px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
+
     
-    state.participants[myId] = { info: state.me, stream: null };
 
-    // --- WEBRTC CONFIGURATION ---
-    const rtcConfig = {
-        iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' }
-        ]
-    };
-    const peers = {}; // Map<peerId, RTCPeerConnection>
-    let localStream = null;
+    .rec-badge { 
 
-    // --- INITIALIZATION ---
-    document.addEventListener('DOMContentLoaded', async () => {
-        // Start Local Media
-        try {
-            localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-            state.participants[myId].stream = localStream;
-            
-            // Mute local audio feedback
-            localStream.getAudioTracks()[0].enabled = false; 
-            localStream.getVideoTracks()[0].enabled = false;
-        } catch(e) {
-            console.warn("Media devices not found, starting without media", e);
-        }
-        
-        renderParticipants();
-        renderAgenda();
-        startTimer();
-        initAudioAnalysis();
-        initSpeechRecognition();
-        
-        // Announce presence via Socket
-        socket.emit('join', state.me);
-        
-        document.title = "KAIROS | " + document.getElementById('meetingTitle').innerText;
-    });
+        display: none; /* Hidden by default until active */
 
-    // --- SOCKET EVENT HANDLERS (SIGNALING) ---
+        align-items: center; gap: 6px; font-size: 11px; color: var(--text-secondary); 
+
+        padding: 4px 10px; border-radius: 20px; background: rgba(125,125,125,0.1); transition: 0.3s; cursor: pointer;
+
+    }
+
+    .rec-badge.active { 
+
+        display: flex;
+
+        color: #fff; 
+
+        background: linear-gradient(135deg, var(--ai-blue), var(--accent)); 
+
+        font-weight: 600; 
+
+        box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+
+    }
+
+    .rec-dot { font-size: 12px; }
+
+
+
+    /* --- MAIN STAGE --- */
+
+    .stage-container { flex: 1; display: flex; overflow: hidden; position: relative; }
+
     
-    // 1. Peer Joins
-    socket.on('join', async (peerInfo, senderId) => {
-        if(!state.participants[senderId]) {
-            showToast(`${peerInfo.name} joined`);
-            addPeerToState(peerInfo);
-            
-            // Create Peer Connection (Initiator)
-            const pc = createPeerConnection(senderId);
-            
-            // Add local tracks
-            if(localStream) {
-                localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-            }
-            
-            // Create Offer
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
-            
-            socket.emit('signal', { target: senderId, type: 'offer', sdp: offer });
-            
-            // Sync State (Host/Older peer responsibility)
-            socket.emit('sync_state', { 
-                target: senderId,
-                participants: Object.keys(state.participants).map(k => state.participants[k].info),
-                agenda: state.agenda,
-                polls: state.polls,
-                title: document.getElementById('meetingTitle').innerText
-            });
+
+    .video-grid {
+
+        flex: 1; padding: 16px; display: grid; gap: 12px;
+
+        grid-template-columns: repeat(4, 1fr);
+
+        grid-template-rows: repeat(3, 1fr);
+
+        align-content: stretch;
+
+        transition: 0.3s;
+
+        overflow-y: auto;
+
+    }
+
+    .video-grid.hidden { display: none; }
+
+
+
+    .video-tile {
+
+        background: var(--tile-bg); border-radius: 12px; position: relative; overflow: hidden;
+
+        border: 1px solid var(--border); display: flex; align-items: center; justify-content: center;
+
+        transition: transform 0.2s, border-color 0.2s, all 0.3s ease;
+
+        min-height: 0;
+
+    }
+
+    .video-tile.speaking { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(16,185,129,0.5); }
+
+    
+
+    /* MAXIMIZED TILE */
+
+    .video-tile.maximized {
+
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+
+        z-index: 100; border-radius: 0; border: none;
+
+    }
+
+
+
+    /* Live Video Element */
+
+    .live-video {
+
+        width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);
+
+    }
+
+
+
+    .tile-avatar { width: 60px; height: 60px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; color: #888; }
+
+    
+
+    .tile-overlay {
+
+        position: absolute; bottom: 8px; left: 8px; right: 8px;
+
+        display: flex; justify-content: space-between; align-items: flex-end; z-index: 5;
+
+    }
+
+    .tile-top-overlay {
+
+        position: absolute; top: 8px; right: 8px; left: 8px;
+
+        display: flex; justify-content: flex-end; align-items: flex-start; z-index: 5; gap: 4px;
+
+    }
+
+
+
+    .user-nametag {
+
+        background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); color: #fff;
+
+        padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 500;
+
+        display: flex; align-items: center; gap: 4px;
+
+    }
+
+    .attention-metric {
+
+        background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+
+        padding: 3px 6px; border-radius: 6px; display: flex; flex-direction: column; gap: 2px;
+
+    }
+
+    .att-label { font-size: 7px; color: #ccc; text-transform: uppercase; font-weight: 700; }
+
+    .att-bar { width: 30px; height: 3px; background: rgba(255,255,255,0.2); border-radius: 2px; overflow: hidden; }
+
+    .att-fill { height: 100%; background: var(--accent); transition: width 0.5s ease, background 0.5s; }
+
+
+
+    .status-badge {
+
+        background: var(--warning); color: #000;
+
+        width: 24px; height: 24px; border-radius: 50%;
+
+        display: flex; align-items: center; justify-content: center;
+
+        font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+
+        transform: scale(0); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+    }
+
+    .status-badge.active { transform: scale(1); }
+
+    
+
+    .tile-btn {
+
+        width: 24px; height: 24px; border-radius: 50%; background: rgba(0,0,0,0.5); 
+
+        color: #fff; display: flex; align-items: center; justify-content: center; 
+
+        cursor: pointer; font-size: 12px; backdrop-filter: blur(4px);
+
+        opacity: 0; transition: 0.2s;
+
+    }
+
+    .video-tile:hover .tile-btn { opacity: 1; }
+
+    .tile-btn:hover { background: #fff; color: #000; }
+
+
+
+    .ai-tile { background: radial-gradient(circle at center, #0f2e23 0%, #000 100%); }
+
+    .ai-visualizer { display: flex; gap: 4px; align-items: center; height: 40px; }
+
+    .ai-bar { width: 6px; background: var(--accent); border-radius: 4px; animation: wave 1s ease-in-out infinite; }
+
+    .ai-bar:nth-child(2) { animation-delay: 0.1s; height: 60%; }
+
+    .ai-bar:nth-child(3) { animation-delay: 0.2s; height: 80%; }
+
+    .ai-bar:nth-child(4) { animation-delay: 0.3s; height: 40%; }
+
+
+
+    /* --- OVERFLOW TILE --- */
+
+    .overflow-tile {
+
+        background: var(--surface-hover); cursor: pointer; flex-direction: column; gap: 8px;
+
+        color: var(--text-secondary); font-weight: 600; font-size: 18px;
+
+    }
+
+    .overflow-tile:hover { background: var(--bg-panel); color: var(--text-primary); border-color: var(--text-secondary); }
+
+    
+
+    /* --- WHITEBOARD --- */
+
+    #whiteboardContainer {
+
+        display: none; flex: 1; background: #fff; position: relative; flex-direction: column;
+
+    }
+
+    #whiteboardContainer.active { display: flex; }
+
+    .wb-toolbar {
+
+        height: 50px; background: #f0f0f0; border-bottom: 1px solid #ccc; display: flex; 
+
+        align-items: center; padding: 0 20px; gap: 10px; color: #333;
+
+    }
+
+    .wb-btn {
+
+        width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center;
+
+        cursor: pointer; font-size: 18px; color: #555;
+
+    }
+
+    .wb-btn:hover, .wb-btn.active { background: #e0e0e0; color: #000; }
+
+    .wb-canvas-area { flex: 1; position: relative; background: #fff; cursor: crosshair; overflow: hidden; }
+
+    canvas { display: block; width: 100%; height: 100%; }
+
+
+
+    /* --- PiP WINDOW --- */
+
+    #pipWindow {
+
+        position: absolute; bottom: 20px; right: 20px; width: 200px; height: 120px;
+
+        background: #000; border-radius: 12px; border: 1px solid var(--border);
+
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 200; overflow: hidden;
+
+        display: none; align-items: center; justify-content: center;
+
+    }
+
+    #pipWindow.active { display: flex; }
+
+    .pip-avatar { width: 40px; height: 40px; border-radius: 50%; background: #d97706; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+
+
+
+    /* --- SIDEBAR --- */
+
+    .sidebar {
+
+        width: 320px; background: var(--bg-panel); border-left: 1px solid var(--border);
+
+        display: flex; flex-direction: column; transform: translateX(0); transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+        position: relative; z-index: 60;
+
+    }
+
+    .sidebar.collapsed { width: 0; border: none; overflow: hidden; }
+
+    
+
+    .sidebar-tabs { display: flex; border-bottom: 1px solid var(--border); overflow-x: auto; }
+
+    .tab-btn { flex: 1; padding: 14px; font-size: 12px; font-weight: 600; color: var(--text-secondary); cursor: pointer; text-align: center; border-bottom: 2px solid transparent; }
+
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+
+
+    .sidebar-content { flex: 1; overflow-y: auto; padding: 16px; display: none; }
+
+    .sidebar-content.active { display: block; }
+
+
+
+    /* Chat & Polls */
+
+    .poll-card { background: var(--surface-hover); padding: 16px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 16px; }
+
+    .poll-question { font-size: 12px; font-weight: 600; margin-bottom: 12px; }
+
+    .poll-option { display: flex; justify-content: space-between; padding: 8px; border-radius: 8px; background: rgba(125,125,125,0.1); margin-bottom: 6px; cursor: pointer; border: 1px solid transparent; }
+
+    .poll-option.selected { border-color: var(--accent); background: rgba(16,185,129,0.1); }
+
+    .poll-bar-fill { height: 100%; background: var(--accent); width: 0%; transition: 1s ease; }
+
+    .agenda-item { display: flex; gap: 10px; padding: 10px; border-radius: 8px; margin-bottom: 8px; align-items: flex-start; cursor: pointer; }
+
+    .agenda-item:hover { background: var(--surface-hover); }
+
+    .chk-box { width: 16px; height: 16px; border: 1px solid var(--text-secondary); border-radius: 4px; display: flex; align-items: center; justify-content: center; color: transparent; }
+
+    .chk-box.checked { background: var(--accent); border-color: var(--accent); color: #000; }
+
+    .agenda-text { font-size: 12px; line-height: 1.4; font-weight: 500; }
+
+    .agenda-text.done { text-decoration: line-through; color: var(--text-secondary); }
+
+    .transcript-entry { margin-bottom: 12px; font-size: 12px; }
+
+    .ts-meta { display: flex; justify-content: space-between; margin-bottom: 4px; color: var(--text-secondary); font-size: 10px; font-family: 'JetBrains Mono'; }
+
+    .ts-text { color: var(--text-secondary); line-height: 1.5; }
+
+    .ai-note { border-left: 2px solid var(--accent); padding-left: 10px; margin: 10px 0; font-style: italic; color: var(--accent); font-size: 12px; }
+
+    .chat-msg { margin-bottom: 12px; }
+
+    .chat-header { display: flex; gap: 8px; margin-bottom: 4px; font-size: 11px; }
+
+    .chat-bubble { background: var(--chat-bubble-me); padding: 8px 12px; border-radius: 8px; font-size: 12px; display: inline-block; color: var(--text-primary); }
+
+    .chat-input-area { padding: 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; background: var(--bg-panel); }
+
+
+
+    /* --- CONTROLS --- */
+
+    .control-bar {
+
+        height: 70px; display: flex; justify-content: center; align-items: center; gap: 12px;
+
+        position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+
+        background: var(--glass); backdrop-filter: blur(16px);
+
+        padding: 0 16px; border-radius: 24px; border: 1px solid rgba(125,125,125,0.2);
+
+        z-index: 50; box-shadow: 0 20px 40px rgba(0,0,0,0.2); max-width: 90%;
+
+    }
+
+
+
+    .ctrl-btn {
+
+        width: 44px; height: 44px; border-radius: 14px; background: #333; color: #fff;
+
+        display: flex; align-items: center; justify-content: center; font-size: 20px;
+
+        cursor: pointer; transition: 0.2s; position: relative; flex-shrink: 0;
+
+    }
+
+    .ctrl-btn:hover { background: #444; transform: translateY(-2px); }
+
+    .ctrl-btn:active { transform: scale(0.95); }
+
+    .ctrl-btn.danger { background: var(--danger); }
+
+    .ctrl-btn.active { background: var(--accent); color: #000; }
+
+    .ctrl-btn.warn.active { background: var(--warning); color: #000; }
+
+    .tooltip {
+
+        position: absolute; top: -35px; left: 50%; transform: translateX(-50%);
+
+        background: #000; color: #fff; font-size: 10px; padding: 4px 8px; border-radius: 4px;
+
+        opacity: 0; pointer-events: none; transition: 0.2s; white-space: nowrap; font-weight: 600;
+
+    }
+
+    .ctrl-btn:hover .tooltip { opacity: 1; top: -40px; }
+
+
+
+    /* --- BOTTOM SHEETS & MODALS --- */
+
+    .sheet-overlay {
+
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+
+        background: rgba(0,0,0,0.6); z-index: 2000; opacity: 0; pointer-events: none; transition: 0.3s;
+
+    }
+
+    .sheet-overlay.active { opacity: 1; pointer-events: all; }
+
+    .bottom-sheet {
+
+        position: absolute; bottom: 0; left: 0; width: 100%; 
+
+        background: var(--sheet-bg); border-top-left-radius: 24px; border-top-right-radius: 24px;
+
+        transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.1, 0.7, 0.1, 1);
+
+        padding: 24px 16px; border-top: 1px solid var(--border);
+
+        display: flex; flex-direction: column; gap: 24px;
+
+        box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+
+    }
+
+    .sheet-overlay.active .bottom-sheet { transform: translateY(0); }
+
+    .sheet-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: -10px auto 10px auto; }
+
+    .sheet-reaction-row { display: flex; justify-content: space-between; align-items: center; padding: 0 10px; }
+
+    .sheet-reaction { font-size: 28px; cursor: pointer; transition: 0.2s; padding: 8px; border-radius: 50%; }
+
+    .sheet-reaction:hover { background: var(--surface-hover); transform: scale(1.2); }
+
+    .sheet-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; text-align: center; }
+
+    .sheet-opt { display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; }
+
+    .sheet-opt-icon { 
+
+        width: 50px; height: 50px; border-radius: 16px; background: var(--bg-main); 
+
+        border: 1px solid var(--border); display: flex; align-items: center; justify-content: center;
+
+        font-size: 24px; color: var(--text-primary); transition: 0.2s;
+
+    }
+
+    .sheet-opt:hover .sheet-opt-icon { background: var(--surface-hover); border-color: var(--text-secondary); }
+
+    .sheet-opt span { font-size: 11px; font-weight: 500; color: var(--text-secondary); }
+
+
+
+    /* Modals */
+
+    .info-modal {
+
+        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
+
+        background: var(--modal-bg); width: 90%; max-width: 350px;
+
+        border-radius: 20px; border: 1px solid var(--border); padding: 24px;
+
+        z-index: 3000; opacity: 0; pointer-events: none; transition: 0.3s;
+
+        box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+
+    }
+
+    .info-modal.active { opacity: 1; pointer-events: all; transform: translate(-50%, -50%) scale(1); }
+
+    .info-header { font-family: 'Space Grotesk'; font-size: 18px; font-weight: 700; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+
+    .info-row { margin-bottom: 16px; }
+
+    .info-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; display: block; }
+
+    .info-val { font-size: 14px; font-weight: 400; color: var(--text-primary); font-family: 'Inter'; letter-spacing: 0.2px; }
+
+    .copy-btn-large { width: 100%; background: var(--surface-hover); border: 1px solid var(--border); padding: 12px; border-radius: 12px; color: var(--text-primary); font-weight: 600; cursor: pointer; margin-bottom: 16px; }
+
+
+
+    /* Participants List Modal */
+
+    .participant-list { display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto; }
+
+    .p-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-radius: 8px; }
+
+    .p-item:hover { background: var(--surface-hover); }
+
+    .p-info { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 500; }
+
+    .p-avatar { width: 32px; height: 32px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+
+    .p-controls { display: flex; gap: 8px; color: var(--text-secondary); }
+
+
+
+    /* Other Styles */
+
+    .settings-list-container { display: flex; flex-direction: column; gap: 4px; }
+
+    .setting-item {
+
+        display: flex; justify-content: space-between; align-items: center;
+
+        padding: 16px; background: transparent; color: var(--text-primary);
+
+        font-size: 14px; font-weight: 500; cursor: pointer; border-radius: 12px;
+
+        transition: 0.2s;
+
+    }
+
+    .setting-item:hover { background: var(--surface-hover); }
+
+    .privacy-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
+
+    .privacy-icon { width: 40px; height: 40px; background: var(--bg-main); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--accent); border: 1px solid var(--border); }
+
+    .privacy-disclaimer { font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px; }
+
+    
+
+    #toast {
+
+        position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-20px);
+
+        background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-primary);
+
+        padding: 10px 20px; border-radius: 50px; font-weight: 500; font-size: 12px;
+
+        opacity: 0; transition: 0.3s; z-index: 4000; display: flex; align-items: center; gap: 10px;
+
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2); pointer-events: none;
+
+    }
+
+    #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+    #toast img { width: 20px; height: 20px; border-radius: 50%; }
+
+
+
+    #captionsOverlay {
+
+        position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
+
+        background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+
+        padding: 12px 24px; border-radius: 12px;
+
+        color: #fff; font-size: 14px; font-weight: 500;
+
+        text-align: center; max-width: 80%; display: none; z-index: 40;
+
+        pointer-events: none;
+
+    }
+
+    #captionsOverlay.active { display: block; }
+
+    
+
+    .reaction-layer {
+
+        position: absolute; bottom: 100px; right: 20px; width: 100px; height: 300px;
+
+        pointer-events: none; overflow: hidden; z-index: 100;
+
+    }
+
+    .floating-emoji {
+
+        position: absolute; bottom: -20px; font-size: 24px;
+
+        animation: floatUp 2s ease-out forwards; opacity: 0;
+
+    }
+
+
+
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+
+    @keyframes wave { 0%, 100% { height: 10%; } 50% { height: 100%; } }
+
+    @keyframes floatUp { 0% { transform: translateY(0) scale(0.5); opacity: 0; } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { transform: translateY(-200px) scale(1); opacity: 0; } }
+
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+
+
+    /* MOBILE */
+
+    @media (max-width: 768px) {
+
+        .stage-container { flex-direction: column; }
+
+        .video-grid { 
+
+            display: flex; flex-direction: column; padding: 12px; padding-bottom: 100px; 
+
+            overflow-y: auto; height: 100%; 
+
+            grid-template-columns: none; grid-template-rows: none;
+
         }
-    });
 
-    // 2. WebRTC Signaling (Offer/Answer/Candidate)
-    socket.on('signal', async (data, senderId) => {
-        if (data.target && data.target !== myId) return; // Ignore if not for me
+        .video-tile { min-height: 220px; flex-shrink: 0; }
 
-        let pc = peers[senderId];
-        if (!pc) {
-             pc = createPeerConnection(senderId);
-             if(localStream) {
-                localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-             }
-        }
+        .sidebar { position: fixed; top: 0; left: 0; width: 100%; height: 100%; transform: translateY(100%); transition: transform 0.3s ease; z-index: 100; border-left: none; }
 
-        if (data.type === 'offer') {
-            await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
-            const answer = await pc.createAnswer();
-            await pc.setLocalDescription(answer);
-            socket.emit('signal', { target: senderId, type: 'answer', sdp: answer });
-        } else if (data.type === 'answer') {
-            await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
-        } else if (data.type === 'candidate') {
-            if (data.candidate) {
-                await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
-            }
-        }
-    });
+        .sidebar.mobile-active { transform: translateY(0); }
 
-    // 3. State Synchronization
-    socket.on('sync_state', (data) => {
-        if(data.target && data.target !== myId) return;
+        .sidebar-header-mobile { display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid var(--border); }
+
+        .control-bar { width: 95%; bottom: 16px; padding: 0 10px; gap: 8px; height: 64px; }
+
+        .ctrl-btn { width: 40px; height: 40px; font-size: 18px; }
+
+        .tooltip { display: none; }
+
+        .ai-tile { min-height: 150px; }
+
+        .sheet-grid { grid-template-columns: repeat(4, 1fr); gap: 10px; }
+
+        .sheet-opt-icon { width: 44px; height: 44px; font-size: 20px; }
+
+    }
+
+
+
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(8px); opacity: 0; transition: opacity 0.5s; }
+
+    .modal-overlay.visible { opacity: 1; }
+
+    .modal-box { background: var(--modal-bg); border: 1px solid var(--border); padding: 30px; border-radius: 20px; width: 400px; text-align: center; box-shadow: 0 30px 60px rgba(0,0,0,0.5); transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+    .modal-box.list-mode { text-align: left; padding: 20px; width: 350px; }
+
+    .modal-overlay.visible .modal-box { transform: scale(1); }
+
+    
+
+    .summary-preview { text-align: left; background: var(--surface-hover); padding: 15px; border-radius: 10px; font-size: 12px; margin: 20px 0; color: var(--text-secondary); border-left: 2px solid var(--accent); display: none; }
+
+    .processing-view { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 20px; }
+
+    .spinner { width: 30px; height: 30px; border: 3px solid rgba(16,185,129,0.3); border-top: 3px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+
+</style>
+
+</head>
+
+<body>
+
+
+
+<div id="toast">
+
+    <img src="https://ui-avatars.com/api/?name=Alice&background=2563eb&color=fff" alt="">
+
+    <span id="toastMsg">Alice raised hand</span>
+
+</div>
+
+
+
+<div id="captionsOverlay">
+
+    <div style="font-size:10px; opacity:0.7; margin-bottom:4px;" id="captionSpeaker">Alice (Translated to English)</div>
+
+    <span id="captionText">We really need to approve the budget by tomorrow.</span>
+
+</div>
+
+
+
+<header>
+
+    <div class="meeting-info" onclick="openMeetingInfo()">
+
+        <h1>Q1 Product Roadmap Review <i class="ph-bold ph-caret-down" style="font-size:12px; color:var(--text-secondary)"></i></h1>
+
+        <div class="meeting-meta">
+
+            <span id="timer">00:00:00</span>
+
+            <span>•</span>
+
+            <span style="color:var(--accent)">Live</span>
+
+        </div>
+
+    </div>
+
+    <div class="rec-badge active" id="smartRecBadge" title="AI Companion Active" onclick="openAiPrivacy()">
+
+        <div class="rec-dot"><i class="ph-fill ph-sparkle"></i></div>
+
+        <span>Smart REC</span>
+
+    </div>
+
+</header>
+
+
+
+<div class="stage-container">
+
+    <!-- PiP Window -->
+
+    <div id="pipWindow">
+
+        <div class="pip-avatar">J</div>
+
+        <div style="position: absolute; bottom: 8px; left: 8px; font-size: 10px; font-weight: 600; color: #fff;">John Dev</div>
+
+    </div>
+
+
+
+    <!-- Whiteboard -->
+
+    <div id="whiteboardContainer">
+
+        <div class="wb-toolbar">
+
+            <div class="wb-btn active" onclick="selectTool('pen')"><i class="ph-bold ph-pencil-simple"></i></div>
+
+            <div class="wb-btn" onclick="selectTool('eraser')"><i class="ph-bold ph-eraser"></i></div>
+
+            <div style="width:1px; height:20px; background:#ccc; margin:0 5px;"></div>
+
+            <div class="wb-btn" onclick="clearBoard()"><i class="ph-bold ph-trash"></i></div>
+
+            <div style="flex:1"></div>
+
+            <button onclick="toggleWhiteboard()" style="padding: 6px 12px; background: #000; color: #fff; border-radius: 6px; border: none; cursor: pointer; font-size: 12px;">Close</button>
+
+        </div>
+
+        <div class="wb-canvas-area" id="canvasArea">
+
+            <canvas id="wbCanvas"></canvas>
+
+            <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#ccc; pointer-events:none; font-family:'Space Grotesk'; font-size:24px; opacity:0.5;">
+
+                Start Drawing...
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- Video Grid -->
+
+    <div class="video-grid" id="grid">
+
+        <div class="video-tile" id="tile-me">
+
+            <div class="tile-top-overlay">
+
+                <div class="status-badge" id="myHand"><i class="ph-bold ph-hand-waving"></i></div>
+
+                <div class="tile-btn" onclick="toggleMaximize(this.parentElement.parentElement)"><i class="ph-bold ph-arrows-out-simple"></i></div>
+
+            </div>
+
+            <div class="tile-avatar">Me</div>
+
+            <div class="tile-overlay">
+
+                <div class="user-nametag">Benedict (Host)</div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- Participants with Attention Metrics & Maximize Btn -->
+
+        <div class="video-tile">
+
+            <div class="tile-top-overlay">
+
+                <div class="tile-btn" onclick="toggleMaximize(this.parentElement.parentElement)"><i class="ph-bold ph-arrows-out-simple"></i></div>
+
+            </div>
+
+            <div class="tile-avatar" style="background: #2563eb; color: #fff;">A</div>
+
+            <div class="tile-overlay">
+
+                <div class="user-nametag">Alice Design</div>
+
+                <div class="attention-metric">
+
+                    <div class="att-label">Focus</div>
+
+                    <div class="att-bar"><div class="att-fill" id="att-1" style="width: 90%;"></div></div>
+
+                </div>
+
+            </div>
+
+            <div class="reaction-layer" id="react-layer-1"></div>
+
+        </div>
+
+
+
+        <div class="video-tile speaking">
+
+            <div class="tile-top-overlay">
+
+                <div class="tile-btn" onclick="toggleMaximize(this.parentElement.parentElement)"><i class="ph-bold ph-arrows-out-simple"></i></div>
+
+            </div>
+
+            <div class="tile-avatar" style="background: #d97706; color: #fff;">J</div>
+
+            <div class="tile-overlay">
+
+                <div class="user-nametag">John Dev</div>
+
+                <div class="attention-metric">
+
+                    <div class="att-label">Focus</div>
+
+                    <div class="att-bar"><div class="att-fill" id="att-2" style="width: 75%; background: #f59e0b;"></div></div>
+
+                </div>
+
+            </div>
+
+        </div>
+
         
-        // Merge Participants
-        data.participants.forEach(p => {
-            if(p.id !== myId) addPeerToState(p);
+
+        <div class="video-tile">
+
+            <div class="tile-top-overlay">
+
+                <div class="tile-btn" onclick="toggleMaximize(this.parentElement.parentElement)"><i class="ph-bold ph-arrows-out-simple"></i></div>
+
+            </div>
+
+            <div class="tile-avatar" style="background: #db2777; color: #fff;">S</div>
+
+            <div class="tile-overlay">
+
+                <div class="user-nametag">Sarah</div>
+
+                <div class="attention-metric">
+
+                    <div class="att-label">Focus</div>
+
+                    <div class="att-bar"><div class="att-fill" style="width: 85%;"></div></div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <div class="video-tile">
+
+            <div class="tile-top-overlay">
+
+                <div class="tile-btn" onclick="toggleMaximize(this.parentElement.parentElement)"><i class="ph-bold ph-arrows-out-simple"></i></div>
+
+            </div>
+
+            <div class="tile-avatar" style="background: #9333ea; color: #fff;">M</div>
+
+            <div class="tile-overlay">
+
+                <div class="user-nametag">Mike</div>
+
+                <div class="attention-metric">
+
+                    <div class="att-label">Focus</div>
+
+                    <div class="att-bar"><div class="att-fill" style="width: 60%; background: #f59e0b;"></div></div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <div class="video-tile">
+
+            <div class="tile-top-overlay">
+
+                <div class="tile-btn" onclick="toggleMaximize(this.parentElement.parentElement)"><i class="ph-bold ph-arrows-out-simple"></i></div>
+
+            </div>
+
+            <div class="tile-avatar" style="background: #16a34a; color: #fff;">D</div>
+
+            <div class="tile-overlay">
+
+                <div class="user-nametag">David</div>
+
+                <div class="attention-metric">
+
+                    <div class="att-label">Focus</div>
+
+                    <div class="att-bar"><div class="att-fill" style="width: 95%;"></div></div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <div class="video-tile">
+
+            <div class="tile-top-overlay">
+
+                <div class="tile-btn" onclick="toggleMaximize(this.parentElement.parentElement)"><i class="ph-bold ph-arrows-out-simple"></i></div>
+
+            </div>
+
+            <div class="tile-avatar" style="background: #dc2626; color: #fff;">E</div>
+
+            <div class="tile-overlay">
+
+                <div class="user-nametag">Emma</div>
+
+                <div class="attention-metric">
+
+                    <div class="att-label">Focus</div>
+
+                    <div class="att-bar"><div class="att-fill" style="width: 40%; background: #ef4444;"></div></div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <div class="video-tile">
+
+            <div class="tile-top-overlay">
+
+                <div class="tile-btn" onclick="toggleMaximize(this.parentElement.parentElement)"><i class="ph-bold ph-arrows-out-simple"></i></div>
+
+            </div>
+
+            <div class="tile-avatar" style="background: #ca8a04; color: #fff;">O</div>
+
+            <div class="tile-overlay">
+
+                <div class="user-nametag">Olivia</div>
+
+                <div class="attention-metric">
+
+                    <div class="att-label">Focus</div>
+
+                    <div class="att-bar"><div class="att-fill" style="width: 80%;"></div></div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <div class="video-tile">
+
+            <div class="tile-top-overlay">
+
+                <div class="tile-btn" onclick="toggleMaximize(this.parentElement.parentElement)"><i class="ph-bold ph-arrows-out-simple"></i></div>
+
+            </div>
+
+            <div class="tile-avatar" style="background: #0891b2; color: #fff;">R</div>
+
+            <div class="tile-overlay">
+
+                <div class="user-nametag">Robert</div>
+
+                <div class="attention-metric">
+
+                    <div class="att-label">Focus</div>
+
+                    <div class="att-bar"><div class="att-fill" style="width: 70%; background: #f59e0b;"></div></div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <div class="video-tile">
+
+            <div class="tile-top-overlay">
+
+                <div class="tile-btn" onclick="toggleMaximize(this.parentElement.parentElement)"><i class="ph-bold ph-arrows-out-simple"></i></div>
+
+            </div>
+
+            <div class="tile-avatar" style="background: #4f46e5; color: #fff;">L</div>
+
+            <div class="tile-overlay">
+
+                <div class="user-nametag">Linda</div>
+
+                <div class="attention-metric">
+
+                    <div class="att-label">Focus</div>
+
+                    <div class="att-bar"><div class="att-fill" style="width: 92%;"></div></div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- Overflow Tile -->
+
+        <div class="video-tile overflow-tile" onclick="openParticipantList()">
+
+            <span>+4</span>
+
+            <span style="font-size:10px; font-weight:500;">Others</span>
+
+        </div>
+
+
+
+        <div class="video-tile ai-tile">
+
+            <div class="tile-overlay" style="top:0; bottom:0; flex-direction: column; align-items: center; justify-content: center; gap:10px;">
+
+                <div class="ai-visualizer">
+
+                    <div class="ai-bar" style="height: 40px;"></div>
+
+                    <div class="ai-bar" style="height: 60px;"></div>
+
+                    <div class="ai-bar" style="height: 30px;"></div>
+
+                    <div class="ai-bar" style="height: 70px;"></div>
+
+                    <div class="ai-bar" style="height: 40px;"></div>
+
+                </div>
+
+                <div class="user-nametag" style="border: 1px solid var(--accent); color: var(--accent); background: rgba(16,185,129,0.1);">
+
+                    <i class="ph-bold ph-sparkle"></i> KAIROS AI
+
+                </div>
+
+                <div style="font-size: 10px; color: var(--accent); margin-top: 4px;">Capturing decisions...</div>
+
+            </div>
+
+        </div>
+
+
+
+    </div>
+
+
+
+    <div class="sidebar" id="sidebar">
+
+        <div class="sidebar-header-mobile" style="display:none;" id="mobSidebarHeader">
+
+            <h3 style="font-family:'Space Grotesk'; font-size:16px;">Meeting Details</h3>
+
+            <button onclick="toggleSidebar()" style="background:none; border:none; color:var(--text-primary); font-size:24px;"><i class="ph-bold ph-x"></i></button>
+
+        </div>
+
+
+
+        <div class="sidebar-tabs">
+
+            <div class="tab-btn active" onclick="switchTab('notes')">AI Notes</div>
+
+            <div class="tab-btn" onclick="switchTab('agenda')">Agenda</div>
+
+            <div class="tab-btn" onclick="switchTab('polls')">Polls</div>
+
+            <div class="tab-btn" onclick="switchTab('chat')">Chat</div>
+
+        </div>
+
+
+
+        <div id="tab-notes" class="sidebar-content active">
+
+            <div style="font-size:10px; color:var(--text-secondary); margin-bottom:10px; text-align:center;">LIVE TRANSCRIPT & INSIGHTS</div>
+
+            <div id="transcript-feed"></div>
+
+        </div>
+
+
+
+        <div id="tab-agenda" class="sidebar-content">
+
+            <div class="agenda-item" onclick="toggleCheck(this)">
+
+                <div class="chk-box checked"><i class="ph-bold ph-check"></i></div>
+
+                <div class="agenda-text done">Review Q4 metrics</div>
+
+            </div>
+
+            <div class="agenda-item" onclick="toggleCheck(this)">
+
+                <div class="chk-box"><i class="ph-bold ph-check"></i></div>
+
+                <div class="agenda-text">Confirm tech stack migration</div>
+
+            </div>
+
+            <div class="agenda-item" onclick="toggleCheck(this)">
+
+                <div class="chk-box"><i class="ph-bold ph-check"></i></div>
+
+                <div class="agenda-text">Budget approval for Sparky Solutions</div>
+
+            </div>
+
+        </div>
+
+
+
+        <div id="tab-polls" class="sidebar-content">
+
+            <div class="poll-card">
+
+                <div class="poll-question">Vote: Primary JS Framework</div>
+
+                <div class="poll-option" onclick="vote(this, 60)">
+
+                    <span style="font-size:12px;">Next.js 14</span>
+
+                    <span style="font-size:10px; color:var(--text-secondary);">0 votes</span>
+
+                </div>
+
+                <div class="poll-bar-bg"><div class="poll-bar-fill"></div></div>
+
+                
+
+                <div class="poll-option" style="margin-top:10px;" onclick="vote(this, 30)">
+
+                    <span style="font-size:12px;">Vue 3</span>
+
+                    <span style="font-size:10px; color:var(--text-secondary);">0 votes</span>
+
+                </div>
+
+                <div class="poll-bar-bg"><div class="poll-bar-fill"></div></div>
+
+            </div>
+
+            <button style="width:100%; padding:10px; border:1px dashed var(--text-secondary); color:var(--text-secondary); border-radius:8px; font-size:12px; cursor:pointer;">+ Create New Poll</button>
+
+        </div>
+
+
+
+        <div id="tab-chat" class="sidebar-content" style="display:none; flex-direction:column; height:100%;">
+
+            <div style="flex:1; overflow-y:auto;" id="chat-feed">
+
+                <div class="chat-msg">
+
+                    <div class="chat-header"><span class="chat-name">Alice</span> <span class="chat-time">10:02</span></div>
+
+                    <div class="chat-bubble" style="background:var(--surface-hover); color:var(--text-primary);">Can you share the Figma link?</div>
+
+                </div>
+
+            </div>
+
+            <div class="chat-input-area">
+
+                <input type="text" placeholder="Type a message..." class="input-field" style="flex:1; background:var(--bg-main); border:1px solid var(--border); padding:10px; border-radius:20px; color:var(--text-primary);" id="chatInput" onkeypress="handleChat(event)">
+
+                <button style="color:var(--accent); background:none; border:none; font-size:18px;" onclick="sendChat()"><i class="ph-fill ph-paper-plane-right"></i></button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<div class="control-bar">
+
+    <div class="ctrl-btn danger" onclick="toggleState(this, 'mute')" id="muteBtn">
+
+        <i class="ph-fill ph-microphone-slash"></i><div class="tooltip">Unmute</div>
+
+    </div>
+
+    <div class="ctrl-btn" onclick="toggleState(this, 'video')" id="videoBtn">
+
+        <i class="ph-fill ph-video-camera-slash"></i><div class="tooltip">Start Video</div>
+
+    </div>
+
+    
+
+    <div class="ctrl-btn warn" onclick="toggleHand(this)" id="handBtnMain">
+
+        <i class="ph-bold ph-hand-waving"></i><div class="tooltip">Raise Hand</div>
+
+    </div>
+
+
+
+    <div class="ctrl-btn" onclick="toggleReactionMenu()">
+
+        <i class="ph-bold ph-smiley"></i><div class="tooltip">React</div>
+
+    </div>
+
+    
+
+    <div class="ctrl-btn" onclick="toggleWhiteboard()" id="wbBtn">
+
+        <i class="ph-bold ph-chalkboard-teacher"></i><div class="tooltip">Whiteboard</div>
+
+    </div>
+
+    
+
+    <div style="width:1px; height:24px; background:var(--text-secondary); opacity:0.3; margin:0 4px;"></div>
+
+    
+
+    <div class="ctrl-btn active" onclick="toggleSidebar()">
+
+        <i class="ph-bold ph-chats-circle"></i><div class="tooltip">Sidebar</div>
+
+    </div>
+
+    
+
+    <div class="ctrl-btn" onclick="toggleMoreMenu()">
+
+        <i class="ph-bold ph-dots-three"></i><div class="tooltip">More</div>
+
+    </div>
+
+    
+
+    <div class="ctrl-btn danger" onclick="endCall()">
+
+        <i class="ph-bold ph-phone-disconnect"></i><div class="tooltip">End</div>
+
+    </div>
+
+</div>
+
+
+
+<div class="sheet-overlay" id="reactionOverlay" onclick="toggleReactionMenu()">
+
+    <div class="bottom-sheet" style="height:auto;" onclick="event.stopPropagation()">
+
+        <div class="sheet-handle"></div>
+
+        <div class="sheet-reaction-row" style="padding-bottom:20px;">
+
+            <div class="sheet-reaction" onclick="sendReaction('👍')">👍</div>
+
+            <div class="sheet-reaction" onclick="sendReaction('❤️')">❤️</div>
+
+            <div class="sheet-reaction" onclick="sendReaction('👏')">👏</div>
+
+            <div class="sheet-reaction" onclick="sendReaction('🎉')">🎉</div>
+
+            <div class="sheet-reaction" onclick="sendReaction('😂')">😂</div>
+
+            <div class="sheet-reaction" onclick="sendReaction('😮')">😮</div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<div class="sheet-overlay" id="moreMenuOverlay" onclick="toggleMoreMenu()">
+
+    <div class="bottom-sheet" onclick="event.stopPropagation()">
+
+        <div class="sheet-handle"></div>
+
+        <div class="sheet-grid">
+
+            <div class="sheet-opt" onclick="showToast('Recording Started')">
+
+                <div class="sheet-opt-icon"><i class="ph-bold ph-record"></i></div>
+
+                <span>Record</span>
+
+            </div>
+
+            <div class="sheet-opt" onclick="toggleCaptions()">
+
+                <div class="sheet-opt-icon"><i class="ph-bold ph-closed-captioning"></i></div>
+
+                <span>Show CC</span>
+
+            </div>
+
+            <div class="sheet-opt" onclick="showToast('Screen Share Started')">
+
+                <div class="sheet-opt-icon"><i class="ph-bold ph-share-network"></i></div>
+
+                <span>Share</span>
+
+            </div>
+
+            <div class="sheet-opt" onclick="toggleSidebar(); toggleMoreMenu();">
+
+                <div class="sheet-opt-icon"><i class="ph-bold ph-notepad"></i></div>
+
+                <span>Notes</span>
+
+            </div>
+
+            <div class="sheet-opt" onclick="showToast('No apps installed')">
+
+                <div class="sheet-opt-icon"><i class="ph-bold ph-squares-four"></i></div>
+
+                <span>Apps</span>
+
+            </div>
+
+            <div class="sheet-opt" onclick="showToast('Audio Disconnected')">
+
+                <div class="sheet-opt-icon"><i class="ph-bold ph-plugs"></i></div>
+
+                <span>Disconnect</span>
+
+            </div>
+
+            <div class="sheet-opt" onclick="openSettings()">
+
+                <div class="sheet-opt-icon"><i class="ph-bold ph-gear"></i></div>
+
+                <span>Settings</span>
+
+            </div>
+
+            <div class="sheet-opt" onclick="openMeetingInfo()">
+
+                <div class="sheet-opt-icon"><i class="ph-bold ph-info"></i></div>
+
+                <span>Meeting Info</span>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<div class="info-modal" id="meetingInfoModal">
+
+    <div class="info-header">
+
+        <span id="modalMeetingTitle">Town Hall Meeting</span>
+
+        <i class="ph-bold ph-x" style="cursor:pointer;" onclick="openMeetingInfo()"></i>
+
+    </div>
+
+    
+
+    <button class="copy-btn-large" onclick="copyMeetingLink()">
+
+        Copy meeting link
+
+    </button>
+
+
+
+    <div class="info-row">
+
+        <span class="info-label">Meeting ID</span>
+
+        <span class="info-val">994 1873 8045</span>
+
+    </div>
+
+    
+
+    <div class="info-row">
+
+        <span class="info-label">Passcode</span>
+
+        <span class="info-val">813668</span>
+
+    </div>
+
+    
+
+    <div class="info-row">
+
+        <span class="info-label">Host</span>
+
+        <span class="info-val">Benedict Adurosakin</span>
+
+    </div>
+
+    
+
+    <div class="info-row">
+
+        <span class="info-label">Participant ID</span>
+
+        <span class="info-val">4600689</span>
+
+    </div>
+
+    
+
+    <div style="font-size:10px; color:var(--accent); display:flex; align-items:center; gap:6px; margin-top:20px;">
+
+        <i class="ph-fill ph-shield-check"></i> Encryption: Enhanced
+
+    </div>
+
+</div>
+
+
+
+<div class="modal-overlay" id="participantsModal">
+
+    <div class="modal-box list-mode">
+
+        <div class="info-header">
+
+            <span>Participants (<span id="pCount">16</span>)</span>
+
+            <i class="ph-bold ph-x" style="cursor:pointer;" onclick="closeParticipantList()"></i>
+
+        </div>
+
+        
+
+        <button id="muteAllBtn" class="copy-btn-large" style="margin-bottom:12px; background:rgba(239,68,68,0.1); color:var(--danger); border-color:var(--danger); display:flex; align-items:center; justify-content:center; gap:8px;" onclick="toggleMuteAll()">
+
+            <i class="ph-bold ph-microphone-slash"></i> Mute All
+
+        </button>
+
+
+
+        <div class="participant-list" id="fullParticipantList">
+
+            <!-- Dynamic list -->
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<div class="modal-overlay" id="settingsModal">
+
+    <div class="modal-box list-mode">
+
+        <div class="info-header">
+
+            <span>Settings</span>
+
+            <i class="ph-bold ph-x" style="cursor:pointer;" onclick="closeSettings()"></i>
+
+        </div>
+
+        <div class="settings-list-container">
+
+            <div class="setting-item" onclick="showToast('Meeting Settings Opened')">
+
+                <span><i class="ph-bold ph-sliders-horizontal" style="margin-right:8px;"></i> Meeting settings</span>
+
+                <i class="ph-bold ph-caret-right"></i>
+
+            </div>
+
+            <div class="setting-item" onclick="showToast('Backgrounds Gallery')">
+
+                <span><i class="ph-bold ph-image" style="margin-right:8px;"></i> Virtual background</span>
+
+                <i class="ph-bold ph-caret-right"></i>
+
+            </div>
+
+            <div class="setting-item" onclick="showToast('Filters Applied')">
+
+                <span><i class="ph-bold ph-magic-wand" style="margin-right:8px;"></i> Video filters</span>
+
+                <i class="ph-bold ph-caret-right"></i>
+
+            </div>
+
+            <div class="setting-item" onclick="showToast('Avatars Loading...')">
+
+                <span><i class="ph-bold ph-user-circle" style="margin-right:8px;"></i> Avatars</span>
+
+                <i class="ph-bold ph-caret-right"></i>
+
+            </div>
+
+            <div class="setting-item" onclick="showToast('Audio Devices')">
+
+                <span><i class="ph-bold ph-headphones" style="margin-right:8px;"></i> Audio</span>
+
+                <i class="ph-bold ph-caret-right"></i>
+
+            </div>
+
+            <div class="setting-item" onclick="toggleCaptions()">
+
+                <span><i class="ph-bold ph-closed-captioning" style="margin-right:8px;"></i> Captions and translation</span>
+
+                <i class="ph-bold ph-caret-right"></i>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<div class="modal-overlay" id="aiPrivacyModal">
+
+    <div class="modal-box list-mode" style="border-left: 3px solid var(--accent);">
+
+        <div class="info-header">
+
+            <span style="font-size:16px;">Apps that access meeting content</span>
+
+            <i class="ph-bold ph-x" style="cursor:pointer;" onclick="closeAiPrivacy()"></i>
+
+        </div>
+
+        
+
+        <div class="privacy-header">
+
+            <div class="privacy-icon"><i class="ph-bold ph-sparkle"></i></div>
+
+            <div>
+
+                <div style="font-size:13px; font-weight:700; color:var(--text-primary); margin-bottom:2px;">KAIROS - AI Meeting Agent</div>
+
+                <div style="font-size:11px; color:var(--text-secondary); margin-bottom:2px;">Benedict's Notetaker (Kairos.ai) (guest)</div>
+
+                <div style="font-size:10px; color:#888;">Accesses: Audio, Video, Chat, Files</div>
+
+            </div>
+
+        </div>
+
+
+
+        <p class="privacy-disclaimer">
+
+            Kairos AI features have been enabled in this meeting. Below you can see the content accessed by features in this meeting. 
+
+            <br><br>
+
+            <a href="#" style="color:var(--ai-blue); text-decoration:none;">Learn more about how your data is handled.</a>
+
+        </p>
+
+
+
+        <!-- Centered Enable AI Companion Button -->
+
+        <div style="display:flex; justify-content:center; margin-top: 20px; border-top: 1px solid var(--border); padding-top: 20px;">
+
+            <button id="aiToggleBtn" class="active" onclick="toggleAiCompanion(this)" style="background:var(--accent); color:black; font-weight:600; padding:10px 20px; border-radius:30px; border:none; cursor:pointer; font-family:'Inter'; display:flex; align-items:center; gap:8px; transition:0.3s;">
+
+                <i class="ph-bold ph-toggle-left"></i> <span>AI Companion On</span>
+
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<div class="modal-overlay" id="endModal">
+
+    <div class="modal-box">
+
+        <div id="processingState" class="processing-view">
+
+            <div class="spinner"></div>
+
+            <h3 style="font-family:'Space Grotesk'; font-size:16px;">KAIROS is organizing memory...</h3>
+
+            <p style="font-size:12px; color:var(--text-secondary);">Analyzing decision points and actions.</p>
+
+        </div>
+
+
+
+        <div id="summaryState" style="display:none;">
+
+            <i class="ph-duotone ph-check-circle" style="font-size: 48px; color: var(--accent); margin-bottom: 16px;"></i>
+
+            <h2 style="font-family:'Space Grotesk'; margin-bottom:8px;">Meeting Ended</h2>
+
+            
+
+            <div class="summary-preview" style="display:block;">
+
+                <div style="font-weight:700; margin-bottom:6px; color:var(--text-primary);">AI Summary:</div>
+
+                • Tech stack migration ratified (Next.js 14).<br>
+
+                • Action Item: Benedict to email Sparky Solutions.<br>
+
+                • Alice to update Figma by EOD.
+
+            </div>
+
+            
+
+            <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:20px;">
+
+                <i class="ph-bold ph-envelope-simple" style="color:var(--text-secondary)"></i>
+
+                <span style="font-size:12px; color:var(--text-secondary);">Sending recap to all participants...</span>
+
+            </div>
+
+
+
+            <button onclick="window.location.href='index.html'" style="background:var(--text-primary); color:var(--bg-main); width:100%; padding:12px; border-radius:10px; font-weight:600; cursor:pointer; border:none; transition:0.2s;">
+
+                Return to Command Center
+
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<script>
+
+    // --- INIT ---
+
+    // Sync header title to modal
+
+    const mainTitle = document.querySelector('header h1').innerText;
+
+    document.getElementById('modalMeetingTitle').innerText = mainTitle;
+
+
+
+    // --- RESPONSIVE INIT ---
+
+    if(window.innerWidth <= 768) {
+
+        document.getElementById('mobSidebarHeader').style.display = 'flex';
+
+    }
+
+
+
+    // --- TIMER LOGIC ---
+
+    let seconds = 0;
+
+    setInterval(() => {
+
+        seconds++;
+
+        const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+
+        const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+
+        const s = (seconds % 60).toString().padStart(2, '0');
+
+        document.getElementById('timer').innerText = `${h}:${m}:${s}`;
+
+    }, 1000);
+
+
+
+    // --- SOCKET CONFIGURATION ---
+
+    const socket = io('https://kairos-backend-u493.onrender.com', { transports: ['websocket'] });
+
+    const ROOM_ID = 'design-team-sync'; // This would be dynamic in production
+
+    const USER_NAME = 'Benedict'; 
+
+    
+
+    let localStream;
+
+    let peers = {}; // Store RTCPeerConnection for each user: { socketId: connection }
+
+
+
+    // --- SOCKET INITIALIZATION ---
+
+    socket.on('connect', () => {
+
+        console.log('Connected to Signaling Server:', socket.id);
+
+        socket.emit('join-room', ROOM_ID);
+
+        showToast('Connected to KAIROS Network');
+
+    });
+
+
+
+    // --- CHAT LOGIC ---
+
+    function handleChat(e) { if(e.key === 'Enter') sendChat(); }
+
+
+
+    function sendChat() {
+
+        const input = document.getElementById('chatInput');
+
+        if(!input.value) return;
+
+        socket.emit('send-chat', { roomId: ROOM_ID, text: input.value, sender: USER_NAME });
+
+        input.value = '';
+
+    }
+
+
+
+    socket.on('receive-chat', (data) => {
+
+        const feed = document.getElementById('chat-feed');
+
+        const isMe = data.sender === USER_NAME;
+
+        const el = document.createElement('div');
+
+        el.className = 'chat-msg';
+
+        el.innerHTML = `
+
+            <div class="chat-header"><span class="chat-name">${data.sender}</span> <span class="chat-time">${data.time}</span></div>
+
+            <div class="chat-bubble" style="background:${isMe ? 'var(--accent)' : 'var(--surface-hover)'}; color:${isMe ? '#000' : 'inherit'};">${data.text}</div>
+
+        `;
+
+        feed.appendChild(el);
+
+        feed.scrollTop = feed.scrollHeight;
+
+    });
+
+
+
+    // --- WEBRTC CORE LOGIC ---
+
+
+
+    // 1. When a new user joins, create an Offer to connect to them
+
+    socket.on('user-joined', async (userId) => {
+
+        console.log('User joined:', userId);
+
+        const pc = createPeerConnection(userId);
+
+        const offer = await pc.createOffer();
+
+        await pc.setLocalDescription(offer);
+
+        socket.emit('offer', { to: userId, offer });
+
+    });
+
+
+
+    // 2. Handle incoming Offer
+
+    socket.on('offer', async (data) => {
+
+        const pc = createPeerConnection(data.from);
+
+        await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+
+        const answer = await pc.createAnswer();
+
+        await pc.setLocalDescription(answer);
+
+        socket.emit('answer', { to: data.from, answer });
+
+    });
+
+
+
+    // 3. Handle incoming Answer
+
+    socket.on('answer', async (data) => {
+
+        const pc = peers[data.from];
+
+        if (pc) await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+
+    });
+
+
+
+    // 4. Handle ICE Candidates
+
+    socket.on('ice-candidate', async (data) => {
+
+        const pc = peers[data.from];
+
+        if (pc && data.candidate) await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+
+    });
+
+
+
+    function createPeerConnection(userId) {
+
+        if (peers[userId]) return peers[userId];
+
+        const pc = new RTCPeerConnection({
+
+            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] // Free Google STUN server
+
         });
-        
-        state.agenda = data.agenda;
-        state.polls = data.polls;
-        document.getElementById('meetingTitle').innerText = data.title;
-        renderParticipants();
-        renderAgenda();
-        renderPolls();
-    });
 
-    // 4. Updates & Chat
-    socket.on('update_peer', (info) => {
-        if(state.participants[info.id]) {
-            state.participants[info.id].info = { ...state.participants[info.id].info, ...info };
-            renderParticipants();
+
+
+        peers[userId] = pc;
+
+
+
+        // Send local tracks to this peer
+
+        if (localStream) {
+
+            localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
         }
-    });
 
-    socket.on('chat', (data) => addChatMessage(data.sender, data.text, false));
-    socket.on('transcript', (data) => handleRemoteTranscript(data));
-    socket.on('agenda_update', (data) => { state.agenda = data; renderAgenda(); });
-    socket.on('poll_update', (data) => { state.polls = data; renderPolls(); });
-    socket.on('title_update', (data) => { document.getElementById('meetingTitle').innerText = data; });
 
-    // --- WEBRTC FUNCTIONS ---
-    function createPeerConnection(peerId) {
-        const pc = new RTCPeerConnection(rtcConfig);
-        peers[peerId] = pc;
+
+        // Send my network info (ICE) to the other user
 
         pc.onicecandidate = (event) => {
+
             if (event.candidate) {
-                socket.emit('signal', { target: peerId, type: 'candidate', candidate: event.candidate });
+
+                socket.emit('ice-candidate', { to: userId, candidate: event.candidate });
+
             }
+
         };
+
+
+
+        // When the other user's video arrives, add it to the UI
 
         pc.ontrack = (event) => {
-            // Received remote stream
-            if (state.participants[peerId]) {
-                state.participants[peerId].stream = event.streams[0];
-                renderParticipants();
-            }
+
+            addUserTile(userId, event.streams[0]);
+
         };
-        
+
+
+
         return pc;
+
     }
 
-    function addPeerToState(info) {
-        if(!state.participants[info.id]) {
-            state.participants[info.id] = { info: info, stream: null };
-            renderParticipants();
-        }
-    }
 
-    // --- PARTICIPANT UI LOGIC (EFFICIENT UPDATE) ---
-    function renderParticipants() {
-        const grid = document.getElementById('videoGrid');
-        const list = Object.values(state.participants);
-        document.getElementById('participantCount').innerText = list.length;
 
-        list.forEach(pData => {
-            const p = pData.info;
-            const isMe = p.id === myId;
-            let tile = document.getElementById(`tile-${p.id}`);
-            
-            const initials = (p.name || "GU").split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
-            const avatarBg = stringToColor(p.name);
+    // --- UI HELPERS & RESTORED FUNCTIONS ---
 
-            if (!tile) {
-                // CREATE TILE
-                tile = document.createElement('div');
-                tile.className = `video-tile ${p.speaking ? 'speaking' : ''}`;
-                tile.id = `tile-${p.id}`;
-                
-                tile.innerHTML = `
-                    <div class="tile-avatar" style="background:${avatarBg}">${initials}</div>
-                    <video class="live-video" id="video-${p.id}" autoplay playsinline muted></video>
-                    <div class="tile-overlay">
-                        <div class="user-nametag">${p.name} ${isMe ? '(You)' : ''}</div>
-                        <div class="attention-metric">
-                            <div class="att-label">Contribution</div>
-                            <div class="att-bar"><div class="att-fill" style="width: ${p.focusScore}%"></div></div>
-                        </div>
-                    </div>
-                `;
-                grid.appendChild(tile);
+
+
+    async function toggleState(btn, type) {
+
+        if(type === 'mute') {
+
+            if(btn.classList.contains('danger')) {
+
+                // UNMUTE
+
+                btn.classList.remove('danger');
+
+                btn.classList.add('active');
+
+                btn.querySelector('i').className = 'ph-fill ph-microphone';
+
+                showToast('Microphone Active');
+
             } else {
-                // UPDATE TILE
-                if (p.speaking) tile.classList.add('speaking');
-                else tile.classList.remove('speaking');
-                const bar = tile.querySelector('.att-fill');
-                if(bar) bar.style.width = `${p.focusScore}%`;
+
+                // MUTE
+
+                btn.classList.add('danger');
+
+                btn.classList.remove('active');
+
+                btn.querySelector('i').className = 'ph-fill ph-microphone-slash';
+
+                showToast('Microphone Muted');
+
             }
 
-            // STREAM HANDLING
-            const videoEl = document.getElementById(`video-${p.id}`);
-            const avatarEl = tile.querySelector('.tile-avatar');
+        }
+
+        
+
+        if(type === 'video') {
+
+            const tileMe = document.getElementById('tile-me');
+
+            const avatar = tileMe.querySelector('.tile-avatar');
+
             
-            if (videoEl) {
-                if (isMe) {
-                    // Local Stream
-                    if (localStream && videoEl.srcObject !== localStream) videoEl.srcObject = localStream;
-                    videoEl.style.display = p.cam ? 'block' : 'none';
-                    videoEl.muted = true; // Always mute self
-                } else {
-                    // Remote Stream
-                    if (pData.stream && videoEl.srcObject !== pData.stream) videoEl.srcObject = pData.stream;
-                    videoEl.style.display = (p.cam && pData.stream) ? 'block' : 'none';
-                    videoEl.muted = false; // Hear others
+
+            if(!btn.classList.contains('active')) {
+
+                try {
+
+                    // Get User Media for WebRTC
+
+                    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+
+                    
+
+                    // UI Update
+
+                    const videoEl = document.createElement('video');
+
+                    videoEl.srcObject = localStream;
+
+                    videoEl.autoplay = true;
+
+                    videoEl.muted = true; // Local video muted
+
+                    videoEl.playsInline = true;
+
+                    videoEl.className = 'live-video';
+
+                    tileMe.insertBefore(videoEl, tileMe.firstChild);
+
+                    avatar.style.display = 'none';
+
+                    
+
+                    btn.classList.add('active');
+
+                    btn.querySelector('i').className = 'ph-fill ph-video-camera';
+
+                    showToast('Camera Active');
+
+                    
+
+                    // Add tracks to all existing peer connections
+
+                    Object.values(peers).forEach(pc => {
+
+                        localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+                    });
+
+                    
+
+                } catch(err) {
+
+                    showToast('Camera Access Denied');
+
+                    console.error(err);
+
                 }
+
+            } else {
+
+                // Stop Video
+
+                if(localStream) {
+
+                    localStream.getTracks().forEach(track => track.stop());
+
+                    localStream = null;
+
+                }
+
+                const vid = tileMe.querySelector('video');
+
+                if(vid) vid.remove();
+
+                avatar.style.display = 'flex';
+
                 
-                // Toggle Avatar based on video visibility
-                avatarEl.style.display = (videoEl.style.display === 'block') ? 'none' : 'flex';
+
+                btn.classList.remove('active');
+
+                btn.querySelector('i').className = 'ph-fill ph-video-camera-slash';
+
+                showToast('Camera Off');
+
             }
-        });
-    }
 
-    // --- AUDIO & SPEAKING DETECTION ---
-    let audioCtx, analyser;
-    
-    async function initAudioAnalysis() {
-        if(!localStream) return;
-        try {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            analyser = audioCtx.createAnalyser();
-            const source = audioCtx.createMediaStreamSource(localStream);
-            source.connect(analyser);
-            analyser.fftSize = 512;
-            checkAudioLevel();
-        } catch (err) {
-            console.error("Audio Analysis failed", err);
-        }
-    }
-
-    let lastFocusUpdate = 0;
-
-    function checkAudioLevel() {
-        if(!analyser || !state.me.mic) {
-            if(state.me.speaking) updateMyStatus({ speaking: false });
-            requestAnimationFrame(checkAudioLevel);
-            return;
         }
 
-        const dataArray = new Uint8Array(analyser.frequencyBinCount);
-        analyser.getByteFrequencyData(dataArray);
-        const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
-        const isSpeaking = average > 25; 
-        
-        if (state.me.speaking !== isSpeaking) {
-            updateMyStatus({ speaking: isSpeaking });
-        }
-
-        if (isSpeaking) {
-            state.me.focusScore = Math.min(100, state.me.focusScore + 0.05);
-            if (Date.now() - lastFocusUpdate > 1000) {
-                updateMyStatus({ focusScore: state.me.focusScore });
-                lastFocusUpdate = Date.now();
-            }
-        }
-        requestAnimationFrame(checkAudioLevel);
     }
 
-    function updateMyStatus(updates) {
-        state.me = { ...state.me, ...updates };
-        state.participants[myId].info = state.me;
-        socket.emit('update_peer', state.me);
-        renderParticipants();
-    }
 
-    function toggleMic() {
-        state.me.mic = !state.me.mic;
-        document.getElementById('micBtn').classList.toggle('active', !state.me.mic);
-        document.getElementById('micBtn').innerHTML = state.me.mic ? '<i class="ph-fill ph-microphone"></i>' : '<i class="ph-fill ph-microphone-slash"></i>';
-        updateMyStatus({ mic: state.me.mic });
-        
-        if(localStream) localStream.getAudioTracks()[0].enabled = state.me.mic;
-    }
 
-    function toggleCam() {
-        state.me.cam = !state.me.cam;
-        document.getElementById('camBtn').classList.toggle('active', !state.me.cam);
-        document.getElementById('camBtn').innerHTML = state.me.cam ? '<i class="ph-fill ph-video-camera"></i>' : '<i class="ph-fill ph-video-camera-slash"></i>';
-        updateMyStatus({ cam: state.me.cam });
-        
-        if(localStream) localStream.getVideoTracks()[0].enabled = state.me.cam;
-        renderParticipants(); // Trigger re-render to toggle video/avatar
-    }
+    function addUserTile(userId, stream) {
 
-    // --- AI TRANSCRIPTION & AGENDA LOGIC ---
-    function initSpeechRecognition() {
-        if (!('webkitSpeechRecognition' in window)) return;
-        const recognition = new webkitSpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = 'en-US';
+        // Check if tile already exists
 
-        recognition.onresult = (event) => {
-            if(!state.me.mic) return;
+        let tile = document.getElementById(`tile-${userId}`);
 
-            let interim = '';
-            for (let i = event.resultIndex; i < event.results.length; ++i) {
-                if (event.results[i].isFinal) {
-                    const text = event.results[i][0].transcript;
-                    handleTranscriptEvent(state.me.name, text, true);
-                    socket.emit('transcript', { sender: state.me.name, text: text, isFinal: true });
-                } else {
-                    interim += event.results[i][0].transcript;
-                }
-            }
-            if(interim) {
-                showCaptions(state.me.name, interim);
-                socket.emit('transcript', { sender: state.me.name, text: interim, isFinal: false });
-            }
-        };
-        recognition.start();
-    }
+        if (!tile) {
 
-    function handleRemoteTranscript(data) {
-        if(data.isFinal) handleTranscriptEvent(data.sender, data.text, false);
-        else showCaptions(data.sender, data.text);
-    }
+            const grid = document.getElementById('grid');
 
-    function handleTranscriptEvent(user, text, isLocal) {
-        const entry = { user, text, time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) };
-        state.transcript.push(entry);
-        updateTranscriptUI(entry);
+            tile = document.createElement('div');
 
-        if (state.isAiActive) analyzeTextForAgenda(text);
-    }
+            tile.className = 'video-tile';
 
-    function analyzeTextForAgenda(text) {
-        let changed = false;
-        const lowerText = text.toLowerCase();
-        
-        state.agenda.forEach(item => {
-            if(!item.done && item.keywords.some(k => lowerText.includes(k))) {
-                item.done = true;
-                changed = true;
-                showToast(`AI: Agenda "${item.text}" marked complete.`);
-                setTimeout(() => {
-                    const el = document.querySelectorAll('.agenda-item')[state.agenda.indexOf(item)];
-                    if(el) el.classList.add('ai-detected');
-                }, 100);
-            }
-        });
+            tile.id = `tile-${userId}`;
 
-        if(changed) {
-            renderAgenda();
-            socket.emit('agenda_update', state.agenda);
-        }
-    }
+            tile.innerHTML = `
 
-    function showCaptions(speaker, text) {
-        if(!state.captionsEnabled) return;
-        const overlay = document.getElementById('captionsOverlay');
-        document.getElementById('captionSpeaker').innerText = speaker;
-        document.getElementById('captionText').innerText = text;
-        overlay.classList.add('active');
-        clearTimeout(window.captionTimeout);
-        window.captionTimeout = setTimeout(() => overlay.classList.remove('active'), 4000);
-    }
+                <div class="tile-top-overlay">
 
-    function updateTranscriptUI(entry) {
-        const feed = document.getElementById('transcriptFeed');
-        const el = document.createElement('div');
-        el.className = 'transcript-entry highlight';
-        el.innerHTML = `<div class="ts-meta"><span>${entry.user}</span> <span>${entry.time}</span></div><div class="ts-text">${entry.text}</div>`;
-        feed.appendChild(el);
-        feed.scrollTop = feed.scrollHeight;
-    }
+                    <div class="tile-btn" onclick="toggleMaximize(this.parentElement.parentElement)"><i class="ph-bold ph-arrows-out-simple"></i></div>
 
-    // --- AGENDA & POLLS ---
-    function renderAgenda() {
-        const list = document.getElementById('agendaList');
-        list.innerHTML = '';
-        state.agenda.forEach(item => {
-            const el = document.createElement('div');
-            el.className = `agenda-item ${item.done ? 'done' : ''}`;
-            el.onclick = () => toggleAgendaManual(item.id);
-            el.innerHTML = `
-                <div class="chk-box ${item.done ? 'checked' : ''}"><i class="ph-bold ph-check"></i></div>
-                <div class="agenda-text ${item.done ? 'done' : ''}">${item.text}</div>
+                </div>
+
+                <video autoplay playsinline class="live-video"></video>
+
+                <div class="tile-overlay">
+
+                    <div class="user-nametag">Remote Participant</div>
+
+                </div>
+
             `;
-            list.appendChild(el);
-        });
-    }
 
-    function addAgendaItem() {
-        const input = document.getElementById('newAgendaInput');
-        if(!input.value.trim()) return;
-        const newItem = { id: Date.now(), text: input.value, done: false, keywords: input.value.toLowerCase().split(' ') };
-        state.agenda.push(newItem);
-        input.value = '';
-        renderAgenda();
-        socket.emit('agenda_update', state.agenda);
-    }
+            grid.prepend(tile);
 
-    function handleAgendaInput(e) { if(e.key === 'Enter') addAgendaItem(); }
-    
-    function toggleAgendaManual(id) {
-        const item = state.agenda.find(i => i.id === id);
-        if(item) {
-            item.done = !item.done;
-            renderAgenda();
-            socket.emit('agenda_update', state.agenda);
         }
+
+        tile.querySelector('video').srcObject = stream;
+
     }
 
-    // POLLS LOGIC
-    function renderPolls() {
-        const list = document.getElementById('pollList');
-        list.innerHTML = '';
-        state.polls.forEach((poll, index) => {
-            const el = document.createElement('div');
-            el.className = 'poll-card';
-            let html = `<div class="poll-question">${poll.question}</div>`;
-            poll.options.forEach((opt, optIndex) => {
-                const pct = poll.total > 0 ? Math.round((opt.votes / poll.total) * 100) : 0;
-                html += `
-                    <div class="poll-option" onclick="votePoll(${index}, ${optIndex})">
-                        <div class="poll-bar-bg" style="width:${pct}%"></div>
-                        <span style="position:relative; z-index:1;">${opt.text}</span>
-                        <span style="position:relative; z-index:1; font-weight:600;">${pct}%</span>
-                    </div>
-                `;
-            });
-            html += `<div class="poll-meta"><span>${poll.total} votes</span> <span>${poll.active ? 'Live' : 'Closed'}</span></div>`;
-            el.innerHTML = html;
-            list.appendChild(el);
-        });
-    }
 
-    function createPoll() {
-        const input = document.getElementById('newPollInput');
-        const txt = input.value.trim();
-        if(!txt) return;
-        let parts = txt.split('?');
-        let question = parts[0] + '?';
-        let options = parts[1] ? parts[1].split(',').map(s => s.trim()) : ['Yes', 'No'];
-        const newPoll = { question, options: options.map(o => ({ text: o, votes: 0 })), total: 0, active: true };
-        state.polls.unshift(newPoll);
-        input.value = '';
-        renderPolls();
-        socket.emit('poll_update', state.polls);
-    }
-    
-    function handlePollInput(e) { if(e.key === 'Enter') createPoll(); }
 
-    function votePoll(pollIndex, optIndex) {
-        const poll = state.polls[pollIndex];
-        poll.options[optIndex].votes++;
-        poll.total++;
-        renderPolls();
-        socket.emit('poll_update', state.polls);
-    }
+    socket.on('user-left', (userId) => {
 
-    // --- CHAT ---
-    function handleChat(e) { if(e.key === 'Enter') sendChat(); }
-    function sendChat() {
-        const input = document.getElementById('chatInput');
-        if(!input.value.trim()) return;
-        addChatMessage(state.me.name, input.value, true);
-        socket.emit('chat', { sender: state.me.name, text: input.value });
-        input.value = '';
-    }
-    function addChatMessage(sender, text, isMe) {
-        const feed = document.getElementById('chatFeed');
-        const msg = document.createElement('div');
-        msg.style.marginBottom = "10px";
-        msg.innerHTML = `
-            <div style="font-size:10px; color:var(--text-secondary); margin-bottom:2px;">${sender}</div>
-            <div style="background:${isMe ? 'var(--accent)' : 'var(--chat-bubble-me)'}; color:${isMe ? '#000' : 'var(--text-primary)'}; padding:8px 12px; border-radius:8px; display:inline-block; font-size:13px; font-weight:500;">${text}</div>
-        `;
-        feed.appendChild(msg);
-        feed.scrollTop = feed.scrollHeight;
-    }
+        const tile = document.getElementById(`tile-${userId}`);
 
-    // --- UTILS ---
-    function broadcastTitleUpdate() {
-        const t = document.getElementById('meetingTitle').innerText;
-        document.title = "KAIROS | " + t;
-        socket.emit('title_update', t);
-    }
+        if (tile) tile.remove();
 
-    function switchTab(tab) {
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.sidebar-content').forEach(c => c.classList.remove('active'));
-        document.querySelectorAll('.sidebar-content').forEach(c => c.style.display = 'none');
-        const btn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.innerText.toLowerCase().includes(tab.split(' ')[0]));
-        if(btn) btn.classList.add('active');
-        const content = document.getElementById(`tab-${tab}`);
-        content.style.display = 'flex';
-        setTimeout(() => content.classList.add('active'), 10);
-    }
+        if (peers[userId]) {
 
-    function toggleSidebar() { document.getElementById('sidebar').classList.toggle('collapsed'); }
-    function toggleCaptions() { 
-        state.captionsEnabled = !state.captionsEnabled; 
-        document.getElementById('captionBtn').classList.toggle('active', state.captionsEnabled);
-    }
-    function toggleAI() { 
-        state.isAiActive = !state.isAiActive;
-        const badge = document.getElementById('aiStatus');
-        badge.innerHTML = state.isAiActive ? '<i class="ph-fill ph-sparkle"></i> <span>AI Active</span>' : '<i class="ph-fill ph-pause"></i> <span>AI Paused</span>';
-        badge.classList.toggle('active', state.isAiActive);
-    }
+            peers[userId].close();
 
-    function startTimer() {
-        let sec = 0;
-        setInterval(() => {
-            sec++;
-            const h = Math.floor(sec/3600).toString().padStart(2,'0');
-            const m = Math.floor((sec%3600)/60).toString().padStart(2,'0');
-            const s = (sec%60).toString().padStart(2,'0');
-            document.getElementById('timer').innerText = `${h}:${m}:${s}`;
-        }, 1000);
-    }
+            delete peers[userId];
 
-    function stringToColor(str) {
-        if (!str) return '#333';
-        let hash = 0;
-        for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
-        const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
-        return '#' + "00000".substring(0, 6 - c.length) + c;
-    }
+        }
+
+    });
+
+
+
+    // --- RESTORED INTERACTION FUNCTIONS ---
+
+
 
     function showToast(msg) {
-        const t = document.createElement('div');
-        t.innerHTML = `<i class="ph-fill ph-info"></i> ${msg}`;
-        t.style.cssText = "position:fixed; top:80px; left:50%; transform:translateX(-50%); background:var(--bg-panel); color:var(--text-primary); padding:10px 20px; border-radius:30px; border:1px solid var(--border); z-index:9999; box-shadow:0 10px 30px rgba(0,0,0,0.5); font-size:12px; font-weight:500; display:flex; align-items:center; gap:8px;";
-        document.body.appendChild(t);
-        setTimeout(() => t.remove(), 3000);
+
+        const t = document.getElementById('toast');
+
+        document.getElementById('toastMsg').innerText = msg;
+
+        t.classList.add('show');
+
+        setTimeout(() => t.classList.remove('show'), 3000);
+
     }
 
-    // --- END MEETING INTELLIGENCE ---
-    function endMeeting() {
-        const container = document.getElementById('aiSummaryContent');
-        container.innerHTML = '';
-        
-        let decisions = [];
-        let actions = [];
-        
-        state.transcript.forEach(t => {
-            const txt = t.text.toLowerCase();
-            if (txt.includes("agree") || txt.includes("decided") || txt.includes("approved")) decisions.push(t.text);
-            else if (txt.includes("will") || txt.includes("task") || txt.includes("todo")) actions.push(t.text);
+
+
+    function switchTab(tabName) {
+
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+        document.querySelectorAll('.sidebar-content').forEach(c => {
+
+            c.style.display = 'none';
+
+            c.classList.remove('active');
+
         });
 
-        const createBlock = (title, items, icon) => {
-            if(items.length === 0) return '';
-            return `<div class="summary-block"><div class="summary-title"><i class="ph-bold ${icon}"></i> ${title}</div>${items.slice(0, 4).map(i => `<div class="summary-item"><span class="summary-bullet">•</span> ${i}</div>`).join('')}</div>`;
-        };
+        event.target.classList.add('active');
 
-        let html = '';
-        html += createBlock('Decisions Made', decisions, 'ph-check-circle');
-        html += createBlock('Action Items', actions, 'ph-list-checks');
-        const doneAgenda = state.agenda.filter(a => a.done).map(a => a.text);
-        html += createBlock('Completed Agenda', doneAgenda, 'ph-calendar-check');
-        
-        if (html === '') html = `<div class="summary-block"><div class="summary-item">No significant discussion points detected.</div></div>`;
+        const content = document.getElementById(`tab-${tabName}`);
 
-        container.innerHTML = html;
-        const modal = document.getElementById('endModal');
-        modal.style.display = 'flex';
-        setTimeout(() => modal.classList.add('visible'), 10);
+        content.style.display = tabName === 'chat' ? 'flex' : 'block';
+
+        setTimeout(() => content.classList.add('active'), 10);
+
     }
+
+
+
+    function toggleCheck(el) {
+
+        const box = el.querySelector('.chk-box');
+
+        const text = el.querySelector('.agenda-text');
+
+        if(box.classList.contains('checked')) {
+
+            box.classList.remove('checked'); text.classList.remove('done');
+
+        } else {
+
+            box.classList.add('checked'); text.classList.add('done');
+
+        }
+
+    }
+
+
+
+    function toggleSidebar() {
+
+        const sb = document.getElementById('sidebar');
+
+        if(window.innerWidth <= 768) {
+
+            sb.classList.toggle('mobile-active');
+
+        } else {
+
+            sb.classList.toggle('collapsed');
+
+        }
+
+    }
+
+
+
+    function toggleHand(btn) {
+
+        if(btn) btn.classList.toggle('active');
+
+        const badge = document.getElementById('myHand');
+
+        if (badge.classList.contains('active')) {
+
+            badge.classList.remove('active');
+
+        } else {
+
+            badge.classList.add('active');
+
+            showToast('You raised your hand');
+
+        }
+
+        document.getElementById('moreMenuOverlay').classList.remove('active');
+
+    }
+
+
+
+    function toggleReactionMenu() {
+
+        document.getElementById('moreMenuOverlay').classList.remove('active');
+
+        const overlay = document.getElementById('reactionOverlay');
+
+        overlay.classList.toggle('active');
+
+    }
+
+
+
+    function toggleMoreMenu() {
+
+        document.getElementById('reactionOverlay').classList.remove('active');
+
+        const overlay = document.getElementById('moreMenuOverlay');
+
+        overlay.classList.toggle('active');
+
+    }
+
+
+
+    function openMeetingInfo() {
+
+        document.getElementById('moreMenuOverlay').classList.remove('active');
+
+        const modal = document.getElementById('meetingInfoModal');
+
+        modal.classList.toggle('active');
+
+    }
+
+
+
+    function copyMeetingLink() {
+
+        const text = "https://meet.kairos.ai/town-hall-2026";
+
+        const textArea = document.createElement("textarea");
+
+        textArea.value = text;
+
+        document.body.appendChild(textArea);
+
+        textArea.select();
+
+        try {
+
+            document.execCommand('copy');
+
+            showToast("Link copied to clipboard");
+
+        } catch (err) {
+
+            console.error('Fallback: Oops, unable to copy', err);
+
+            showToast("Failed to copy link");
+
+        }
+
+        document.body.removeChild(textArea);
+
+        openMeetingInfo(); 
+
+    }
+
+    
+
+    function openAiPrivacy() {
+
+        const modal = document.getElementById('aiPrivacyModal');
+
+        modal.classList.add('visible');
+
+        modal.style.display = 'flex';
+
+    }
+
+    function closeAiPrivacy() {
+
+        const modal = document.getElementById('aiPrivacyModal');
+
+        modal.classList.remove('visible');
+
+        setTimeout(() => modal.style.display = 'none', 300);
+
+    }
+
+    
+
+    function toggleAiCompanion(btn) {
+
+        const badge = document.getElementById('smartRecBadge');
+
+        const isActive = btn.classList.contains('active');
+
+
+
+        if (!isActive) {
+
+             // Turn ON
+
+             btn.classList.add('active');
+
+             btn.style.backgroundColor = 'var(--accent)';
+
+             btn.style.color = 'black';
+
+             btn.innerHTML = '<i class="ph-bold ph-toggle-left"></i> <span>AI Companion On</span>';
+
+             
+
+             badge.style.display = 'flex';
+
+             setTimeout(() => badge.classList.add('active'), 10);
+
+             showToast('AI Companion Enabled');
+
+        } else {
+
+             // Turn OFF
+
+             btn.classList.remove('active');
+
+             btn.style.backgroundColor = 'var(--surface-hover)';
+
+             btn.style.color = 'var(--text-secondary)';
+
+             btn.innerHTML = '<i class="ph-bold ph-toggle-right"></i> <span>AI Companion Off</span>';
+
+             
+
+             badge.classList.remove('active');
+
+             setTimeout(() => badge.style.display = 'none', 300); 
+
+             showToast('AI Companion Disabled');
+
+        }
+
+    }
+
+    
+
+    function sendReaction(emoji) {
+
+        const layer = document.getElementById('tile-me'); 
+
+        const el = document.createElement('div');
+
+        el.className = 'floating-emoji';
+
+        el.innerText = emoji;
+
+        el.style.left = Math.random() * 60 + 20 + '%'; 
+
+        
+
+        const target = document.getElementById('react-layer-1');
+
+        if(target) target.appendChild(el);
+
+        
+
+        setTimeout(() => el.remove(), 2000);
+
+        document.getElementById('reactionOverlay').classList.remove('active');
+
+        showToast(`Reacted with ${emoji}`);
+
+    }
+
+
+
+    function vote(opt, percent) {
+
+        const parent = opt.parentElement;
+
+        parent.querySelectorAll('.poll-option').forEach(o => o.classList.remove('selected'));
+
+        parent.querySelectorAll('.poll-bar-fill').forEach(b => b.style.width = '0%');
+
+        opt.classList.add('selected');
+
+        const bar = opt.nextElementSibling.querySelector('.poll-bar-fill');
+
+        bar.style.width = percent + '%';
+
+        opt.querySelector('span:last-child').innerText = '1 vote';
+
+    }
+
+
+
+    function toggleCaptions() {
+
+        const cap = document.getElementById('captionsOverlay');
+
+        cap.classList.toggle('active');
+
+        const isActive = cap.classList.contains('active');
+
+        showToast(isActive ? 'Captions Enabled (Translating)' : 'Captions Disabled');
+
+        
+
+        document.getElementById('settingsModal').classList.remove('visible');
+
+        document.getElementById('moreMenuOverlay').classList.remove('active');
+
+        setTimeout(() => document.getElementById('settingsModal').style.display = 'none', 300);
+
+    }
+
+
+
+    function openSettings() {
+
+        toggleMoreMenu(); 
+
+        const modal = document.getElementById('settingsModal');
+
+        modal.style.display = 'flex';
+
+        setTimeout(() => modal.classList.add('visible'), 10);
+
+    }
+
+
+
+    function closeSettings() {
+
+        const modal = document.getElementById('settingsModal');
+
+        modal.classList.remove('visible');
+
+        setTimeout(() => modal.style.display = 'none', 300);
+
+    }
+
+    
+
+    /* --- PARTICIPANTS LIST LOGIC --- */
+
+    const allParticipants = [
+
+        { name: "Benedict (Host)", role: "Host", avatar: "Me" },
+
+        { name: "Alice Design", role: "Guest", avatar: "A" },
+
+        { name: "John Dev", role: "Member", avatar: "J" },
+
+        { name: "Sarah", role: "Guest", avatar: "S" },
+
+        { name: "Mike", role: "Member", avatar: "M" },
+
+        { name: "David", role: "Guest", avatar: "D" }
+
+    ];
+
+
+
+    let allMuted = false;
+
+
+
+    function openParticipantList() {
+
+        const modal = document.getElementById('participantsModal');
+
+        const list = document.getElementById('fullParticipantList');
+
+        document.getElementById('pCount').innerText = allParticipants.length;
+
+        
+
+        list.innerHTML = ''; // clear
+
+        
+
+        allParticipants.forEach(p => {
+
+            const el = document.createElement('div');
+
+            el.className = 'p-item';
+
+            const isMuted = allMuted || Math.random() > 0.7; 
+
+            const micIcon = isMuted ? 'ph-microphone-slash' : 'ph-microphone';
+
+            
+
+            el.innerHTML = `
+
+                <div class="p-info">
+
+                    <div class="p-avatar" style="background:#333;">${p.avatar}</div> 
+
+                    ${p.name}
+
+                </div>
+
+                <div class="p-controls">
+
+                    <i class="ph-fill ${micIcon}"></i> 
+
+                    <i class="ph-fill ph-video-camera${Math.random() > 0.5 ? '-slash' : ''}"></i>
+
+                </div>
+
+            `;
+
+            list.appendChild(el);
+
+        });
+
+
+
+        modal.style.display = 'flex';
+
+        setTimeout(() => modal.classList.add('visible'), 10);
+
+    }
+
+    
+
+    function closeParticipantList() {
+
+        const modal = document.getElementById('participantsModal');
+
+        modal.classList.remove('visible');
+
+        setTimeout(() => modal.style.display = 'none', 300);
+
+    }
+
+
+
+    function toggleMuteAll() {
+
+        const btn = document.getElementById('muteAllBtn');
+
+        const list = document.getElementById('fullParticipantList');
+
+        
+
+        allMuted = !allMuted;
+
+        
+
+        if(allMuted) {
+
+            btn.innerHTML = '<i class="ph-bold ph-microphone"></i> Unmute All';
+
+            btn.style.color = 'var(--accent)';
+
+            btn.style.background = 'rgba(16,185,129,0.1)';
+
+            btn.style.borderColor = 'var(--accent)';
+
+            showToast('All participants muted');
+
+        } else {
+
+            btn.innerHTML = '<i class="ph-bold ph-microphone-slash"></i> Mute All';
+
+            btn.style.color = 'var(--danger)';
+
+            btn.style.background = 'rgba(239,68,68,0.1)';
+
+            btn.style.borderColor = 'var(--danger)';
+
+            showToast('All participants unmuted');
+
+        }
+
+        
+
+        const icons = list.querySelectorAll('.ph-microphone, .ph-microphone-slash');
+
+        icons.forEach(i => {
+
+            i.className = allMuted ? 'ph-fill ph-microphone-slash' : 'ph-fill ph-microphone';
+
+        });
+
+    }
+
+
+
+    /* --- WHITEBOARD --- */
+
+    let isWhiteboardOpen = false;
+
+    const canvas = document.getElementById('wbCanvas');
+
+    const ctx = canvas.getContext('2d');
+
+    let isDrawing = false;
+
+    let currentTool = 'pen';
+
+    
+
+    function resizeCanvas() {
+
+        const container = document.getElementById('canvasArea');
+
+        canvas.width = container.offsetWidth;
+
+        canvas.height = container.offsetHeight;
+
+        ctx.lineCap = 'round';
+
+        ctx.lineJoin = 'round';
+
+        ctx.lineWidth = 3;
+
+        ctx.strokeStyle = '#000';
+
+    }
+
+
+
+    function toggleWhiteboard() {
+
+        const wb = document.getElementById('whiteboardContainer');
+
+        const grid = document.getElementById('grid');
+
+        const pip = document.getElementById('pipWindow');
+
+        const btn = document.getElementById('wbBtn');
+
+        
+
+        isWhiteboardOpen = !isWhiteboardOpen;
+
+        
+
+        if(isWhiteboardOpen) {
+
+            wb.classList.add('active');
+
+            grid.classList.add('hidden');
+
+            pip.classList.add('active');
+
+            btn.classList.add('active');
+
+            resizeCanvas();
+
+        } else {
+
+            wb.classList.remove('active');
+
+            grid.classList.remove('hidden');
+
+            pip.classList.remove('active');
+
+            btn.classList.remove('active');
+
+        }
+
+    }
+
+    
+
+    function selectTool(tool) {
+
+        currentTool = tool;
+
+        document.querySelectorAll('.wb-btn').forEach(b => b.classList.remove('active'));
+
+        if(tool === 'pen') {
+
+            document.querySelector('.wb-btn:nth-child(1)').classList.add('active');
+
+            ctx.globalCompositeOperation = 'source-over';
+
+            ctx.lineWidth = 3;
+
+        } else if(tool === 'eraser') {
+
+            document.querySelector('.wb-btn:nth-child(2)').classList.add('active');
+
+            ctx.globalCompositeOperation = 'destination-out';
+
+            ctx.lineWidth = 20;
+
+        }
+
+    }
+
+    
+
+    function clearBoard() {
+
+        ctx.clearRect(0,0, canvas.width, canvas.height);
+
+    }
+
+    
+
+    // Drawing Logic
+
+    canvas.addEventListener('mousedown', startDraw);
+
+    canvas.addEventListener('mousemove', draw);
+
+    canvas.addEventListener('mouseup', stopDraw);
+
+    canvas.addEventListener('mouseout', stopDraw);
+
+    
+
+    function startDraw(e) {
+
+        isDrawing = true;
+
+        draw(e);
+
+    }
+
+    function draw(e) {
+
+        if(!isDrawing) return;
+
+        const rect = canvas.getBoundingClientRect();
+
+        const x = e.clientX - rect.left;
+
+        const y = e.clientY - rect.top;
+
+        
+
+        ctx.lineTo(x, y);
+
+        ctx.stroke();
+
+        ctx.beginPath();
+
+        ctx.moveTo(x, y);
+
+    }
+
+    function stopDraw() {
+
+        isDrawing = false;
+
+        ctx.beginPath();
+
+    }
+
+    
+
+    /* --- MAXIMIZE TILE --- */
+
+    function toggleMaximize(tile) {
+
+        if(tile.classList.contains('maximized')) {
+
+            tile.classList.remove('maximized');
+
+        } else {
+
+            document.querySelectorAll('.video-tile').forEach(t => t.classList.remove('maximized'));
+
+            tile.classList.add('maximized');
+
+        }
+
+    }
+
+
+
+    function endCall() {
+
+        const modal = document.getElementById('endModal');
+
+        modal.style.display = 'flex';
+
+        setTimeout(() => modal.classList.add('visible'), 10);
+
+
+
+        setTimeout(() => {
+
+            document.getElementById('processingState').style.display = 'none';
+
+            document.getElementById('summaryState').style.display = 'block';
+
+        }, 2000);
+
+    }
+
 </script>
+
 </body>
+
 </html>
