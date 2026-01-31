@@ -1,16 +1,18 @@
 {
   "name": "kairos-signaling-server",
   "version": "1.0.0",
-  "description": "Real-time signaling server for KAIROS video and chat",
+  "description": "Token issuer and management server for KAIROS LiveKit sessions",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "node --watch server.js"
   },
   "dependencies": {
+    "dotenv": "^16.4.1",
     "express": "^4.18.2",
-    "socket.io": "^4.7.2"
+    "livekit-server-sdk": "^2.0.4"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=18.0.0"
   }
 }
