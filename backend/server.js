@@ -1,86 +1,63 @@
 const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
+const cors = require('cors');
+const { AccessToken } = require('livekit-server-sdk');
+require('dotenv').config();
 
 const app = express();
-const server = http.createServer(app);
 
-// --- KEEP-ALIVE / HEALTH CHECK ROUTE ---
-// This prevents Render from marking the service as timed out
+// --- MIDDLEWARE ---
+app.use(cors()); // Critical for frontend connection
+app.use(express.json());
+
+// --- HEALTH CHECK ---
 app.get('/', (req, res) => {
-    res.status(200).send('KAIROS Signaling Server is live and healthy.');
+    res.status(200).send('KAIROS Token Server is live and healthy.');
 });
 
-// Enable CORS so your frontend can connect
-const io = new Server(server, {
-    cors: {
-        origin: "*", // In production, replace with your frontend URL
-        methods: ["GET", "POST"]
+/**
+ * Endpoint to generate a KAIROS session token
+ * Expects query params: ?room=RoomName&user=UserName
+ */
+app.get('/get-token', async (req, res) => {
+    const roomName = req.query.room;
+    const participantName = req.query.user;
+
+    if (!roomName || !participantName) {
+        return res.status(400).json({ error: 'room and user parameters are required' });
+    }
+
+    // These values are pulled from your .env file
+    const apiKey = process.env.LIVEKIT_API_KEY;
+    const apiSecret = process.env.LIVEKIT_API_SECRET;
+
+    try {
+        const at = new AccessToken(apiKey, apiSecret, {
+            identity: participantName,
+        });
+
+        // Grant permissions for the user
+        at.addGrant({
+            roomJoin: true,
+            room: roomName,
+            canPublish: true,      // Allow camera/mic
+            canSubscribe: true,    // Allow seeing others
+            canPublishData: true   // Critical for the Chat feature
+        });
+
+        const token = await at.toJwt();
+        res.json({ token });
+    } catch (error) {
+        console.error('Token Generation Error:', error);
+        res.status(500).json({ error: 'Failed to generate token' });
     }
 });
 
-const rooms = {}; 
-
-io.on('connection', (socket) => {
-    console.log('User connected:', socket.id);
-
-    // --- ROOM LOGIC ---
-    socket.on('join-room', (roomId) => {
-        socket.join(roomId);
-        
-        if (!rooms[roomId]) rooms[roomId] = [];
-        rooms[roomId].push(socket.id);
-
-        socket.to(roomId).emit('user-joined', socket.id);
-        
-        const otherUsers = rooms[roomId].filter(id => id !== socket.id);
-        socket.emit('all-users', otherUsers);
-        
-        console.log(`Socket ${socket.id} joined room ${roomId}`);
-    });
-
-    // --- WEBRTC SIGNALING ---
-    socket.on('offer', (data) => {
-        io.to(data.to).emit('offer', {
-            from: socket.id,
-            offer: data.offer
-        });
-    });
-
-    socket.on('answer', (data) => {
-        io.to(data.to).emit('answer', {
-            from: socket.id,
-            answer: data.answer
-        });
-    });
-
-    socket.on('ice-candidate', (data) => {
-        io.to(data.to).emit('ice-candidate', {
-            from: socket.id,
-            candidate: data.candidate
-        });
-    });
-
-    // --- CHAT LOGIC ---
-    socket.on('send-chat', (data) => {
-        io.to(data.roomId).emit('receive-chat', {
-            text: data.text,
-            sender: data.sender,
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        });
-    });
-
-    // --- DISCONNECT ---
-    socket.on('disconnect', () => {
-        console.log('User disconnected:', socket.id);
-        for (const roomId in rooms) {
-            rooms[roomId] = rooms[roomId].filter(id => id !== socket.id);
-            socket.to(roomId).emit('user-left', socket.id);
-        }
-    });
-});
-
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`KAIROS Signaling Server running on port ${PORT}`);
+app.listen(PORT, () => {
+    console.log(`
+    🚀 KAIROS Token Server Running
+    ------------------------------
+    Port: ${PORT}
+    Endpoint: http://localhost:${PORT}/get-token
+    `);
 });
