@@ -13,7 +13,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 
 <script src="https://unpkg.com/@phosphor-icons/web"></script>
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="https://unpkg.com/livekit-client/dist/livekit-client.umd.min.js"></script>
 
 
 <script>
@@ -1866,35 +1866,168 @@
 
 
 
-    // --- SOCKET CONFIGURATION ---
-
-    const socket = io('https://kairos-backend-u493.onrender.com', { transports: ['websocket'] });
-
-    const ROOM_ID = 'design-team-sync'; // This would be dynamic in production
-
-    const USER_NAME = 'Benedict'; 
-
+    // --- LIVEKIT CONFIG & CONSTANTS ---
+    const { Room, RoomEvent, VideoPreserveAspect, Track } = LiveKitClient;
     
+    // Replace these with your backend-generated values
+    const LIVEKIT_URL = 'wss://kairos-ovqab9eg.livekit.cloud'; 
+    const LIVEKIT_TOKEN = 'GENERATED_TOKEN_FROM_BACKEND'; 
 
-    let localStream;
-
-    let peers = {}; // Store RTCPeerConnection for each user: { socketId: connection }
-
-
-
-    // --- SOCKET INITIALIZATION ---
-
-    socket.on('connect', () => {
-
-        console.log('Connected to Signaling Server:', socket.id);
-
-        socket.emit('join-room', ROOM_ID);
-
-        showToast('Connected to KAIROS Network');
-
+    const room = new Room({
+        adaptiveStream: true, // Optimized for grid performance
+        dynacast: true,       // Saves bandwidth
+        videoCaptureDefaults: {
+            resolution: { width: 1280, height: 720 },
+        },
     });
 
+    let localStream = null;
 
+    // --- INITIALIZATION ---
+    async function initLiveKit() {
+        try {
+            // 1. Connect to the room
+            await room.connect(LIVEKIT_URL, LIVEKIT_TOKEN);
+            showToast('Connected to KAIROS Network');
+            
+            // 2. Handle existing and new participants
+            room.on(RoomEvent.TrackSubscribed, handleTrackSubscribed);
+            room.on(RoomEvent.TrackUnsubscribed, handleTrackUnsubscribed);
+            room.on(RoomEvent.ActiveSpeakersChanged, handleActiveSpeakers);
+            room.on(RoomEvent.ParticipantDisconnected, (participant) => {
+                const tile = document.getElementById(`tile-${participant.sid}`);
+                if (tile) tile.remove();
+            });
+
+            // 3. Pre-load existing participants
+            room.participants.forEach(participant => {
+                participant.tracks.forEach(publication => {
+                    if (publication.isSubscribed) {
+                        handleTrackSubscribed(publication.track, publication, participant);
+                    }
+                });
+            });
+
+        } catch (error) {
+            console.error('LiveKit connection error:', error);
+            showToast('Connection Failed');
+        }
+    }
+
+    // --- TRACK HANDLING ---
+    function handleTrackSubscribed(track, publication, participant) {
+        if (track.kind === Track.Kind.Video) {
+            addUserTile(participant.sid, track, participant.identity);
+        } else if (track.kind === Track.Kind.Audio) {
+            // Audio tracks must be attached to the DOM to be heard
+            const element = track.attach();
+            document.body.appendChild(element);
+        }
+    }
+
+    function handleTrackUnsubscribed(track, publication, participant) {
+        track.detach().forEach((element) => element.remove());
+        if (track.kind === Track.Kind.Video) {
+            const tile = document.getElementById(`tile-${participant.sid}`);
+            // Keep tile if other tracks exist, or remove if user left
+        }
+    }
+
+// --- SPEAKER HIGHLIGHTING ---
+    function handleActiveSpeakers(speakers) {
+        // Remove speaking class from all
+        document.querySelectorAll('.video-tile').forEach(t => t.classList.remove('speaking'));
+        
+        speakers.forEach(speaker => {
+            const tile = document.getElementById(speaker.isLocal ? 'tile-me' : `tile-${speaker.sid}`);
+            if (tile) tile.classList.add('speaking');
+        });
+    }
+
+    // --- UI HELPERS ---
+    function addUserTile(sid, track, identity) {
+        let tile = document.getElementById(`tile-${sid}`);
+        if (!tile) {
+            const grid = document.getElementById('grid');
+            tile = document.createElement('div');
+            tile.className = 'video-tile';
+            tile.id = `tile-${sid}`;
+            tile.innerHTML = `
+                <div class="tile-top-overlay">
+                    <div class="tile-btn" onclick="toggleMaximize(this.parentElement.parentElement)"><i class="ph-bold ph-arrows-out-simple"></i></div>
+                </div>
+                <div class="video-container"></div>
+                <div class="tile-overlay">
+                    <div class="user-nametag">${identity || 'Remote Participant'}</div>
+                </div>
+            `;
+            grid.prepend(tile);
+        }
+        
+        const container = tile.querySelector('.video-container');
+        container.innerHTML = ''; // Clear previous
+        const element = track.attach();
+        element.className = 'live-video';
+        container.appendChild(element);
+    }
+
+    // --- CONTROLS SYNCED WITH LIVEKIT ---
+    async function toggleState(btn, type) {
+        if (type === 'mute') {
+            const isMuted = room.localParticipant.isMicrophoneEnabled;
+            await room.localParticipant.setMicrophoneEnabled(!isMuted);
+            
+            if (!isMuted) { // Turning ON
+                btn.classList.remove('danger');
+                btn.classList.add('active');
+                btn.querySelector('i').className = 'ph-fill ph-microphone';
+                showToast('Microphone Active');
+            } else { // Turning OFF
+                btn.classList.add('danger');
+                btn.classList.remove('active');
+                btn.querySelector('i').className = 'ph-fill ph-microphone-slash';
+                showToast('Microphone Muted');
+            }
+        }
+        
+        if (type === 'video') {
+            const isVideoEnabled = room.localParticipant.isCameraEnabled;
+            await room.localParticipant.setCameraEnabled(!isVideoEnabled);
+            
+            const tileMe = document.getElementById('tile-me');
+            const avatar = tileMe.querySelector('.tile-avatar');
+            
+            if (!isVideoEnabled) { // Turning ON
+                const track = room.localParticipant.getTrack(Track.Source.Camera);
+                if (track) {
+                    const element = track.videoTrack.attach();
+                    element.className = 'live-video';
+                    tileMe.insertBefore(element, tileMe.firstChild);
+                }
+                avatar.style.display = 'none';
+                btn.classList.add('active');
+                btn.querySelector('i').className = 'ph-fill ph-video-camera';
+                showToast('Camera Active');
+            } else { // Turning OFF
+                const vid = tileMe.querySelector('video');
+                if (vid) vid.remove();
+                avatar.style.display = 'flex';
+                btn.classList.remove('active');
+                btn.querySelector('i').className = 'ph-fill ph-video-camera-slash';
+                showToast('Camera Off');
+            }
+        }
+    }
+
+    // Start LiveKit on Page Load
+    window.addEventListener('DOMContentLoaded', initLiveKit);
+
+    // Update endCall to disconnect from LiveKit
+    const originalEndCall = endCall;
+    endCall = function() {
+        room.disconnect();
+        originalEndCall();
+    }
 
     // --- CHAT LOGIC ---
 
