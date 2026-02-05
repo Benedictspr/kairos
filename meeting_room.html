@@ -1884,6 +1884,33 @@
     let localStream = null;
 
     // --- INITIALIZATION ---
+async function initLiveKit() {
+    try {
+        // REPLACE THIS with your actual deployed backend URL
+        const backendUrl = 'https://https://kairos-backend-u493.onrender.com/getToken'; 
+        
+        const response = await fetch(`${backendUrl}?room=main-room&identity=Benedict`);
+        
+        if (!response.ok) throw new Error('Network response was not ok');
+        
+        const data = await response.json();
+        const LIVEKIT_TOKEN = data.token;
+
+        // Connect to LiveKit Cloud
+        await room.connect(LIVEKIT_URL, LIVEKIT_TOKEN);
+        showToast('Connected to KAIROS Network');
+        
+        // Publish local tracks so you appear immediately
+        await room.localParticipant.setMicrophoneEnabled(true);
+        await room.localParticipant.setCameraEnabled(true);
+
+    } catch (error) {
+        console.error('Connection Error:', error);
+        showToast('Server Unreachable');
+    }
+}
+
+    // --- INITIALIZATION ---
     async function initLiveKit() {
         try {
             // 1. Connect to the room
