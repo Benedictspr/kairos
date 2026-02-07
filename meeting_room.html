@@ -1829,49 +1829,30 @@
     // --- INIT ---
 
     // Sync header title to modal
-
     const mainTitle = document.querySelector('header h1').innerText;
-
     document.getElementById('modalMeetingTitle').innerText = mainTitle;
 
-
-
     // --- RESPONSIVE INIT ---
-
     if(window.innerWidth <= 768) {
-
         document.getElementById('mobSidebarHeader').style.display = 'flex';
-
     }
 
-
-
     // --- TIMER LOGIC ---
-
     let seconds = 0;
-
     setInterval(() => {
-
         seconds++;
-
         const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
-
         const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
-
         const s = (seconds % 60).toString().padStart(2, '0');
-
         document.getElementById('timer').innerText = `${h}:${m}:${s}`;
-
     }, 1000);
 
-
-
     // --- LIVEKIT CONFIG & CONSTANTS ---
-    const { Room, RoomEvent, VideoPreserveAspect, Track } = LiveKitClient;
-    
+    const { Room, RoomEvent, VideoPreserveAspect, Track, DataPacket_Kind } = LiveKitClient;
+
     // Replace these with your backend-generated values
     const LIVEKIT_URL = 'wss://kairos-ovqab9eg.livekit.cloud'; 
-    const LIVEKIT_TOKEN = 'GENERATED_TOKEN_FROM_BACKEND'; 
+    let LIVEKIT_TOKEN = ''; // Will be fetched
 
     const room = new Room({
         adaptiveStream: true, // Optimized for grid performance
@@ -1884,49 +1865,53 @@
     let localStream = null;
 
     // --- INITIALIZATION ---
-async function initLiveKit() {
-    try {
-        // REPLACE THIS with your actual deployed backend URL
-        const backendUrl = 'https://https://kairos-backend-u493.onrender.com/getToken'; 
-        
-        const response = await fetch(`${backendUrl}?room=main-room&identity=Benedict`);
-        
-        if (!response.ok) throw new Error('Network response was not ok');
-        
-        const data = await response.json();
-        const LIVEKIT_TOKEN = data.token;
-
-        // Connect to LiveKit Cloud
-        await room.connect(LIVEKIT_URL, LIVEKIT_TOKEN);
-        showToast('Connected to KAIROS Network');
-        
-        // Publish local tracks so you appear immediately
-        await room.localParticipant.setMicrophoneEnabled(true);
-        await room.localParticipant.setCameraEnabled(true);
-
-    } catch (error) {
-        console.error('Connection Error:', error);
-        showToast('Server Unreachable');
-    }
-}
-
-    // --- INITIALIZATION ---
     async function initLiveKit() {
         try {
-            // 1. Connect to the room
-            await room.connect(LIVEKIT_URL, LIVEKIT_TOKEN);
-            showToast('Connected to KAIROS Network');
+            // 1. Fetch Token
+            // REPLACE THIS with your actual deployed backend URL
+            const backendUrl = 'https://kairos-backend-u493.onrender.com/getToken'; 
             
-            // 2. Handle existing and new participants
+            try {
+                const response = await fetch(`${backendUrl}?room=main-room&identity=Benedict`);
+                if (response.ok) {
+                    const data = await response.json();
+                    LIVEKIT_TOKEN = data.token;
+                } else {
+                    console.warn('Backend fetch failed, using manual token if set');
+                }
+            } catch (e) {
+                console.warn('Backend fetch error', e);
+            }
+
+            if (!LIVEKIT_TOKEN) {
+                console.error('No token found. Please set LIVEKIT_TOKEN manually.');
+                showToast('Token Missing');
+                // return; 
+            }
+
+            if (LIVEKIT_TOKEN) {
+                // 2. Connect to the room
+                await room.connect(LIVEKIT_URL, LIVEKIT_TOKEN);
+                showToast('Connected to KAIROS Network');
+            
+                // 3. Publish local tracks so you appear immediately
+                await room.localParticipant.setMicrophoneEnabled(true);
+                await room.localParticipant.setCameraEnabled(true);
+            } else {
+                 showToast('Demo Mode (No Server)');
+            }
+
+            // 4. Handle existing and new participants
             room.on(RoomEvent.TrackSubscribed, handleTrackSubscribed);
             room.on(RoomEvent.TrackUnsubscribed, handleTrackUnsubscribed);
             room.on(RoomEvent.ActiveSpeakersChanged, handleActiveSpeakers);
+            room.on(RoomEvent.DataReceived, handleDataReceived); // For chat
             room.on(RoomEvent.ParticipantDisconnected, (participant) => {
                 const tile = document.getElementById(`tile-${participant.sid}`);
                 if (tile) tile.remove();
             });
 
-            // 3. Pre-load existing participants
+            // 5. Pre-load existing participants
             room.participants.forEach(participant => {
                 participant.tracks.forEach(publication => {
                     if (publication.isSubscribed) {
@@ -1956,11 +1941,11 @@ async function initLiveKit() {
         track.detach().forEach((element) => element.remove());
         if (track.kind === Track.Kind.Video) {
             const tile = document.getElementById(`tile-${participant.sid}`);
-            // Keep tile if other tracks exist, or remove if user left
+            // Keep tile if other tracks exist
         }
     }
 
-// --- SPEAKER HIGHLIGHTING ---
+    // --- SPEAKER HIGHLIGHTING ---
     function handleActiveSpeakers(speakers) {
         // Remove speaking class from all
         document.querySelectorAll('.video-tile').forEach(t => t.classList.remove('speaking'));
@@ -1970,6 +1955,61 @@ async function initLiveKit() {
             if (tile) tile.classList.add('speaking');
         });
     }
+
+    // --- CHAT LOGIC (LiveKit Data Messages) ---
+    function handleChat(e) { if(e.key === 'Enter') sendChat(); }
+
+    async function sendChat() {
+        const input = document.getElementById('chatInput');
+        const text = input.value;
+        if(!text) return;
+
+        // Optimized for chat: reliable=true
+        const strData = JSON.stringify({ type: 'chat', text: text, sender: 'Me', time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) });
+        const encoder = new TextEncoder();
+        const data = encoder.encode(strData);
+
+        try {
+            if (room && room.state === 'connected') {
+                await room.localParticipant.publishData(data, { reliable: true });
+            }
+            // Add to my own UI
+            addChatMessage('Me', text, true, new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
+            input.value = '';
+        } catch (e) {
+            console.error('Failed to send chat', e);
+            // Fallback: just show locally if offline or error
+            addChatMessage('Me', text, true, 'Now');
+            input.value = '';
+        }
+    }
+
+    function handleDataReceived(payload, participant, kind) {
+        const decoder = new TextDecoder();
+        const strData = decoder.decode(payload);
+        try {
+            const data = JSON.parse(strData);
+            if (data.type === 'chat') {
+                const isMe = participant === room.localParticipant;
+                addChatMessage(participant.identity || 'Guest', data.text, isMe, data.time);
+            }
+        } catch (e) {
+            console.warn('Received unknown data format');
+        }
+    }
+
+    function addChatMessage(sender, text, isMe, time) {
+        const feed = document.getElementById('chat-feed');
+        const el = document.createElement('div');
+        el.className = 'chat-msg';
+        el.innerHTML = `
+            <div class="chat-header"><span class="chat-name">${sender}</span> <span class="chat-time">${time}</span></div>
+            <div class="chat-bubble" style="background:${isMe ? 'var(--accent)' : 'var(--surface-hover)'}; color:${isMe ? '#000' : 'inherit'};">${text}</div>
+        `;
+        feed.appendChild(el);
+        feed.scrollTop = feed.scrollHeight;
+    }
+
 
     // --- UI HELPERS ---
     function addUserTile(sid, track, identity) {
@@ -1983,7 +2023,7 @@ async function initLiveKit() {
                 <div class="tile-top-overlay">
                     <div class="tile-btn" onclick="toggleMaximize(this.parentElement.parentElement)"><i class="ph-bold ph-arrows-out-simple"></i></div>
                 </div>
-                <div class="video-container"></div>
+                <div class="video-container" style="width:100%; height:100%;"></div>
                 <div class="tile-overlay">
                     <div class="user-nametag">${identity || 'Remote Participant'}</div>
                 </div>
@@ -2002,14 +2042,18 @@ async function initLiveKit() {
     async function toggleState(btn, type) {
         if (type === 'mute') {
             const isMuted = room.localParticipant.isMicrophoneEnabled;
+            // Toggle
             await room.localParticipant.setMicrophoneEnabled(!isMuted);
             
-            if (!isMuted) { // Turning ON
+            // Check new state
+            const nowMuted = !room.localParticipant.isMicrophoneEnabled;
+
+            if (!nowMuted) { // Enabled
                 btn.classList.remove('danger');
                 btn.classList.add('active');
                 btn.querySelector('i').className = 'ph-fill ph-microphone';
                 showToast('Microphone Active');
-            } else { // Turning OFF
+            } else { // Disabled
                 btn.classList.add('danger');
                 btn.classList.remove('active');
                 btn.querySelector('i').className = 'ph-fill ph-microphone-slash';
@@ -2025,12 +2069,17 @@ async function initLiveKit() {
             const avatar = tileMe.querySelector('.tile-avatar');
             
             if (!isVideoEnabled) { // Turning ON
+                // Get track
                 const track = room.localParticipant.getTrack(Track.Source.Camera);
-                if (track) {
+                if (track && track.videoTrack) {
+                    const params = tileMe.querySelector('.live-video');
+                    if(params) params.remove();
+
                     const element = track.videoTrack.attach();
                     element.className = 'live-video';
                     tileMe.insertBefore(element, tileMe.firstChild);
                 }
+                
                 avatar.style.display = 'none';
                 btn.classList.add('active');
                 btn.querySelector('i').className = 'ph-fill ph-video-camera';
@@ -2049,1081 +2098,359 @@ async function initLiveKit() {
     // Start LiveKit on Page Load
     window.addEventListener('DOMContentLoaded', initLiveKit);
 
-    // Update endCall to disconnect from LiveKit
-    const originalEndCall = endCall;
-    endCall = function() {
-        room.disconnect();
-        originalEndCall();
-    }
-
-    // --- CHAT LOGIC ---
-
-    function handleChat(e) { if(e.key === 'Enter') sendChat(); }
-
-
-
-    function sendChat() {
-
-        const input = document.getElementById('chatInput');
-
-        if(!input.value) return;
-
-        socket.emit('send-chat', { roomId: ROOM_ID, text: input.value, sender: USER_NAME });
-
-        input.value = '';
-
-    }
-
-
-
-    socket.on('receive-chat', (data) => {
-
-        const feed = document.getElementById('chat-feed');
-
-        const isMe = data.sender === USER_NAME;
-
-        const el = document.createElement('div');
-
-        el.className = 'chat-msg';
-
-        el.innerHTML = `
-
-            <div class="chat-header"><span class="chat-name">${data.sender}</span> <span class="chat-time">${data.time}</span></div>
-
-            <div class="chat-bubble" style="background:${isMe ? 'var(--accent)' : 'var(--surface-hover)'}; color:${isMe ? '#000' : 'inherit'};">${data.text}</div>
-
-        `;
-
-        feed.appendChild(el);
-
-        feed.scrollTop = feed.scrollHeight;
-
-    });
-
-
-
-    // --- WEBRTC CORE LOGIC ---
-
-
-
-    // 1. When a new user joins, create an Offer to connect to them
-
-    socket.on('user-joined', async (userId) => {
-
-        console.log('User joined:', userId);
-
-        const pc = createPeerConnection(userId);
-
-        const offer = await pc.createOffer();
-
-        await pc.setLocalDescription(offer);
-
-        socket.emit('offer', { to: userId, offer });
-
-    });
-
-
-
-    // 2. Handle incoming Offer
-
-    socket.on('offer', async (data) => {
-
-        const pc = createPeerConnection(data.from);
-
-        await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-
-        const answer = await pc.createAnswer();
-
-        await pc.setLocalDescription(answer);
-
-        socket.emit('answer', { to: data.from, answer });
-
-    });
-
-
-
-    // 3. Handle incoming Answer
-
-    socket.on('answer', async (data) => {
-
-        const pc = peers[data.from];
-
-        if (pc) await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-
-    });
-
-
-
-    // 4. Handle ICE Candidates
-
-    socket.on('ice-candidate', async (data) => {
-
-        const pc = peers[data.from];
-
-        if (pc && data.candidate) await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
-
-    });
-
-
-
-    function createPeerConnection(userId) {
-
-        if (peers[userId]) return peers[userId];
-
-        const pc = new RTCPeerConnection({
-
-            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] // Free Google STUN server
-
-        });
-
-
-
-        peers[userId] = pc;
-
-
-
-        // Send local tracks to this peer
-
-        if (localStream) {
-
-            localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-
-        }
-
-
-
-        // Send my network info (ICE) to the other user
-
-        pc.onicecandidate = (event) => {
-
-            if (event.candidate) {
-
-                socket.emit('ice-candidate', { to: userId, candidate: event.candidate });
-
-            }
-
-        };
-
-
-
-        // When the other user's video arrives, add it to the UI
-
-        pc.ontrack = (event) => {
-
-            addUserTile(userId, event.streams[0]);
-
-        };
-
-
-
-        return pc;
-
-    }
-
-
-
     // --- UI HELPERS & RESTORED FUNCTIONS ---
 
-
-
-    async function toggleState(btn, type) {
-
-        if(type === 'mute') {
-
-            if(btn.classList.contains('danger')) {
-
-                // UNMUTE
-
-                btn.classList.remove('danger');
-
-                btn.classList.add('active');
-
-                btn.querySelector('i').className = 'ph-fill ph-microphone';
-
-                showToast('Microphone Active');
-
-            } else {
-
-                // MUTE
-
-                btn.classList.add('danger');
-
-                btn.classList.remove('active');
-
-                btn.querySelector('i').className = 'ph-fill ph-microphone-slash';
-
-                showToast('Microphone Muted');
-
-            }
-
-        }
-
-        
-
-        if(type === 'video') {
-
-            const tileMe = document.getElementById('tile-me');
-
-            const avatar = tileMe.querySelector('.tile-avatar');
-
-            
-
-            if(!btn.classList.contains('active')) {
-
-                try {
-
-                    // Get User Media for WebRTC
-
-                    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-
-                    
-
-                    // UI Update
-
-                    const videoEl = document.createElement('video');
-
-                    videoEl.srcObject = localStream;
-
-                    videoEl.autoplay = true;
-
-                    videoEl.muted = true; // Local video muted
-
-                    videoEl.playsInline = true;
-
-                    videoEl.className = 'live-video';
-
-                    tileMe.insertBefore(videoEl, tileMe.firstChild);
-
-                    avatar.style.display = 'none';
-
-                    
-
-                    btn.classList.add('active');
-
-                    btn.querySelector('i').className = 'ph-fill ph-video-camera';
-
-                    showToast('Camera Active');
-
-                    
-
-                    // Add tracks to all existing peer connections
-
-                    Object.values(peers).forEach(pc => {
-
-                        localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-
-                    });
-
-                    
-
-                } catch(err) {
-
-                    showToast('Camera Access Denied');
-
-                    console.error(err);
-
-                }
-
-            } else {
-
-                // Stop Video
-
-                if(localStream) {
-
-                    localStream.getTracks().forEach(track => track.stop());
-
-                    localStream = null;
-
-                }
-
-                const vid = tileMe.querySelector('video');
-
-                if(vid) vid.remove();
-
-                avatar.style.display = 'flex';
-
-                
-
-                btn.classList.remove('active');
-
-                btn.querySelector('i').className = 'ph-fill ph-video-camera-slash';
-
-                showToast('Camera Off');
-
-            }
-
-        }
-
-    }
-
-
-
-    function addUserTile(userId, stream) {
-
-        // Check if tile already exists
-
-        let tile = document.getElementById(`tile-${userId}`);
-
-        if (!tile) {
-
-            const grid = document.getElementById('grid');
-
-            tile = document.createElement('div');
-
-            tile.className = 'video-tile';
-
-            tile.id = `tile-${userId}`;
-
-            tile.innerHTML = `
-
-                <div class="tile-top-overlay">
-
-                    <div class="tile-btn" onclick="toggleMaximize(this.parentElement.parentElement)"><i class="ph-bold ph-arrows-out-simple"></i></div>
-
-                </div>
-
-                <video autoplay playsinline class="live-video"></video>
-
-                <div class="tile-overlay">
-
-                    <div class="user-nametag">Remote Participant</div>
-
-                </div>
-
-            `;
-
-            grid.prepend(tile);
-
-        }
-
-        tile.querySelector('video').srcObject = stream;
-
-    }
-
-
-
-    socket.on('user-left', (userId) => {
-
-        const tile = document.getElementById(`tile-${userId}`);
-
-        if (tile) tile.remove();
-
-        if (peers[userId]) {
-
-            peers[userId].close();
-
-            delete peers[userId];
-
-        }
-
-    });
-
-
-
-    // --- RESTORED INTERACTION FUNCTIONS ---
-
-
-
     function showToast(msg) {
-
         const t = document.getElementById('toast');
-
         document.getElementById('toastMsg').innerText = msg;
-
         t.classList.add('show');
-
         setTimeout(() => t.classList.remove('show'), 3000);
-
     }
-
-
 
     function switchTab(tabName) {
-
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-
         document.querySelectorAll('.sidebar-content').forEach(c => {
-
             c.style.display = 'none';
-
             c.classList.remove('active');
-
         });
-
         event.target.classList.add('active');
-
         const content = document.getElementById(`tab-${tabName}`);
-
         content.style.display = tabName === 'chat' ? 'flex' : 'block';
-
         setTimeout(() => content.classList.add('active'), 10);
-
     }
-
-
 
     function toggleCheck(el) {
-
         const box = el.querySelector('.chk-box');
-
         const text = el.querySelector('.agenda-text');
-
         if(box.classList.contains('checked')) {
-
             box.classList.remove('checked'); text.classList.remove('done');
-
         } else {
-
             box.classList.add('checked'); text.classList.add('done');
-
         }
-
     }
-
-
 
     function toggleSidebar() {
-
         const sb = document.getElementById('sidebar');
-
         if(window.innerWidth <= 768) {
-
             sb.classList.toggle('mobile-active');
-
         } else {
-
             sb.classList.toggle('collapsed');
-
         }
-
     }
-
-
 
     function toggleHand(btn) {
-
         if(btn) btn.classList.toggle('active');
-
         const badge = document.getElementById('myHand');
-
         if (badge.classList.contains('active')) {
-
             badge.classList.remove('active');
-
         } else {
-
             badge.classList.add('active');
-
             showToast('You raised your hand');
-
         }
-
         document.getElementById('moreMenuOverlay').classList.remove('active');
-
     }
-
-
 
     function toggleReactionMenu() {
-
         document.getElementById('moreMenuOverlay').classList.remove('active');
-
         const overlay = document.getElementById('reactionOverlay');
-
         overlay.classList.toggle('active');
-
     }
-
-
 
     function toggleMoreMenu() {
-
         document.getElementById('reactionOverlay').classList.remove('active');
-
         const overlay = document.getElementById('moreMenuOverlay');
-
         overlay.classList.toggle('active');
-
     }
-
-
 
     function openMeetingInfo() {
-
         document.getElementById('moreMenuOverlay').classList.remove('active');
-
         const modal = document.getElementById('meetingInfoModal');
-
         modal.classList.toggle('active');
-
     }
-
-
 
     function copyMeetingLink() {
-
         const text = "https://meet.kairos.ai/town-hall-2026";
-
         const textArea = document.createElement("textarea");
-
         textArea.value = text;
-
         document.body.appendChild(textArea);
-
         textArea.select();
-
         try {
-
             document.execCommand('copy');
-
             showToast("Link copied to clipboard");
-
         } catch (err) {
-
             console.error('Fallback: Oops, unable to copy', err);
-
             showToast("Failed to copy link");
-
         }
-
         document.body.removeChild(textArea);
-
         openMeetingInfo(); 
-
     }
-
     
-
     function openAiPrivacy() {
-
         const modal = document.getElementById('aiPrivacyModal');
-
         modal.classList.add('visible');
-
         modal.style.display = 'flex';
-
     }
 
     function closeAiPrivacy() {
-
         const modal = document.getElementById('aiPrivacyModal');
-
         modal.classList.remove('visible');
-
         setTimeout(() => modal.style.display = 'none', 300);
-
     }
-
     
-
     function toggleAiCompanion(btn) {
-
         const badge = document.getElementById('smartRecBadge');
-
         const isActive = btn.classList.contains('active');
 
-
-
         if (!isActive) {
-
              // Turn ON
-
              btn.classList.add('active');
-
              btn.style.backgroundColor = 'var(--accent)';
-
              btn.style.color = 'black';
-
              btn.innerHTML = '<i class="ph-bold ph-toggle-left"></i> <span>AI Companion On</span>';
-
              
-
              badge.style.display = 'flex';
-
              setTimeout(() => badge.classList.add('active'), 10);
-
              showToast('AI Companion Enabled');
-
         } else {
-
              // Turn OFF
-
              btn.classList.remove('active');
-
              btn.style.backgroundColor = 'var(--surface-hover)';
-
              btn.style.color = 'var(--text-secondary)';
-
              btn.innerHTML = '<i class="ph-bold ph-toggle-right"></i> <span>AI Companion Off</span>';
-
              
-
              badge.classList.remove('active');
-
              setTimeout(() => badge.style.display = 'none', 300); 
-
              showToast('AI Companion Disabled');
-
         }
-
     }
-
     
-
     function sendReaction(emoji) {
-
         const layer = document.getElementById('tile-me'); 
-
         const el = document.createElement('div');
-
         el.className = 'floating-emoji';
-
         el.innerText = emoji;
-
         el.style.left = Math.random() * 60 + 20 + '%'; 
-
         
-
-        const target = document.getElementById('react-layer-1');
-
-        if(target) target.appendChild(el);
-
+        layer.appendChild(el);
         
-
         setTimeout(() => el.remove(), 2000);
-
         document.getElementById('reactionOverlay').classList.remove('active');
-
         showToast(`Reacted with ${emoji}`);
-
     }
-
-
 
     function vote(opt, percent) {
-
         const parent = opt.parentElement;
-
         parent.querySelectorAll('.poll-option').forEach(o => o.classList.remove('selected'));
-
         parent.querySelectorAll('.poll-bar-fill').forEach(b => b.style.width = '0%');
-
         opt.classList.add('selected');
-
         const bar = opt.nextElementSibling.querySelector('.poll-bar-fill');
-
         bar.style.width = percent + '%';
-
         opt.querySelector('span:last-child').innerText = '1 vote';
-
     }
-
-
 
     function toggleCaptions() {
-
         const cap = document.getElementById('captionsOverlay');
-
         cap.classList.toggle('active');
-
         const isActive = cap.classList.contains('active');
-
         showToast(isActive ? 'Captions Enabled (Translating)' : 'Captions Disabled');
-
         
-
         document.getElementById('settingsModal').classList.remove('visible');
-
         document.getElementById('moreMenuOverlay').classList.remove('active');
-
         setTimeout(() => document.getElementById('settingsModal').style.display = 'none', 300);
-
     }
-
-
 
     function openSettings() {
-
         toggleMoreMenu(); 
-
         const modal = document.getElementById('settingsModal');
-
         modal.style.display = 'flex';
-
         setTimeout(() => modal.classList.add('visible'), 10);
-
     }
-
-
 
     function closeSettings() {
-
         const modal = document.getElementById('settingsModal');
-
         modal.classList.remove('visible');
-
         setTimeout(() => modal.style.display = 'none', 300);
-
     }
-
     
-
     /* --- PARTICIPANTS LIST LOGIC --- */
-
     const allParticipants = [
-
         { name: "Benedict (Host)", role: "Host", avatar: "Me" },
-
         { name: "Alice Design", role: "Guest", avatar: "A" },
-
         { name: "John Dev", role: "Member", avatar: "J" },
-
         { name: "Sarah", role: "Guest", avatar: "S" },
-
         { name: "Mike", role: "Member", avatar: "M" },
-
         { name: "David", role: "Guest", avatar: "D" }
-
     ];
-
-
 
     let allMuted = false;
 
-
-
     function openParticipantList() {
-
         const modal = document.getElementById('participantsModal');
-
         const list = document.getElementById('fullParticipantList');
-
         document.getElementById('pCount').innerText = allParticipants.length;
-
         
-
         list.innerHTML = ''; // clear
-
         
-
         allParticipants.forEach(p => {
-
             const el = document.createElement('div');
-
             el.className = 'p-item';
-
             const isMuted = allMuted || Math.random() > 0.7; 
-
             const micIcon = isMuted ? 'ph-microphone-slash' : 'ph-microphone';
-
             
-
             el.innerHTML = `
-
                 <div class="p-info">
-
                     <div class="p-avatar" style="background:#333;">${p.avatar}</div> 
-
                     ${p.name}
-
                 </div>
-
                 <div class="p-controls">
-
                     <i class="ph-fill ${micIcon}"></i> 
-
                     <i class="ph-fill ph-video-camera${Math.random() > 0.5 ? '-slash' : ''}"></i>
-
                 </div>
-
             `;
-
             list.appendChild(el);
-
         });
 
-
-
         modal.style.display = 'flex';
-
         setTimeout(() => modal.classList.add('visible'), 10);
-
     }
-
     
-
     function closeParticipantList() {
-
         const modal = document.getElementById('participantsModal');
-
         modal.classList.remove('visible');
-
         setTimeout(() => modal.style.display = 'none', 300);
-
     }
-
-
 
     function toggleMuteAll() {
-
         const btn = document.getElementById('muteAllBtn');
-
         const list = document.getElementById('fullParticipantList');
-
         
-
         allMuted = !allMuted;
-
         
-
         if(allMuted) {
-
             btn.innerHTML = '<i class="ph-bold ph-microphone"></i> Unmute All';
-
             btn.style.color = 'var(--accent)';
-
             btn.style.background = 'rgba(16,185,129,0.1)';
-
             btn.style.borderColor = 'var(--accent)';
-
             showToast('All participants muted');
-
         } else {
-
             btn.innerHTML = '<i class="ph-bold ph-microphone-slash"></i> Mute All';
-
             btn.style.color = 'var(--danger)';
-
             btn.style.background = 'rgba(239,68,68,0.1)';
-
             btn.style.borderColor = 'var(--danger)';
-
             showToast('All participants unmuted');
-
         }
-
         
-
         const icons = list.querySelectorAll('.ph-microphone, .ph-microphone-slash');
-
         icons.forEach(i => {
-
             i.className = allMuted ? 'ph-fill ph-microphone-slash' : 'ph-fill ph-microphone';
-
         });
-
     }
-
-
 
     /* --- WHITEBOARD --- */
-
     let isWhiteboardOpen = false;
-
     const canvas = document.getElementById('wbCanvas');
-
     const ctx = canvas.getContext('2d');
-
     let isDrawing = false;
-
     let currentTool = 'pen';
-
     
-
     function resizeCanvas() {
-
         const container = document.getElementById('canvasArea');
-
         canvas.width = container.offsetWidth;
-
         canvas.height = container.offsetHeight;
-
         ctx.lineCap = 'round';
-
         ctx.lineJoin = 'round';
-
         ctx.lineWidth = 3;
-
         ctx.strokeStyle = '#000';
-
     }
-
-
 
     function toggleWhiteboard() {
-
         const wb = document.getElementById('whiteboardContainer');
-
         const grid = document.getElementById('grid');
-
         const pip = document.getElementById('pipWindow');
-
         const btn = document.getElementById('wbBtn');
-
         
-
         isWhiteboardOpen = !isWhiteboardOpen;
-
         
-
         if(isWhiteboardOpen) {
-
             wb.classList.add('active');
-
             grid.classList.add('hidden');
-
             pip.classList.add('active');
-
             btn.classList.add('active');
-
             resizeCanvas();
-
         } else {
-
             wb.classList.remove('active');
-
             grid.classList.remove('hidden');
-
             pip.classList.remove('active');
-
             btn.classList.remove('active');
-
         }
-
     }
-
     
-
     function selectTool(tool) {
-
         currentTool = tool;
-
         document.querySelectorAll('.wb-btn').forEach(b => b.classList.remove('active'));
-
         if(tool === 'pen') {
-
             document.querySelector('.wb-btn:nth-child(1)').classList.add('active');
-
             ctx.globalCompositeOperation = 'source-over';
-
             ctx.lineWidth = 3;
-
         } else if(tool === 'eraser') {
-
             document.querySelector('.wb-btn:nth-child(2)').classList.add('active');
-
             ctx.globalCompositeOperation = 'destination-out';
-
             ctx.lineWidth = 20;
-
         }
-
     }
-
     
-
     function clearBoard() {
-
         ctx.clearRect(0,0, canvas.width, canvas.height);
-
     }
-
     
-
     // Drawing Logic
-
     canvas.addEventListener('mousedown', startDraw);
-
     canvas.addEventListener('mousemove', draw);
-
     canvas.addEventListener('mouseup', stopDraw);
-
     canvas.addEventListener('mouseout', stopDraw);
-
     
-
     function startDraw(e) {
-
         isDrawing = true;
-
         draw(e);
-
     }
-
     function draw(e) {
-
         if(!isDrawing) return;
-
         const rect = canvas.getBoundingClientRect();
-
         const x = e.clientX - rect.left;
-
         const y = e.clientY - rect.top;
-
         
-
         ctx.lineTo(x, y);
-
         ctx.stroke();
-
         ctx.beginPath();
-
         ctx.moveTo(x, y);
-
     }
-
     function stopDraw() {
-
         isDrawing = false;
-
         ctx.beginPath();
-
     }
-
     
-
     /* --- MAXIMIZE TILE --- */
-
     function toggleMaximize(tile) {
-
         if(tile.classList.contains('maximized')) {
-
             tile.classList.remove('maximized');
-
         } else {
-
             document.querySelectorAll('.video-tile').forEach(t => t.classList.remove('maximized'));
-
             tile.classList.add('maximized');
-
         }
-
     }
-
-
 
     function endCall() {
-
+        if (typeof room !== 'undefined' && room) room.disconnect(); // Disconnect LiveKit
+        
         const modal = document.getElementById('endModal');
-
         modal.style.display = 'flex';
-
         setTimeout(() => modal.classList.add('visible'), 10);
 
-
-
         setTimeout(() => {
-
             document.getElementById('processingState').style.display = 'none';
-
             document.getElementById('summaryState').style.display = 'block';
-
         }, 2000);
-
     }
-
 </script>
-
 </body>
-
 </html>
