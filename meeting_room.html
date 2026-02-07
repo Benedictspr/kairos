@@ -1,2456 +1,496 @@
-<!DOCTYPE html> 
-
+<!DOCTYPE html>
 <html lang="en" data-theme="dark">
 
 <head>
-
-<meta charset="UTF-8">
-
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
-<title>KAIROS | Live Session</title>
-
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
-
-<script src="https://unpkg.com/@phosphor-icons/web"></script>
-<script src="https://unpkg.com/livekit-client/dist/livekit-client.umd.min.js"></script>
-
-
-<script>
-
-    const savedTheme = localStorage.getItem('kairosTheme') || 'dark';
-
-    document.documentElement.setAttribute('data-theme', savedTheme);
-
-</script>
-
-
-
-<style>
-
-    /* --- THEME VARIABLES --- */
-
-    :root[data-theme="dark"] {
-
-        --bg-main: #000000;
-
-        --bg-panel: #111111;
-
-        --border: rgba(255, 255, 255, 0.1);
-
-        --text-primary: #ffffff;
-
-        --text-secondary: #888888;
-
-        --surface-hover: rgba(255, 255, 255, 0.08);
-
-        --glass: rgba(17, 17, 17, 0.9);
-
-        --tile-bg: #1a1a1a;
-
-        --chat-bubble-me: #222;
-
-        --modal-bg: #1a1a1a;
-
-        --sheet-bg: #1a1a1a;
-
-    }
-
-
-
-    :root[data-theme="light"] {
-
-        --bg-main: #f0f2f5;
-
-        --bg-panel: #ffffff;
-
-        --border: rgba(0, 0, 0, 0.1);
-
-        --text-primary: #111827;
-
-        --text-secondary: #6b7280;
-
-        --surface-hover: rgba(0, 0, 0, 0.05);
-
-        --glass: rgba(255, 255, 255, 0.9);
-
-        --tile-bg: #222;
-
-        --chat-bubble-me: #e5e7eb;
-
-        --modal-bg: #ffffff;
-
-        --sheet-bg: #ffffff;
-
-    }
-
-
-
-    :root {
-
-        --accent: #10b981;
-
-        --ai-blue: #3b82f6;
-
-        --danger: #ef4444;
-
-        --warning: #f59e0b;
-
-    }
-
-
-
-    * { box-sizing: border-box; margin: 0; padding: 0; outline: none; -webkit-tap-highlight-color: transparent; }
-
-    body { background-color: var(--bg-main); color: var(--text-primary); font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; display: flex; flex-direction: column; transition: background 0.3s, color 0.3s; }
-
-
-
-    /* --- SCROLLBARS --- */
-
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-
-    ::-webkit-scrollbar-track { background: transparent; }
-
-    ::-webkit-scrollbar-thumb { background: rgba(125, 125, 125, 0.2); border-radius: 10px; }
-
-    ::-webkit-scrollbar-thumb:hover { background: rgba(125, 125, 125, 0.4); }
-
-
-
-    /* --- HEADER --- */
-
-    header {
-
-        height: 60px; padding: 0 20px; display: flex; justify-content: space-between; align-items: center;
-
-        border-bottom: 1px solid var(--border); background: var(--bg-panel); z-index: 10;
-
-        flex-shrink: 0;
-
-    }
-
-    .meeting-info { cursor: pointer; }
-
-    .meeting-info h1 { font-family: 'Space Grotesk'; font-size: 16px; font-weight: 700; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; display: flex; align-items: center; gap: 6px; }
-
-    .meeting-info h1:hover { color: var(--text-secondary); }
-
-    .meeting-meta { font-size: 11px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
-
-    
-
-    .rec-badge { 
-
-        display: none; /* Hidden by default until active */
-
-        align-items: center; gap: 6px; font-size: 11px; color: var(--text-secondary); 
-
-        padding: 4px 10px; border-radius: 20px; background: rgba(125,125,125,0.1); transition: 0.3s; cursor: pointer;
-
-    }
-
-    .rec-badge.active { 
-
-        display: flex;
-
-        color: #fff; 
-
-        background: linear-gradient(135deg, var(--ai-blue), var(--accent)); 
-
-        font-weight: 600; 
-
-        box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
-
-    }
-
-    .rec-dot { font-size: 12px; }
-
-
-
-    /* --- MAIN STAGE --- */
-
-    .stage-container { flex: 1; display: flex; overflow: hidden; position: relative; }
-
-    
-
-    .video-grid {
-
-        flex: 1; padding: 16px; display: grid; gap: 12px;
-
-        grid-template-columns: repeat(4, 1fr);
-
-        grid-template-rows: repeat(3, 1fr);
-
-        align-content: stretch;
-
-        transition: 0.3s;
-
-        overflow-y: auto;
-
-    }
-
-    .video-grid.hidden { display: none; }
-
-
-
-    .video-tile {
-
-        background: var(--tile-bg); border-radius: 12px; position: relative; overflow: hidden;
-
-        border: 1px solid var(--border); display: flex; align-items: center; justify-content: center;
-
-        transition: transform 0.2s, border-color 0.2s, all 0.3s ease;
-
-        min-height: 0;
-
-    }
-
-    .video-tile.speaking { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(16,185,129,0.5); }
-
-    
-
-    /* MAXIMIZED TILE */
-
-    .video-tile.maximized {
-
-        position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-
-        z-index: 100; border-radius: 0; border: none;
-
-    }
-
-
-
-    /* Live Video Element */
-
-    .live-video {
-
-        width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);
-
-    }
-
-
-
-    .tile-avatar { width: 60px; height: 60px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; color: #888; }
-
-    
-
-    .tile-overlay {
-
-        position: absolute; bottom: 8px; left: 8px; right: 8px;
-
-        display: flex; justify-content: space-between; align-items: flex-end; z-index: 5;
-
-    }
-
-    .tile-top-overlay {
-
-        position: absolute; top: 8px; right: 8px; left: 8px;
-
-        display: flex; justify-content: flex-end; align-items: flex-start; z-index: 5; gap: 4px;
-
-    }
-
-
-
-    .user-nametag {
-
-        background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); color: #fff;
-
-        padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 500;
-
-        display: flex; align-items: center; gap: 4px;
-
-    }
-
-    .attention-metric {
-
-        background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
-
-        padding: 3px 6px; border-radius: 6px; display: flex; flex-direction: column; gap: 2px;
-
-    }
-
-    .att-label { font-size: 7px; color: #ccc; text-transform: uppercase; font-weight: 700; }
-
-    .att-bar { width: 30px; height: 3px; background: rgba(255,255,255,0.2); border-radius: 2px; overflow: hidden; }
-
-    .att-fill { height: 100%; background: var(--accent); transition: width 0.5s ease, background 0.5s; }
-
-
-
-    .status-badge {
-
-        background: var(--warning); color: #000;
-
-        width: 24px; height: 24px; border-radius: 50%;
-
-        display: flex; align-items: center; justify-content: center;
-
-        font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-
-        transform: scale(0); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-
-    }
-
-    .status-badge.active { transform: scale(1); }
-
-    
-
-    .tile-btn {
-
-        width: 24px; height: 24px; border-radius: 50%; background: rgba(0,0,0,0.5); 
-
-        color: #fff; display: flex; align-items: center; justify-content: center; 
-
-        cursor: pointer; font-size: 12px; backdrop-filter: blur(4px);
-
-        opacity: 0; transition: 0.2s;
-
-    }
-
-    .video-tile:hover .tile-btn { opacity: 1; }
-
-    .tile-btn:hover { background: #fff; color: #000; }
-
-
-
-    .ai-tile { background: radial-gradient(circle at center, #0f2e23 0%, #000 100%); }
-
-    .ai-visualizer { display: flex; gap: 4px; align-items: center; height: 40px; }
-
-    .ai-bar { width: 6px; background: var(--accent); border-radius: 4px; animation: wave 1s ease-in-out infinite; }
-
-    .ai-bar:nth-child(2) { animation-delay: 0.1s; height: 60%; }
-
-    .ai-bar:nth-child(3) { animation-delay: 0.2s; height: 80%; }
-
-    .ai-bar:nth-child(4) { animation-delay: 0.3s; height: 40%; }
-
-
-
-    /* --- OVERFLOW TILE --- */
-
-    .overflow-tile {
-
-        background: var(--surface-hover); cursor: pointer; flex-direction: column; gap: 8px;
-
-        color: var(--text-secondary); font-weight: 600; font-size: 18px;
-
-    }
-
-    .overflow-tile:hover { background: var(--bg-panel); color: var(--text-primary); border-color: var(--text-secondary); }
-
-    
-
-    /* --- WHITEBOARD --- */
-
-    #whiteboardContainer {
-
-        display: none; flex: 1; background: #fff; position: relative; flex-direction: column;
-
-    }
-
-    #whiteboardContainer.active { display: flex; }
-
-    .wb-toolbar {
-
-        height: 50px; background: #f0f0f0; border-bottom: 1px solid #ccc; display: flex; 
-
-        align-items: center; padding: 0 20px; gap: 10px; color: #333;
-
-    }
-
-    .wb-btn {
-
-        width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center;
-
-        cursor: pointer; font-size: 18px; color: #555;
-
-    }
-
-    .wb-btn:hover, .wb-btn.active { background: #e0e0e0; color: #000; }
-
-    .wb-canvas-area { flex: 1; position: relative; background: #fff; cursor: crosshair; overflow: hidden; }
-
-    canvas { display: block; width: 100%; height: 100%; }
-
-
-
-    /* --- PiP WINDOW --- */
-
-    #pipWindow {
-
-        position: absolute; bottom: 20px; right: 20px; width: 200px; height: 120px;
-
-        background: #000; border-radius: 12px; border: 1px solid var(--border);
-
-        box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 200; overflow: hidden;
-
-        display: none; align-items: center; justify-content: center;
-
-    }
-
-    #pipWindow.active { display: flex; }
-
-    .pip-avatar { width: 40px; height: 40px; border-radius: 50%; background: #d97706; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; }
-
-
-
-    /* --- SIDEBAR --- */
-
-    .sidebar {
-
-        width: 320px; background: var(--bg-panel); border-left: 1px solid var(--border);
-
-        display: flex; flex-direction: column; transform: translateX(0); transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-        position: relative; z-index: 60;
-
-    }
-
-    .sidebar.collapsed { width: 0; border: none; overflow: hidden; }
-
-    
-
-    .sidebar-tabs { display: flex; border-bottom: 1px solid var(--border); overflow-x: auto; }
-
-    .tab-btn { flex: 1; padding: 14px; font-size: 12px; font-weight: 600; color: var(--text-secondary); cursor: pointer; text-align: center; border-bottom: 2px solid transparent; }
-
-    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-
-
-
-    .sidebar-content { flex: 1; overflow-y: auto; padding: 16px; display: none; }
-
-    .sidebar-content.active { display: block; }
-
-
-
-    /* Chat & Polls */
-
-    .poll-card { background: var(--surface-hover); padding: 16px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 16px; }
-
-    .poll-question { font-size: 12px; font-weight: 600; margin-bottom: 12px; }
-
-    .poll-option { display: flex; justify-content: space-between; padding: 8px; border-radius: 8px; background: rgba(125,125,125,0.1); margin-bottom: 6px; cursor: pointer; border: 1px solid transparent; }
-
-    .poll-option.selected { border-color: var(--accent); background: rgba(16,185,129,0.1); }
-
-    .poll-bar-fill { height: 100%; background: var(--accent); width: 0%; transition: 1s ease; }
-
-    .agenda-item { display: flex; gap: 10px; padding: 10px; border-radius: 8px; margin-bottom: 8px; align-items: flex-start; cursor: pointer; }
-
-    .agenda-item:hover { background: var(--surface-hover); }
-
-    .chk-box { width: 16px; height: 16px; border: 1px solid var(--text-secondary); border-radius: 4px; display: flex; align-items: center; justify-content: center; color: transparent; }
-
-    .chk-box.checked { background: var(--accent); border-color: var(--accent); color: #000; }
-
-    .agenda-text { font-size: 12px; line-height: 1.4; font-weight: 500; }
-
-    .agenda-text.done { text-decoration: line-through; color: var(--text-secondary); }
-
-    .transcript-entry { margin-bottom: 12px; font-size: 12px; }
-
-    .ts-meta { display: flex; justify-content: space-between; margin-bottom: 4px; color: var(--text-secondary); font-size: 10px; font-family: 'JetBrains Mono'; }
-
-    .ts-text { color: var(--text-secondary); line-height: 1.5; }
-
-    .ai-note { border-left: 2px solid var(--accent); padding-left: 10px; margin: 10px 0; font-style: italic; color: var(--accent); font-size: 12px; }
-
-    .chat-msg { margin-bottom: 12px; }
-
-    .chat-header { display: flex; gap: 8px; margin-bottom: 4px; font-size: 11px; }
-
-    .chat-bubble { background: var(--chat-bubble-me); padding: 8px 12px; border-radius: 8px; font-size: 12px; display: inline-block; color: var(--text-primary); }
-
-    .chat-input-area { padding: 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; background: var(--bg-panel); }
-
-
-
-    /* --- CONTROLS --- */
-
-    .control-bar {
-
-        height: 70px; display: flex; justify-content: center; align-items: center; gap: 12px;
-
-        position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
-
-        background: var(--glass); backdrop-filter: blur(16px);
-
-        padding: 0 16px; border-radius: 24px; border: 1px solid rgba(125,125,125,0.2);
-
-        z-index: 50; box-shadow: 0 20px 40px rgba(0,0,0,0.2); max-width: 90%;
-
-    }
-
-
-
-    .ctrl-btn {
-
-        width: 44px; height: 44px; border-radius: 14px; background: #333; color: #fff;
-
-        display: flex; align-items: center; justify-content: center; font-size: 20px;
-
-        cursor: pointer; transition: 0.2s; position: relative; flex-shrink: 0;
-
-    }
-
-    .ctrl-btn:hover { background: #444; transform: translateY(-2px); }
-
-    .ctrl-btn:active { transform: scale(0.95); }
-
-    .ctrl-btn.danger { background: var(--danger); }
-
-    .ctrl-btn.active { background: var(--accent); color: #000; }
-
-    .ctrl-btn.warn.active { background: var(--warning); color: #000; }
-
-    .tooltip {
-
-        position: absolute; top: -35px; left: 50%; transform: translateX(-50%);
-
-        background: #000; color: #fff; font-size: 10px; padding: 4px 8px; border-radius: 4px;
-
-        opacity: 0; pointer-events: none; transition: 0.2s; white-space: nowrap; font-weight: 600;
-
-    }
-
-    .ctrl-btn:hover .tooltip { opacity: 1; top: -40px; }
-
-
-
-    /* --- BOTTOM SHEETS & MODALS --- */
-
-    .sheet-overlay {
-
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-
-        background: rgba(0,0,0,0.6); z-index: 2000; opacity: 0; pointer-events: none; transition: 0.3s;
-
-    }
-
-    .sheet-overlay.active { opacity: 1; pointer-events: all; }
-
-    .bottom-sheet {
-
-        position: absolute; bottom: 0; left: 0; width: 100%; 
-
-        background: var(--sheet-bg); border-top-left-radius: 24px; border-top-right-radius: 24px;
-
-        transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.1, 0.7, 0.1, 1);
-
-        padding: 24px 16px; border-top: 1px solid var(--border);
-
-        display: flex; flex-direction: column; gap: 24px;
-
-        box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
-
-    }
-
-    .sheet-overlay.active .bottom-sheet { transform: translateY(0); }
-
-    .sheet-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: -10px auto 10px auto; }
-
-    .sheet-reaction-row { display: flex; justify-content: space-between; align-items: center; padding: 0 10px; }
-
-    .sheet-reaction { font-size: 28px; cursor: pointer; transition: 0.2s; padding: 8px; border-radius: 50%; }
-
-    .sheet-reaction:hover { background: var(--surface-hover); transform: scale(1.2); }
-
-    .sheet-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; text-align: center; }
-
-    .sheet-opt { display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; }
-
-    .sheet-opt-icon { 
-
-        width: 50px; height: 50px; border-radius: 16px; background: var(--bg-main); 
-
-        border: 1px solid var(--border); display: flex; align-items: center; justify-content: center;
-
-        font-size: 24px; color: var(--text-primary); transition: 0.2s;
-
-    }
-
-    .sheet-opt:hover .sheet-opt-icon { background: var(--surface-hover); border-color: var(--text-secondary); }
-
-    .sheet-opt span { font-size: 11px; font-weight: 500; color: var(--text-secondary); }
-
-
-
-    /* Modals */
-
-    .info-modal {
-
-        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
-
-        background: var(--modal-bg); width: 90%; max-width: 350px;
-
-        border-radius: 20px; border: 1px solid var(--border); padding: 24px;
-
-        z-index: 3000; opacity: 0; pointer-events: none; transition: 0.3s;
-
-        box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-
-    }
-
-    .info-modal.active { opacity: 1; pointer-events: all; transform: translate(-50%, -50%) scale(1); }
-
-    .info-header { font-family: 'Space Grotesk'; font-size: 18px; font-weight: 700; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-
-    .info-row { margin-bottom: 16px; }
-
-    .info-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; display: block; }
-
-    .info-val { font-size: 14px; font-weight: 400; color: var(--text-primary); font-family: 'Inter'; letter-spacing: 0.2px; }
-
-    .copy-btn-large { width: 100%; background: var(--surface-hover); border: 1px solid var(--border); padding: 12px; border-radius: 12px; color: var(--text-primary); font-weight: 600; cursor: pointer; margin-bottom: 16px; }
-
-
-
-    /* Participants List Modal */
-
-    .participant-list { display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto; }
-
-    .p-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-radius: 8px; }
-
-    .p-item:hover { background: var(--surface-hover); }
-
-    .p-info { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 500; }
-
-    .p-avatar { width: 32px; height: 32px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
-
-    .p-controls { display: flex; gap: 8px; color: var(--text-secondary); }
-
-
-
-    /* Other Styles */
-
-    .settings-list-container { display: flex; flex-direction: column; gap: 4px; }
-
-    .setting-item {
-
-        display: flex; justify-content: space-between; align-items: center;
-
-        padding: 16px; background: transparent; color: var(--text-primary);
-
-        font-size: 14px; font-weight: 500; cursor: pointer; border-radius: 12px;
-
-        transition: 0.2s;
-
-    }
-
-    .setting-item:hover { background: var(--surface-hover); }
-
-    .privacy-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
-
-    .privacy-icon { width: 40px; height: 40px; background: var(--bg-main); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--accent); border: 1px solid var(--border); }
-
-    .privacy-disclaimer { font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px; }
-
-    
-
-    #toast {
-
-        position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-20px);
-
-        background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-primary);
-
-        padding: 10px 20px; border-radius: 50px; font-weight: 500; font-size: 12px;
-
-        opacity: 0; transition: 0.3s; z-index: 4000; display: flex; align-items: center; gap: 10px;
-
-        box-shadow: 0 10px 30px rgba(0,0,0,0.2); pointer-events: none;
-
-    }
-
-    #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
-
-    #toast img { width: 20px; height: 20px; border-radius: 50%; }
-
-
-
-    #captionsOverlay {
-
-        position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
-
-        background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
-
-        padding: 12px 24px; border-radius: 12px;
-
-        color: #fff; font-size: 14px; font-weight: 500;
-
-        text-align: center; max-width: 80%; display: none; z-index: 40;
-
-        pointer-events: none;
-
-    }
-
-    #captionsOverlay.active { display: block; }
-
-    
-
-    .reaction-layer {
-
-        position: absolute; bottom: 100px; right: 20px; width: 100px; height: 300px;
-
-        pointer-events: none; overflow: hidden; z-index: 100;
-
-    }
-
-    .floating-emoji {
-
-        position: absolute; bottom: -20px; font-size: 24px;
-
-        animation: floatUp 2s ease-out forwards; opacity: 0;
-
-    }
-
-
-
-    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
-
-    @keyframes wave { 0%, 100% { height: 10%; } 50% { height: 100%; } }
-
-    @keyframes floatUp { 0% { transform: translateY(0) scale(0.5); opacity: 0; } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { transform: translateY(-200px) scale(1); opacity: 0; } }
-
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-
-
-    /* MOBILE */
-
-    @media (max-width: 768px) {
-
-        .stage-container { flex-direction: column; }
-
-        .video-grid { 
-
-            display: flex; flex-direction: column; padding: 12px; padding-bottom: 100px; 
-
-            overflow-y: auto; height: 100%; 
-
-            grid-template-columns: none; grid-template-rows: none;
-
-        }
-
-        .video-tile { min-height: 220px; flex-shrink: 0; }
-
-        .sidebar { position: fixed; top: 0; left: 0; width: 100%; height: 100%; transform: translateY(100%); transition: transform 0.3s ease; z-index: 100; border-left: none; }
-
-        .sidebar.mobile-active { transform: translateY(0); }
-
-        .sidebar-header-mobile { display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid var(--border); }
-
-        .control-bar { width: 95%; bottom: 16px; padding: 0 10px; gap: 8px; height: 64px; }
-
-        .ctrl-btn { width: 40px; height: 40px; font-size: 18px; }
-
-        .tooltip { display: none; }
-
-        .ai-tile { min-height: 150px; }
-
-        .sheet-grid { grid-template-columns: repeat(4, 1fr); gap: 10px; }
-
-        .sheet-opt-icon { width: 44px; height: 44px; font-size: 20px; }
-
-    }
-
-
-
-    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(8px); opacity: 0; transition: opacity 0.5s; }
-
-    .modal-overlay.visible { opacity: 1; }
-
-    .modal-box { background: var(--modal-bg); border: 1px solid var(--border); padding: 30px; border-radius: 20px; width: 400px; text-align: center; box-shadow: 0 30px 60px rgba(0,0,0,0.5); transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-
-    .modal-box.list-mode { text-align: left; padding: 20px; width: 350px; }
-
-    .modal-overlay.visible .modal-box { transform: scale(1); }
-
-    
-
-    .summary-preview { text-align: left; background: var(--surface-hover); padding: 15px; border-radius: 10px; font-size: 12px; margin: 20px 0; color: var(--text-secondary); border-left: 2px solid var(--accent); display: none; }
-
-    .processing-view { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 20px; }
-
-    .spinner { width: 30px; height: 30px; border: 3px solid rgba(16,185,129,0.3); border-top: 3px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
-
-</style>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KAIROS | Live Session</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://unpkg.com/livekit-client/dist/livekit-client.umd.min.js"></script>
+
+    <link rel="stylesheet" href="css/styles.css">
+
+    <script>
+        const savedTheme = localStorage.getItem('kairosTheme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    </script>
 </head>
 
 <body>
 
-
-
-<div id="toast">
-
-    <img src="https://ui-avatars.com/api/?name=Alice&background=2563eb&color=fff" alt="">
-
-    <span id="toastMsg">Alice raised hand</span>
-
-</div>
-
-
-
-<div id="captionsOverlay">
-
-    <div style="font-size:10px; opacity:0.7; margin-bottom:4px;" id="captionSpeaker">Alice (Translated to English)</div>
-
-    <span id="captionText">We really need to approve the budget by tomorrow.</span>
-
-</div>
-
-
-
-<header>
-
-    <div class="meeting-info" onclick="openMeetingInfo()">
-
-        <h1>Q1 Product Roadmap Review <i class="ph-bold ph-caret-down" style="font-size:12px; color:var(--text-secondary)"></i></h1>
-
-        <div class="meeting-meta">
-
-            <span id="timer">00:00:00</span>
-
-            <span>•</span>
-
-            <span style="color:var(--accent)">Live</span>
-
-        </div>
-
+    <div id="toast">
+        <img src="https://ui-avatars.com/api/?name=Alice&background=2563eb&color=fff" alt="">
+        <span id="toastMsg">Alice raised hand</span>
     </div>
 
-    <div class="rec-badge active" id="smartRecBadge" title="AI Companion Active" onclick="openAiPrivacy()">
-
-        <div class="rec-dot"><i class="ph-fill ph-sparkle"></i></div>
-
-        <span>Smart REC</span>
-
+    <div id="captionsOverlay">
+        <div style="font-size:10px; opacity:0.7; margin-bottom:4px;" id="captionSpeaker">Alice (Translated to English)
+        </div>
+        <span id="captionText">We really need to approve the budget by tomorrow.</span>
     </div>
 
-</header>
+    <header>
+        <div class="meeting-info" onclick="openMeetingInfo()">
+            <h1>Q1 Product Roadmap Review <i class="ph-bold ph-caret-down"
+                    style="font-size:12px; color:var(--text-secondary)"></i></h1>
+            <div class="meeting-meta">
+                <span id="timer">00:00:00</span>
+                <span>•</span>
+                <span style="color:var(--accent)">Live</span>
+            </div>
+        </div>
+        <div class="rec-badge active" id="smartRecBadge" title="AI Companion Active" onclick="openAiPrivacy()">
+            <div class="rec-dot"><i class="ph-fill ph-sparkle"></i></div>
+            <span>Smart REC</span>
+        </div>
+    </header>
 
-
-
-<div class="stage-container">
-
-    <!-- PiP Window -->
-
-    <div id="pipWindow">
-
-        <div class="pip-avatar">J</div>
-
-        <div style="position: absolute; bottom: 8px; left: 8px; font-size: 10px; font-weight: 600; color: #fff;">John Dev</div>
-
-    </div>
-
-
-
-    <!-- Whiteboard -->
-
-    <div id="whiteboardContainer">
-
-        <div class="wb-toolbar">
-
-            <div class="wb-btn active" onclick="selectTool('pen')"><i class="ph-bold ph-pencil-simple"></i></div>
-
-            <div class="wb-btn" onclick="selectTool('eraser')"><i class="ph-bold ph-eraser"></i></div>
-
-            <div style="width:1px; height:20px; background:#ccc; margin:0 5px;"></div>
-
-            <div class="wb-btn" onclick="clearBoard()"><i class="ph-bold ph-trash"></i></div>
-
-            <div style="flex:1"></div>
-
-            <button onclick="toggleWhiteboard()" style="padding: 6px 12px; background: #000; color: #fff; border-radius: 6px; border: none; cursor: pointer; font-size: 12px;">Close</button>
-
+    <div class="stage-container">
+        <!-- PiP Window -->
+        <div id="pipWindow">
+            <div class="pip-avatar">J</div>
+            <div style="position: absolute; bottom: 8px; left: 8px; font-size: 10px; font-weight: 600; color: #fff;">
+                John Dev</div>
         </div>
 
-        <div class="wb-canvas-area" id="canvasArea">
-
-            <canvas id="wbCanvas"></canvas>
-
-            <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#ccc; pointer-events:none; font-family:'Space Grotesk'; font-size:24px; opacity:0.5;">
-
-                Start Drawing...
-
+        <!-- Whiteboard -->
+        <div id="whiteboardContainer">
+            <div class="wb-toolbar">
+                <div class="wb-btn active" onclick="selectTool('pen')"><i class="ph-bold ph-pencil-simple"></i></div>
+                <div class="wb-btn" onclick="selectTool('eraser')"><i class="ph-bold ph-eraser"></i></div>
+                <div style="width:1px; height:20px; background:#ccc; margin:0 5px;"></div>
+                <div class="wb-btn" onclick="clearBoard()"><i class="ph-bold ph-trash"></i></div>
+                <div style="flex:1"></div>
+                <button onclick="toggleWhiteboard()"
+                    style="padding: 6px 12px; background: #000; color: #fff; border-radius: 6px; border: none; cursor: pointer; font-size: 12px;">Close</button>
             </div>
-
-        </div>
-
-    </div>
-
-
-
-    <!-- Video Grid -->
-
-    <div class="video-grid" id="grid">
-
-        <div class="video-tile" id="tile-me">
-
-            <div class="tile-top-overlay">
-
-                <div class="status-badge" id="myHand"><i class="ph-bold ph-hand-waving"></i></div>
-
-                <div class="tile-btn" onclick="toggleMaximize(this.parentElement.parentElement)"><i class="ph-bold ph-arrows-out-simple"></i></div>
-
-            </div>
-
-            <div class="tile-avatar">Me</div>
-
-            <div class="tile-overlay">
-
-                <div class="user-nametag">Benedict (Host)</div>
-
-            </div>
-
-        </div>
-
-
-
-        <!-- Participants with Attention Metrics & Maximize Btn -->
-
-        <div class="video-tile">
-
-            <div class="tile-top-overlay">
-
-                <div class="tile-btn" onclick="toggleMaximize(this.parentElement.parentElement)"><i class="ph-bold ph-arrows-out-simple"></i></div>
-
-            </div>
-
-            <div class="tile-avatar" style="background: #2563eb; color: #fff;">A</div>
-
-            <div class="tile-overlay">
-
-                <div class="user-nametag">Alice Design</div>
-
-                <div class="attention-metric">
-
-                    <div class="att-label">Focus</div>
-
-                    <div class="att-bar"><div class="att-fill" id="att-1" style="width: 90%;"></div></div>
-
+            <div class="wb-canvas-area" id="canvasArea">
+                <canvas id="wbCanvas"></canvas>
+                <div
+                    style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#ccc; pointer-events:none; font-family:'Space Grotesk'; font-size:24px; opacity:0.5;">
+                    Start Drawing...
                 </div>
-
             </div>
-
-            <div class="reaction-layer" id="react-layer-1"></div>
-
         </div>
 
-
-
-        <div class="video-tile speaking">
-
-            <div class="tile-top-overlay">
-
-                <div class="tile-btn" onclick="toggleMaximize(this.parentElement.parentElement)"><i class="ph-bold ph-arrows-out-simple"></i></div>
-
-            </div>
-
-            <div class="tile-avatar" style="background: #d97706; color: #fff;">J</div>
-
-            <div class="tile-overlay">
-
-                <div class="user-nametag">John Dev</div>
-
-                <div class="attention-metric">
-
-                    <div class="att-label">Focus</div>
-
-                    <div class="att-bar"><div class="att-fill" id="att-2" style="width: 75%; background: #f59e0b;"></div></div>
-
+        <!-- Video Grid -->
+        <div class="video-grid" id="grid">
+            <div class="video-tile" id="tile-me">
+                <div class="tile-top-overlay">
+                    <div class="status-badge" id="myHand"><i class="ph-bold ph-hand-waving"></i></div>
+                    <div class="tile-btn" onclick="toggleMaximize(this.parentElement.parentElement)"><i
+                            class="ph-bold ph-arrows-out-simple"></i></div>
                 </div>
-
-            </div>
-
-        </div>
-
-        
-
-        <div class="video-tile">
-
-            <div class="tile-top-overlay">
-
-                <div class="tile-btn" onclick="toggleMaximize(this.parentElement.parentElement)"><i class="ph-bold ph-arrows-out-simple"></i></div>
-
-            </div>
-
-            <div class="tile-avatar" style="background: #db2777; color: #fff;">S</div>
-
-            <div class="tile-overlay">
-
-                <div class="user-nametag">Sarah</div>
-
-                <div class="attention-metric">
-
-                    <div class="att-label">Focus</div>
-
-                    <div class="att-bar"><div class="att-fill" style="width: 85%;"></div></div>
-
+                <div class="tile-avatar">Me</div>
+                <div class="tile-overlay">
+                    <div class="user-nametag">Benedict (Host)</div>
                 </div>
-
             </div>
 
-        </div>
+            <!-- Participants with Attention Metrics & Maximize Btn -->
+            <!-- These will be largely managed dynamically, but keeping mock data for initial layout -->
 
-
-
-        <div class="video-tile">
-
-            <div class="tile-top-overlay">
-
-                <div class="tile-btn" onclick="toggleMaximize(this.parentElement.parentElement)"><i class="ph-bold ph-arrows-out-simple"></i></div>
-
+            <!-- Overflow Tile -->
+            <div class="video-tile overflow-tile" onclick="openParticipantList()">
+                <span>+<span id="pCountPreview">0</span></span>
+                <span style="font-size:10px; font-weight:500;">Others</span>
             </div>
 
-            <div class="tile-avatar" style="background: #9333ea; color: #fff;">M</div>
-
-            <div class="tile-overlay">
-
-                <div class="user-nametag">Mike</div>
-
-                <div class="attention-metric">
-
-                    <div class="att-label">Focus</div>
-
-                    <div class="att-bar"><div class="att-fill" style="width: 60%; background: #f59e0b;"></div></div>
-
+            <div class="video-tile ai-tile">
+                <div class="tile-overlay"
+                    style="top:0; bottom:0; flex-direction: column; align-items: center; justify-content: center; gap:10px;">
+                    <div class="ai-visualizer">
+                        <div class="ai-bar" style="height: 40px;"></div>
+                        <div class="ai-bar" style="height: 60px;"></div>
+                        <div class="ai-bar" style="height: 30px;"></div>
+                        <div class="ai-bar" style="height: 70px;"></div>
+                        <div class="ai-bar" style="height: 40px;"></div>
+                    </div>
+                    <div class="user-nametag"
+                        style="border: 1px solid var(--accent); color: var(--accent); background: rgba(16,185,129,0.1);">
+                        <i class="ph-bold ph-sparkle"></i> KAIROS AI
+                    </div>
+                    <div style="font-size: 10px; color: var(--accent); margin-top: 4px;">Capturing decisions...</div>
                 </div>
-
             </div>
 
         </div>
 
-
-
-        <div class="video-tile">
-
-            <div class="tile-top-overlay">
-
-                <div class="tile-btn" onclick="toggleMaximize(this.parentElement.parentElement)"><i class="ph-bold ph-arrows-out-simple"></i></div>
-
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header-mobile" style="display:none;" id="mobSidebarHeader">
+                <h3 style="font-family:'Space Grotesk'; font-size:16px;">Meeting Details</h3>
+                <button onclick="toggleSidebar()"
+                    style="background:none; border:none; color:var(--text-primary); font-size:24px;"><i
+                        class="ph-bold ph-x"></i></button>
             </div>
 
-            <div class="tile-avatar" style="background: #16a34a; color: #fff;">D</div>
+            <div class="sidebar-tabs">
+                <div class="tab-btn active" onclick="switchTab('notes')">AI Notes</div>
+                <div class="tab-btn" onclick="switchTab('agenda')">Agenda</div>
+                <div class="tab-btn" onclick="switchTab('polls')">Polls</div>
+                <div class="tab-btn" onclick="switchTab('chat')">Chat</div>
+            </div>
 
-            <div class="tile-overlay">
+            <div id="tab-notes" class="sidebar-content active">
+                <div style="font-size:10px; color:var(--text-secondary); margin-bottom:10px; text-align:center;">LIVE
+                    TRANSCRIPT & INSIGHTS</div>
+                <div id="transcript-feed"></div>
+            </div>
 
-                <div class="user-nametag">David</div>
-
-                <div class="attention-metric">
-
-                    <div class="att-label">Focus</div>
-
-                    <div class="att-bar"><div class="att-fill" style="width: 95%;"></div></div>
-
+            <div id="tab-agenda" class="sidebar-content">
+                <div class="agenda-item" onclick="toggleCheck(this)">
+                    <div class="chk-box checked"><i class="ph-bold ph-check"></i></div>
+                    <div class="agenda-text done">Review Q4 metrics</div>
                 </div>
-
-            </div>
-
-        </div>
-
-
-
-        <div class="video-tile">
-
-            <div class="tile-top-overlay">
-
-                <div class="tile-btn" onclick="toggleMaximize(this.parentElement.parentElement)"><i class="ph-bold ph-arrows-out-simple"></i></div>
-
-            </div>
-
-            <div class="tile-avatar" style="background: #dc2626; color: #fff;">E</div>
-
-            <div class="tile-overlay">
-
-                <div class="user-nametag">Emma</div>
-
-                <div class="attention-metric">
-
-                    <div class="att-label">Focus</div>
-
-                    <div class="att-bar"><div class="att-fill" style="width: 40%; background: #ef4444;"></div></div>
-
+                <div class="agenda-item" onclick="toggleCheck(this)">
+                    <div class="chk-box"><i class="ph-bold ph-check"></i></div>
+                    <div class="agenda-text">Confirm tech stack migration</div>
                 </div>
-
-            </div>
-
-        </div>
-
-
-
-        <div class="video-tile">
-
-            <div class="tile-top-overlay">
-
-                <div class="tile-btn" onclick="toggleMaximize(this.parentElement.parentElement)"><i class="ph-bold ph-arrows-out-simple"></i></div>
-
-            </div>
-
-            <div class="tile-avatar" style="background: #ca8a04; color: #fff;">O</div>
-
-            <div class="tile-overlay">
-
-                <div class="user-nametag">Olivia</div>
-
-                <div class="attention-metric">
-
-                    <div class="att-label">Focus</div>
-
-                    <div class="att-bar"><div class="att-fill" style="width: 80%;"></div></div>
-
+                <div class="agenda-item" onclick="toggleCheck(this)">
+                    <div class="chk-box"><i class="ph-bold ph-check"></i></div>
+                    <div class="agenda-text">Budget approval for Sparky Solutions</div>
                 </div>
-
             </div>
 
-        </div>
+            <div id="tab-polls" class="sidebar-content">
+                <div class="poll-card">
+                    <div class="poll-question">Vote: Primary JS Framework</div>
+                    <div class="poll-option" onclick="vote(this, 60)">
+                        <span style="font-size:12px;">Next.js 14</span>
+                        <span style="font-size:10px; color:var(--text-secondary);">0 votes</span>
+                    </div>
+                    <!-- <div class="poll-bar-bg"><div class="poll-bar-fill"></div></div> -->
 
-
-
-        <div class="video-tile">
-
-            <div class="tile-top-overlay">
-
-                <div class="tile-btn" onclick="toggleMaximize(this.parentElement.parentElement)"><i class="ph-bold ph-arrows-out-simple"></i></div>
-
-            </div>
-
-            <div class="tile-avatar" style="background: #0891b2; color: #fff;">R</div>
-
-            <div class="tile-overlay">
-
-                <div class="user-nametag">Robert</div>
-
-                <div class="attention-metric">
-
-                    <div class="att-label">Focus</div>
-
-                    <div class="att-bar"><div class="att-fill" style="width: 70%; background: #f59e0b;"></div></div>
-
+                    <div class="poll-option" style="margin-top:10px;" onclick="vote(this, 30)">
+                        <span style="font-size:12px;">Vue 3</span>
+                        <span style="font-size:10px; color:var(--text-secondary);">0 votes</span>
+                    </div>
+                    <!-- <div class="poll-bar-bg"><div class="poll-bar-fill"></div></div> -->
                 </div>
-
+                <button
+                    style="width:100%; padding:10px; border:1px dashed var(--text-secondary); color:var(--text-secondary); border-radius:8px; font-size:12px; cursor:pointer;">+
+                    Create New Poll</button>
             </div>
 
-        </div>
-
-
-
-        <div class="video-tile">
-
-            <div class="tile-top-overlay">
-
-                <div class="tile-btn" onclick="toggleMaximize(this.parentElement.parentElement)"><i class="ph-bold ph-arrows-out-simple"></i></div>
-
-            </div>
-
-            <div class="tile-avatar" style="background: #4f46e5; color: #fff;">L</div>
-
-            <div class="tile-overlay">
-
-                <div class="user-nametag">Linda</div>
-
-                <div class="attention-metric">
-
-                    <div class="att-label">Focus</div>
-
-                    <div class="att-bar"><div class="att-fill" style="width: 92%;"></div></div>
-
+            <div id="tab-chat" class="sidebar-content" style="display:none; flex-direction:column; height:100%;">
+                <div style="flex:1; overflow-y:auto;" id="chat-feed">
+                    <!-- Chat messages will appear here -->
                 </div>
-
-            </div>
-
-        </div>
-
-
-
-        <!-- Overflow Tile -->
-
-        <div class="video-tile overflow-tile" onclick="openParticipantList()">
-
-            <span>+4</span>
-
-            <span style="font-size:10px; font-weight:500;">Others</span>
-
-        </div>
-
-
-
-        <div class="video-tile ai-tile">
-
-            <div class="tile-overlay" style="top:0; bottom:0; flex-direction: column; align-items: center; justify-content: center; gap:10px;">
-
-                <div class="ai-visualizer">
-
-                    <div class="ai-bar" style="height: 40px;"></div>
-
-                    <div class="ai-bar" style="height: 60px;"></div>
-
-                    <div class="ai-bar" style="height: 30px;"></div>
-
-                    <div class="ai-bar" style="height: 70px;"></div>
-
-                    <div class="ai-bar" style="height: 40px;"></div>
-
+                <div class="chat-input-area">
+                    <input type="text" placeholder="Type a message..." class="input-field"
+                        style="flex:1; background:var(--bg-main); border:1px solid var(--border); padding:10px; border-radius:20px; color:var(--text-primary);"
+                        id="chatInput" onkeypress="handleChat(event)">
+                    <button style="color:var(--accent); background:none; border:none; font-size:18px;"
+                        onclick="sendChat()"><i class="ph-fill ph-paper-plane-right"></i></button>
                 </div>
+            </div>
+        </div>
+    </div>
 
-                <div class="user-nametag" style="border: 1px solid var(--accent); color: var(--accent); background: rgba(16,185,129,0.1);">
+    <div class="control-bar">
+        <div class="ctrl-btn danger" onclick="toggleState(this, 'mute')" id="muteBtn">
+            <i class="ph-fill ph-microphone-slash"></i>
+            <div class="tooltip">Unmute</div>
+        </div>
+        <div class="ctrl-btn" onclick="toggleState(this, 'video')" id="videoBtn">
+            <i class="ph-fill ph-video-camera-slash"></i>
+            <div class="tooltip">Start Video</div>
+        </div>
 
-                    <i class="ph-bold ph-sparkle"></i> KAIROS AI
+        <div class="ctrl-btn warn" onclick="toggleHand(this)" id="handBtnMain">
+            <i class="ph-bold ph-hand-waving"></i>
+            <div class="tooltip">Raise Hand</div>
+        </div>
 
+        <!-- Screen Share Added to Main Bar -->
+        <div class="ctrl-btn" onclick="toggleScreenShare(this)" id="shareBtn">
+            <i class="ph-bold ph-screencast"></i>
+            <div class="tooltip">Share Screen</div>
+        </div>
+
+        <div class="ctrl-btn" onclick="toggleReactionMenu()">
+            <i class="ph-bold ph-smiley"></i>
+            <div class="tooltip">React</div>
+        </div>
+
+        <div class="ctrl-btn" onclick="toggleWhiteboard()" id="wbBtn">
+            <i class="ph-bold ph-chalkboard-teacher"></i>
+            <div class="tooltip">Whiteboard</div>
+        </div>
+
+        <div style="width:1px; height:24px; background:var(--text-secondary); opacity:0.3; margin:0 4px;"></div>
+
+        <div class="ctrl-btn active" onclick="toggleSidebar()">
+            <i class="ph-bold ph-chats-circle"></i>
+            <div class="tooltip">Sidebar</div>
+        </div>
+
+        <div class="ctrl-btn" onclick="toggleMoreMenu()">
+            <i class="ph-bold ph-dots-three"></i>
+            <div class="tooltip">More</div>
+        </div>
+
+        <div class="ctrl-btn danger" onclick="endCall()">
+            <i class="ph-bold ph-phone-disconnect"></i>
+            <div class="tooltip">End</div>
+        </div>
+    </div>
+
+    <div class="sheet-overlay" id="reactionOverlay" onclick="toggleReactionMenu()">
+        <div class="bottom-sheet" style="height:auto;" onclick="event.stopPropagation()">
+            <div class="sheet-handle"></div>
+            <div class="sheet-reaction-row" style="padding-bottom:20px;">
+                <div class="sheet-reaction" onclick="sendReaction('👍')">👍</div>
+                <div class="sheet-reaction" onclick="sendReaction('❤️')">❤️</div>
+                <div class="sheet-reaction" onclick="sendReaction('👏')">👏</div>
+                <div class="sheet-reaction" onclick="sendReaction('🎉')">🎉</div>
+                <div class="sheet-reaction" onclick="sendReaction('😂')">😂</div>
+                <div class="sheet-reaction" onclick="sendReaction('😮')">😮</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="sheet-overlay" id="moreMenuOverlay" onclick="toggleMoreMenu()">
+        <div class="bottom-sheet" onclick="event.stopPropagation()">
+            <div class="sheet-handle"></div>
+            <div class="sheet-grid">
+                <div class="sheet-opt" onclick="showToast('Recording Started')">
+                    <div class="sheet-opt-icon"><i class="ph-bold ph-record"></i></div>
+                    <span>Record</span>
                 </div>
-
-                <div style="font-size: 10px; color: var(--accent); margin-top: 4px;">Capturing decisions...</div>
-
-            </div>
-
-        </div>
-
-
-
-    </div>
-
-
-
-    <div class="sidebar" id="sidebar">
-
-        <div class="sidebar-header-mobile" style="display:none;" id="mobSidebarHeader">
-
-            <h3 style="font-family:'Space Grotesk'; font-size:16px;">Meeting Details</h3>
-
-            <button onclick="toggleSidebar()" style="background:none; border:none; color:var(--text-primary); font-size:24px;"><i class="ph-bold ph-x"></i></button>
-
-        </div>
-
-
-
-        <div class="sidebar-tabs">
-
-            <div class="tab-btn active" onclick="switchTab('notes')">AI Notes</div>
-
-            <div class="tab-btn" onclick="switchTab('agenda')">Agenda</div>
-
-            <div class="tab-btn" onclick="switchTab('polls')">Polls</div>
-
-            <div class="tab-btn" onclick="switchTab('chat')">Chat</div>
-
-        </div>
-
-
-
-        <div id="tab-notes" class="sidebar-content active">
-
-            <div style="font-size:10px; color:var(--text-secondary); margin-bottom:10px; text-align:center;">LIVE TRANSCRIPT & INSIGHTS</div>
-
-            <div id="transcript-feed"></div>
-
-        </div>
-
-
-
-        <div id="tab-agenda" class="sidebar-content">
-
-            <div class="agenda-item" onclick="toggleCheck(this)">
-
-                <div class="chk-box checked"><i class="ph-bold ph-check"></i></div>
-
-                <div class="agenda-text done">Review Q4 metrics</div>
-
-            </div>
-
-            <div class="agenda-item" onclick="toggleCheck(this)">
-
-                <div class="chk-box"><i class="ph-bold ph-check"></i></div>
-
-                <div class="agenda-text">Confirm tech stack migration</div>
-
-            </div>
-
-            <div class="agenda-item" onclick="toggleCheck(this)">
-
-                <div class="chk-box"><i class="ph-bold ph-check"></i></div>
-
-                <div class="agenda-text">Budget approval for Sparky Solutions</div>
-
-            </div>
-
-        </div>
-
-
-
-        <div id="tab-polls" class="sidebar-content">
-
-            <div class="poll-card">
-
-                <div class="poll-question">Vote: Primary JS Framework</div>
-
-                <div class="poll-option" onclick="vote(this, 60)">
-
-                    <span style="font-size:12px;">Next.js 14</span>
-
-                    <span style="font-size:10px; color:var(--text-secondary);">0 votes</span>
-
+                <div class="sheet-opt" onclick="toggleCaptions()">
+                    <div class="sheet-opt-icon"><i class="ph-bold ph-closed-captioning"></i></div>
+                    <span>Show CC</span>
                 </div>
-
-                <div class="poll-bar-bg"><div class="poll-bar-fill"></div></div>
-
-                
-
-                <div class="poll-option" style="margin-top:10px;" onclick="vote(this, 30)">
-
-                    <span style="font-size:12px;">Vue 3</span>
-
-                    <span style="font-size:10px; color:var(--text-secondary);">0 votes</span>
-
+                <!-- Duplicated share here for access, calling same function -->
+                <div class="sheet-opt" onclick="toggleScreenShare(document.getElementById('shareBtn'))">
+                    <div class="sheet-opt-icon"><i class="ph-bold ph-share-network"></i></div>
+                    <span>Share</span>
                 </div>
-
-                <div class="poll-bar-bg"><div class="poll-bar-fill"></div></div>
-
-            </div>
-
-            <button style="width:100%; padding:10px; border:1px dashed var(--text-secondary); color:var(--text-secondary); border-radius:8px; font-size:12px; cursor:pointer;">+ Create New Poll</button>
-
-        </div>
-
-
-
-        <div id="tab-chat" class="sidebar-content" style="display:none; flex-direction:column; height:100%;">
-
-            <div style="flex:1; overflow-y:auto;" id="chat-feed">
-
-                <div class="chat-msg">
-
-                    <div class="chat-header"><span class="chat-name">Alice</span> <span class="chat-time">10:02</span></div>
-
-                    <div class="chat-bubble" style="background:var(--surface-hover); color:var(--text-primary);">Can you share the Figma link?</div>
-
+                <div class="sheet-opt" onclick="toggleSidebar(); toggleMoreMenu();">
+                    <div class="sheet-opt-icon"><i class="ph-bold ph-notepad"></i></div>
+                    <span>Notes</span>
                 </div>
-
+                <div class="sheet-opt" onclick="showToast('No apps installed')">
+                    <div class="sheet-opt-icon"><i class="ph-bold ph-squares-four"></i></div>
+                    <span>Apps</span>
+                </div>
+                <div class="sheet-opt" onclick="endCall()">
+                    <div class="sheet-opt-icon"><i class="ph-bold ph-plugs"></i></div>
+                    <span>Disconnect</span>
+                </div>
+                <div class="sheet-opt" onclick="openSettings()">
+                    <div class="sheet-opt-icon"><i class="ph-bold ph-gear"></i></div>
+                    <span>Settings</span>
+                </div>
+                <div class="sheet-opt" onclick="openMeetingInfo()">
+                    <div class="sheet-opt-icon"><i class="ph-bold ph-info"></i></div>
+                    <span>Meeting Info</span>
+                </div>
             </div>
-
-            <div class="chat-input-area">
-
-                <input type="text" placeholder="Type a message..." class="input-field" style="flex:1; background:var(--bg-main); border:1px solid var(--border); padding:10px; border-radius:20px; color:var(--text-primary);" id="chatInput" onkeypress="handleChat(event)">
-
-                <button style="color:var(--accent); background:none; border:none; font-size:18px;" onclick="sendChat()"><i class="ph-fill ph-paper-plane-right"></i></button>
-
-            </div>
-
         </div>
-
     </div>
 
-</div>
-
-
-
-<div class="control-bar">
-
-    <div class="ctrl-btn danger" onclick="toggleState(this, 'mute')" id="muteBtn">
-
-        <i class="ph-fill ph-microphone-slash"></i><div class="tooltip">Unmute</div>
-
-    </div>
-
-    <div class="ctrl-btn" onclick="toggleState(this, 'video')" id="videoBtn">
-
-        <i class="ph-fill ph-video-camera-slash"></i><div class="tooltip">Start Video</div>
-
-    </div>
-
-    
-
-    <div class="ctrl-btn warn" onclick="toggleHand(this)" id="handBtnMain">
-
-        <i class="ph-bold ph-hand-waving"></i><div class="tooltip">Raise Hand</div>
-
-    </div>
-
-
-
-    <div class="ctrl-btn" onclick="toggleReactionMenu()">
-
-        <i class="ph-bold ph-smiley"></i><div class="tooltip">React</div>
-
-    </div>
-
-    
-
-    <div class="ctrl-btn" onclick="toggleWhiteboard()" id="wbBtn">
-
-        <i class="ph-bold ph-chalkboard-teacher"></i><div class="tooltip">Whiteboard</div>
-
-    </div>
-
-    
-
-    <div style="width:1px; height:24px; background:var(--text-secondary); opacity:0.3; margin:0 4px;"></div>
-
-    
-
-    <div class="ctrl-btn active" onclick="toggleSidebar()">
-
-        <i class="ph-bold ph-chats-circle"></i><div class="tooltip">Sidebar</div>
-
-    </div>
-
-    
-
-    <div class="ctrl-btn" onclick="toggleMoreMenu()">
-
-        <i class="ph-bold ph-dots-three"></i><div class="tooltip">More</div>
-
-    </div>
-
-    
-
-    <div class="ctrl-btn danger" onclick="endCall()">
-
-        <i class="ph-bold ph-phone-disconnect"></i><div class="tooltip">End</div>
-
-    </div>
-
-</div>
-
-
-
-<div class="sheet-overlay" id="reactionOverlay" onclick="toggleReactionMenu()">
-
-    <div class="bottom-sheet" style="height:auto;" onclick="event.stopPropagation()">
-
-        <div class="sheet-handle"></div>
-
-        <div class="sheet-reaction-row" style="padding-bottom:20px;">
-
-            <div class="sheet-reaction" onclick="sendReaction('👍')">👍</div>
-
-            <div class="sheet-reaction" onclick="sendReaction('❤️')">❤️</div>
-
-            <div class="sheet-reaction" onclick="sendReaction('👏')">👏</div>
-
-            <div class="sheet-reaction" onclick="sendReaction('🎉')">🎉</div>
-
-            <div class="sheet-reaction" onclick="sendReaction('😂')">😂</div>
-
-            <div class="sheet-reaction" onclick="sendReaction('😮')">😮</div>
-
-        </div>
-
-    </div>
-
-</div>
-
-
-
-<div class="sheet-overlay" id="moreMenuOverlay" onclick="toggleMoreMenu()">
-
-    <div class="bottom-sheet" onclick="event.stopPropagation()">
-
-        <div class="sheet-handle"></div>
-
-        <div class="sheet-grid">
-
-            <div class="sheet-opt" onclick="showToast('Recording Started')">
-
-                <div class="sheet-opt-icon"><i class="ph-bold ph-record"></i></div>
-
-                <span>Record</span>
-
-            </div>
-
-            <div class="sheet-opt" onclick="toggleCaptions()">
-
-                <div class="sheet-opt-icon"><i class="ph-bold ph-closed-captioning"></i></div>
-
-                <span>Show CC</span>
-
-            </div>
-
-            <div class="sheet-opt" onclick="showToast('Screen Share Started')">
-
-                <div class="sheet-opt-icon"><i class="ph-bold ph-share-network"></i></div>
-
-                <span>Share</span>
-
-            </div>
-
-            <div class="sheet-opt" onclick="toggleSidebar(); toggleMoreMenu();">
-
-                <div class="sheet-opt-icon"><i class="ph-bold ph-notepad"></i></div>
-
-                <span>Notes</span>
-
-            </div>
-
-            <div class="sheet-opt" onclick="showToast('No apps installed')">
-
-                <div class="sheet-opt-icon"><i class="ph-bold ph-squares-four"></i></div>
-
-                <span>Apps</span>
-
-            </div>
-
-            <div class="sheet-opt" onclick="showToast('Audio Disconnected')">
-
-                <div class="sheet-opt-icon"><i class="ph-bold ph-plugs"></i></div>
-
-                <span>Disconnect</span>
-
-            </div>
-
-            <div class="sheet-opt" onclick="openSettings()">
-
-                <div class="sheet-opt-icon"><i class="ph-bold ph-gear"></i></div>
-
-                <span>Settings</span>
-
-            </div>
-
-            <div class="sheet-opt" onclick="openMeetingInfo()">
-
-                <div class="sheet-opt-icon"><i class="ph-bold ph-info"></i></div>
-
-                <span>Meeting Info</span>
-
-            </div>
-
-        </div>
-
-    </div>
-
-</div>
-
-
-
-<div class="info-modal" id="meetingInfoModal">
-
-    <div class="info-header">
-
-        <span id="modalMeetingTitle">Town Hall Meeting</span>
-
-        <i class="ph-bold ph-x" style="cursor:pointer;" onclick="openMeetingInfo()"></i>
-
-    </div>
-
-    
-
-    <button class="copy-btn-large" onclick="copyMeetingLink()">
-
-        Copy meeting link
-
-    </button>
-
-
-
-    <div class="info-row">
-
-        <span class="info-label">Meeting ID</span>
-
-        <span class="info-val">994 1873 8045</span>
-
-    </div>
-
-    
-
-    <div class="info-row">
-
-        <span class="info-label">Passcode</span>
-
-        <span class="info-val">813668</span>
-
-    </div>
-
-    
-
-    <div class="info-row">
-
-        <span class="info-label">Host</span>
-
-        <span class="info-val">Benedict Adurosakin</span>
-
-    </div>
-
-    
-
-    <div class="info-row">
-
-        <span class="info-label">Participant ID</span>
-
-        <span class="info-val">4600689</span>
-
-    </div>
-
-    
-
-    <div style="font-size:10px; color:var(--accent); display:flex; align-items:center; gap:6px; margin-top:20px;">
-
-        <i class="ph-fill ph-shield-check"></i> Encryption: Enhanced
-
-    </div>
-
-</div>
-
-
-
-<div class="modal-overlay" id="participantsModal">
-
-    <div class="modal-box list-mode">
-
+    <div class="info-modal" id="meetingInfoModal">
         <div class="info-header">
-
-            <span>Participants (<span id="pCount">16</span>)</span>
-
-            <i class="ph-bold ph-x" style="cursor:pointer;" onclick="closeParticipantList()"></i>
-
+            <span id="modalMeetingTitle">Town Hall Meeting</span>
+            <i class="ph-bold ph-x" style="cursor:pointer;" onclick="openMeetingInfo()"></i>
         </div>
 
-        
-
-        <button id="muteAllBtn" class="copy-btn-large" style="margin-bottom:12px; background:rgba(239,68,68,0.1); color:var(--danger); border-color:var(--danger); display:flex; align-items:center; justify-content:center; gap:8px;" onclick="toggleMuteAll()">
-
-            <i class="ph-bold ph-microphone-slash"></i> Mute All
-
+        <button class="copy-btn-large" onclick="copyMeetingLink()">
+            Copy meeting link
         </button>
 
-
-
-        <div class="participant-list" id="fullParticipantList">
-
-            <!-- Dynamic list -->
-
+        <div class="info-row">
+            <span class="info-label">Meeting ID</span>
+            <span class="info-val">994 1873 8045</span>
         </div>
 
+        <div class="info-row">
+            <span class="info-label">Passcode</span>
+            <span class="info-val">813668</span>
+        </div>
+
+        <div class="info-row">
+            <span class="info-label">Host</span>
+            <span class="info-val">Benedict Adurosakin</span>
+        </div>
+
+        <div class="info-row">
+            <span class="info-label">Participant ID</span>
+            <span class="info-val">4600689</span>
+        </div>
+
+        <div style="font-size:10px; color:var(--accent); display:flex; align-items:center; gap:6px; margin-top:20px;">
+            <i class="ph-fill ph-shield-check"></i> Encryption: Enhanced
+        </div>
     </div>
 
-</div>
-
-
-
-<div class="modal-overlay" id="settingsModal">
-
-    <div class="modal-box list-mode">
-
-        <div class="info-header">
-
-            <span>Settings</span>
-
-            <i class="ph-bold ph-x" style="cursor:pointer;" onclick="closeSettings()"></i>
-
-        </div>
-
-        <div class="settings-list-container">
-
-            <div class="setting-item" onclick="showToast('Meeting Settings Opened')">
-
-                <span><i class="ph-bold ph-sliders-horizontal" style="margin-right:8px;"></i> Meeting settings</span>
-
-                <i class="ph-bold ph-caret-right"></i>
-
+    <div class="modal-overlay" id="participantsModal">
+        <div class="modal-box list-mode">
+            <div class="info-header">
+                <span>Participants (<span id="pCount">16</span>)</span>
+                <i class="ph-bold ph-x" style="cursor:pointer;" onclick="closeParticipantList()"></i>
             </div>
 
-            <div class="setting-item" onclick="showToast('Backgrounds Gallery')">
-
-                <span><i class="ph-bold ph-image" style="margin-right:8px;"></i> Virtual background</span>
-
-                <i class="ph-bold ph-caret-right"></i>
-
-            </div>
-
-            <div class="setting-item" onclick="showToast('Filters Applied')">
-
-                <span><i class="ph-bold ph-magic-wand" style="margin-right:8px;"></i> Video filters</span>
-
-                <i class="ph-bold ph-caret-right"></i>
-
-            </div>
-
-            <div class="setting-item" onclick="showToast('Avatars Loading...')">
-
-                <span><i class="ph-bold ph-user-circle" style="margin-right:8px;"></i> Avatars</span>
-
-                <i class="ph-bold ph-caret-right"></i>
-
-            </div>
-
-            <div class="setting-item" onclick="showToast('Audio Devices')">
-
-                <span><i class="ph-bold ph-headphones" style="margin-right:8px;"></i> Audio</span>
-
-                <i class="ph-bold ph-caret-right"></i>
-
-            </div>
-
-            <div class="setting-item" onclick="toggleCaptions()">
-
-                <span><i class="ph-bold ph-closed-captioning" style="margin-right:8px;"></i> Captions and translation</span>
-
-                <i class="ph-bold ph-caret-right"></i>
-
-            </div>
-
-        </div>
-
-    </div>
-
-</div>
-
-
-
-<div class="modal-overlay" id="aiPrivacyModal">
-
-    <div class="modal-box list-mode" style="border-left: 3px solid var(--accent);">
-
-        <div class="info-header">
-
-            <span style="font-size:16px;">Apps that access meeting content</span>
-
-            <i class="ph-bold ph-x" style="cursor:pointer;" onclick="closeAiPrivacy()"></i>
-
-        </div>
-
-        
-
-        <div class="privacy-header">
-
-            <div class="privacy-icon"><i class="ph-bold ph-sparkle"></i></div>
-
-            <div>
-
-                <div style="font-size:13px; font-weight:700; color:var(--text-primary); margin-bottom:2px;">KAIROS - AI Meeting Agent</div>
-
-                <div style="font-size:11px; color:var(--text-secondary); margin-bottom:2px;">Benedict's Notetaker (Kairos.ai) (guest)</div>
-
-                <div style="font-size:10px; color:#888;">Accesses: Audio, Video, Chat, Files</div>
-
-            </div>
-
-        </div>
-
-
-
-        <p class="privacy-disclaimer">
-
-            Kairos AI features have been enabled in this meeting. Below you can see the content accessed by features in this meeting. 
-
-            <br><br>
-
-            <a href="#" style="color:var(--ai-blue); text-decoration:none;">Learn more about how your data is handled.</a>
-
-        </p>
-
-
-
-        <!-- Centered Enable AI Companion Button -->
-
-        <div style="display:flex; justify-content:center; margin-top: 20px; border-top: 1px solid var(--border); padding-top: 20px;">
-
-            <button id="aiToggleBtn" class="active" onclick="toggleAiCompanion(this)" style="background:var(--accent); color:black; font-weight:600; padding:10px 20px; border-radius:30px; border:none; cursor:pointer; font-family:'Inter'; display:flex; align-items:center; gap:8px; transition:0.3s;">
-
-                <i class="ph-bold ph-toggle-left"></i> <span>AI Companion On</span>
-
+            <button id="muteAllBtn" class="copy-btn-large"
+                style="margin-bottom:12px; background:rgba(239,68,68,0.1); color:var(--danger); border-color:var(--danger); display:flex; align-items:center; justify-content:center; gap:8px;"
+                onclick="toggleMuteAll()">
+                <i class="ph-bold ph-microphone-slash"></i> Mute All
             </button>
 
+            <div class="participant-list" id="fullParticipantList">
+                <!-- Dynamic list -->
+            </div>
         </div>
-
     </div>
 
-</div>
-
-
-
-<div class="modal-overlay" id="endModal">
-
-    <div class="modal-box">
-
-        <div id="processingState" class="processing-view">
-
-            <div class="spinner"></div>
-
-            <h3 style="font-family:'Space Grotesk'; font-size:16px;">KAIROS is organizing memory...</h3>
-
-            <p style="font-size:12px; color:var(--text-secondary);">Analyzing decision points and actions.</p>
-
-        </div>
-
-
-
-        <div id="summaryState" style="display:none;">
-
-            <i class="ph-duotone ph-check-circle" style="font-size: 48px; color: var(--accent); margin-bottom: 16px;"></i>
-
-            <h2 style="font-family:'Space Grotesk'; margin-bottom:8px;">Meeting Ended</h2>
-
-            
-
-            <div class="summary-preview" style="display:block;">
-
-                <div style="font-weight:700; margin-bottom:6px; color:var(--text-primary);">AI Summary:</div>
-
-                • Tech stack migration ratified (Next.js 14).<br>
-
-                • Action Item: Benedict to email Sparky Solutions.<br>
-
-                • Alice to update Figma by EOD.
-
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal-box list-mode">
+            <div class="info-header">
+                <span>Settings</span>
+                <i class="ph-bold ph-x" style="cursor:pointer;" onclick="closeSettings()"></i>
             </div>
-
-            
-
-            <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:20px;">
-
-                <i class="ph-bold ph-envelope-simple" style="color:var(--text-secondary)"></i>
-
-                <span style="font-size:12px; color:var(--text-secondary);">Sending recap to all participants...</span>
-
+            <div class="settings-list-container">
+                <div class="setting-item" onclick="showToast('Meeting Settings Opened')">
+                    <span><i class="ph-bold ph-sliders-horizontal" style="margin-right:8px;"></i> Meeting
+                        settings</span>
+                    <i class="ph-bold ph-caret-right"></i>
+                </div>
+                <div class="setting-item" onclick="showToast('Backgrounds Gallery')">
+                    <span><i class="ph-bold ph-image" style="margin-right:8px;"></i> Virtual background</span>
+                    <i class="ph-bold ph-caret-right"></i>
+                </div>
+                <div class="setting-item" onclick="showToast('Filters Applied')">
+                    <span><i class="ph-bold ph-magic-wand" style="margin-right:8px;"></i> Video filters</span>
+                    <i class="ph-bold ph-caret-right"></i>
+                </div>
+                <div class="setting-item" onclick="showToast('Avatars Loading...')">
+                    <span><i class="ph-bold ph-user-circle" style="margin-right:8px;"></i> Avatars</span>
+                    <i class="ph-bold ph-caret-right"></i>
+                </div>
+                <div class="setting-item" onclick="showToast('Audio Devices')">
+                    <span><i class="ph-bold ph-headphones" style="margin-right:8px;"></i> Audio</span>
+                    <i class="ph-bold ph-caret-right"></i>
+                </div>
+                <div class="setting-item" onclick="toggleCaptions()">
+                    <span><i class="ph-bold ph-closed-captioning" style="margin-right:8px;"></i> Captions and
+                        translation</span>
+                    <i class="ph-bold ph-caret-right"></i>
+                </div>
             </div>
-
-
-
-            <button onclick="window.location.href='index.html'" style="background:var(--text-primary); color:var(--bg-main); width:100%; padding:12px; border-radius:10px; font-weight:600; cursor:pointer; border:none; transition:0.2s;">
-
-                Return to Command Center
-
-            </button>
-
         </div>
-
     </div>
 
-</div>
+    <div class="modal-overlay" id="aiPrivacyModal">
+        <div class="modal-box list-mode" style="border-left: 3px solid var(--accent);">
+            <div class="info-header">
+                <span style="font-size:16px;">Apps that access meeting content</span>
+                <i class="ph-bold ph-x" style="cursor:pointer;" onclick="closeAiPrivacy()"></i>
+            </div>
 
-
-
-<script>
-
-    // --- INIT ---
-
-    // Sync header title to modal
-    const mainTitle = document.querySelector('header h1').innerText;
-    document.getElementById('modalMeetingTitle').innerText = mainTitle;
-
-    // --- RESPONSIVE INIT ---
-    if(window.innerWidth <= 768) {
-        document.getElementById('mobSidebarHeader').style.display = 'flex';
-    }
-
-    // --- TIMER LOGIC ---
-    let seconds = 0;
-    setInterval(() => {
-        seconds++;
-        const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
-        const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
-        const s = (seconds % 60).toString().padStart(2, '0');
-        document.getElementById('timer').innerText = `${h}:${m}:${s}`;
-    }, 1000);
-
-    // --- LIVEKIT CONFIG & CONSTANTS ---
-    const { Room, RoomEvent, VideoPreserveAspect, Track, DataPacket_Kind } = LiveKitClient;
-
-    // Replace these with your backend-generated values
-    const LIVEKIT_URL = 'wss://kairos-ovqab9eg.livekit.cloud'; 
-    let LIVEKIT_TOKEN = ''; // Will be fetched
-
-    const room = new Room({
-        adaptiveStream: true, // Optimized for grid performance
-        dynacast: true,       // Saves bandwidth
-        videoCaptureDefaults: {
-            resolution: { width: 1280, height: 720 },
-        },
-    });
-
-    let localStream = null;
-
-    // --- INITIALIZATION ---
-    async function initLiveKit() {
-        try {
-            // 1. Fetch Token
-            // REPLACE THIS with your actual deployed backend URL
-            const backendUrl = 'https://kairos-backend-u493.onrender.com/getToken'; 
-            
-            try {
-                const response = await fetch(`${backendUrl}?room=main-room&identity=Benedict`);
-                if (response.ok) {
-                    const data = await response.json();
-                    LIVEKIT_TOKEN = data.token;
-                } else {
-                    console.warn('Backend fetch failed, using manual token if set');
-                }
-            } catch (e) {
-                console.warn('Backend fetch error', e);
-            }
-
-            if (!LIVEKIT_TOKEN) {
-                console.error('No token found. Please set LIVEKIT_TOKEN manually.');
-                showToast('Token Missing');
-                // return; 
-            }
-
-            if (LIVEKIT_TOKEN) {
-                // 2. Connect to the room
-                await room.connect(LIVEKIT_URL, LIVEKIT_TOKEN);
-                showToast('Connected to KAIROS Network');
-            
-                // 3. Publish local tracks so you appear immediately
-                await room.localParticipant.setMicrophoneEnabled(true);
-                await room.localParticipant.setCameraEnabled(true);
-            } else {
-                 showToast('Demo Mode (No Server)');
-            }
-
-            // 4. Handle existing and new participants
-            room.on(RoomEvent.TrackSubscribed, handleTrackSubscribed);
-            room.on(RoomEvent.TrackUnsubscribed, handleTrackUnsubscribed);
-            room.on(RoomEvent.ActiveSpeakersChanged, handleActiveSpeakers);
-            room.on(RoomEvent.DataReceived, handleDataReceived); // For chat
-            room.on(RoomEvent.ParticipantDisconnected, (participant) => {
-                const tile = document.getElementById(`tile-${participant.sid}`);
-                if (tile) tile.remove();
-            });
-
-            // 5. Pre-load existing participants
-            room.participants.forEach(participant => {
-                participant.tracks.forEach(publication => {
-                    if (publication.isSubscribed) {
-                        handleTrackSubscribed(publication.track, publication, participant);
-                    }
-                });
-            });
-
-        } catch (error) {
-            console.error('LiveKit connection error:', error);
-            showToast('Connection Failed');
-        }
-    }
-
-    // --- TRACK HANDLING ---
-    function handleTrackSubscribed(track, publication, participant) {
-        if (track.kind === Track.Kind.Video) {
-            addUserTile(participant.sid, track, participant.identity);
-        } else if (track.kind === Track.Kind.Audio) {
-            // Audio tracks must be attached to the DOM to be heard
-            const element = track.attach();
-            document.body.appendChild(element);
-        }
-    }
-
-    function handleTrackUnsubscribed(track, publication, participant) {
-        track.detach().forEach((element) => element.remove());
-        if (track.kind === Track.Kind.Video) {
-            const tile = document.getElementById(`tile-${participant.sid}`);
-            // Keep tile if other tracks exist
-        }
-    }
-
-    // --- SPEAKER HIGHLIGHTING ---
-    function handleActiveSpeakers(speakers) {
-        // Remove speaking class from all
-        document.querySelectorAll('.video-tile').forEach(t => t.classList.remove('speaking'));
-        
-        speakers.forEach(speaker => {
-            const tile = document.getElementById(speaker.isLocal ? 'tile-me' : `tile-${speaker.sid}`);
-            if (tile) tile.classList.add('speaking');
-        });
-    }
-
-    // --- CHAT LOGIC (LiveKit Data Messages) ---
-    function handleChat(e) { if(e.key === 'Enter') sendChat(); }
-
-    async function sendChat() {
-        const input = document.getElementById('chatInput');
-        const text = input.value;
-        if(!text) return;
-
-        // Optimized for chat: reliable=true
-        const strData = JSON.stringify({ type: 'chat', text: text, sender: 'Me', time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) });
-        const encoder = new TextEncoder();
-        const data = encoder.encode(strData);
-
-        try {
-            if (room && room.state === 'connected') {
-                await room.localParticipant.publishData(data, { reliable: true });
-            }
-            // Add to my own UI
-            addChatMessage('Me', text, true, new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
-            input.value = '';
-        } catch (e) {
-            console.error('Failed to send chat', e);
-            // Fallback: just show locally if offline or error
-            addChatMessage('Me', text, true, 'Now');
-            input.value = '';
-        }
-    }
-
-    function handleDataReceived(payload, participant, kind) {
-        const decoder = new TextDecoder();
-        const strData = decoder.decode(payload);
-        try {
-            const data = JSON.parse(strData);
-            if (data.type === 'chat') {
-                const isMe = participant === room.localParticipant;
-                addChatMessage(participant.identity || 'Guest', data.text, isMe, data.time);
-            }
-        } catch (e) {
-            console.warn('Received unknown data format');
-        }
-    }
-
-    function addChatMessage(sender, text, isMe, time) {
-        const feed = document.getElementById('chat-feed');
-        const el = document.createElement('div');
-        el.className = 'chat-msg';
-        el.innerHTML = `
-            <div class="chat-header"><span class="chat-name">${sender}</span> <span class="chat-time">${time}</span></div>
-            <div class="chat-bubble" style="background:${isMe ? 'var(--accent)' : 'var(--surface-hover)'}; color:${isMe ? '#000' : 'inherit'};">${text}</div>
-        `;
-        feed.appendChild(el);
-        feed.scrollTop = feed.scrollHeight;
-    }
-
-
-    // --- UI HELPERS ---
-    function addUserTile(sid, track, identity) {
-        let tile = document.getElementById(`tile-${sid}`);
-        if (!tile) {
-            const grid = document.getElementById('grid');
-            tile = document.createElement('div');
-            tile.className = 'video-tile';
-            tile.id = `tile-${sid}`;
-            tile.innerHTML = `
-                <div class="tile-top-overlay">
-                    <div class="tile-btn" onclick="toggleMaximize(this.parentElement.parentElement)"><i class="ph-bold ph-arrows-out-simple"></i></div>
+            <div class="privacy-header">
+                <div class="privacy-icon"><i class="ph-bold ph-sparkle"></i></div>
+                <div>
+                    <div style="font-size:13px; font-weight:700; color:var(--text-primary); margin-bottom:2px;">KAIROS -
+                        AI Meeting Agent</div>
+                    <div style="font-size:11px; color:var(--text-secondary); margin-bottom:2px;">Benedict's Notetaker
+                        (Kairos.ai) (guest)</div>
+                    <div style="font-size:10px; color:#888;">Accesses: Audio, Video, Chat, Files</div>
                 </div>
-                <div class="video-container" style="width:100%; height:100%;"></div>
-                <div class="tile-overlay">
-                    <div class="user-nametag">${identity || 'Remote Participant'}</div>
+            </div>
+
+            <p class="privacy-disclaimer">
+                Kairos AI features have been enabled in this meeting. Below you can see the content accessed by features
+                in this meeting.
+                <br><br>
+                <a href="#" style="color:var(--ai-blue); text-decoration:none;">Learn more about how your data is
+                    handled.</a>
+            </p>
+
+            <!-- Centered Enable AI Companion Button -->
+            <div
+                style="display:flex; justify-content:center; margin-top: 20px; border-top: 1px solid var(--border); padding-top: 20px;">
+                <button id="aiToggleBtn" class="active" onclick="toggleAiCompanion(this)"
+                    style="background:var(--accent); color:black; font-weight:600; padding:10px 20px; border-radius:30px; border:none; cursor:pointer; font-family:'Inter'; display:flex; align-items:center; gap:8px; transition:0.3s;">
+                    <i class="ph-bold ph-toggle-left"></i> <span>AI Companion On</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="endModal">
+        <div class="modal-box">
+            <div id="processingState" class="processing-view">
+                <div class="spinner"></div>
+                <h3 style="font-family:'Space Grotesk'; font-size:16px;">KAIROS is organizing memory...</h3>
+                <p style="font-size:12px; color:var(--text-secondary);">Analyzing decision points and actions.</p>
+            </div>
+
+            <div id="summaryState" style="display:none;">
+                <i class="ph-duotone ph-check-circle"
+                    style="font-size: 48px; color: var(--accent); margin-bottom: 16px;"></i>
+                <h2 style="font-family:'Space Grotesk'; margin-bottom:8px;">Meeting Ended</h2>
+
+                <div class="summary-preview" style="display:block;">
+                    <div style="font-weight:700; margin-bottom:6px; color:var(--text-primary);">AI Summary:</div>
+                    • Tech stack migration ratified (Next.js 14).<br>
+                    • Action Item: Benedict to email Sparky Solutions.<br>
+                    • Alice to update Figma by EOD.
                 </div>
-            `;
-            grid.prepend(tile);
-        }
-        
-        const container = tile.querySelector('.video-container');
-        container.innerHTML = ''; // Clear previous
-        const element = track.attach();
-        element.className = 'live-video';
-        container.appendChild(element);
-    }
 
-    // --- CONTROLS SYNCED WITH LIVEKIT ---
-    async function toggleState(btn, type) {
-        if (type === 'mute') {
-            const isMuted = room.localParticipant.isMicrophoneEnabled;
-            // Toggle
-            await room.localParticipant.setMicrophoneEnabled(!isMuted);
-            
-            // Check new state
-            const nowMuted = !room.localParticipant.isMicrophoneEnabled;
+                <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:20px;">
+                    <i class="ph-bold ph-envelope-simple" style="color:var(--text-secondary)"></i>
+                    <span style="font-size:12px; color:var(--text-secondary);">Sending recap to all
+                        participants...</span>
+                </div>
 
-            if (!nowMuted) { // Enabled
-                btn.classList.remove('danger');
-                btn.classList.add('active');
-                btn.querySelector('i').className = 'ph-fill ph-microphone';
-                showToast('Microphone Active');
-            } else { // Disabled
-                btn.classList.add('danger');
-                btn.classList.remove('active');
-                btn.querySelector('i').className = 'ph-fill ph-microphone-slash';
-                showToast('Microphone Muted');
+                <button onclick="window.location.href='index.html'"
+                    style="background:var(--text-primary); color:var(--bg-main); width:100%; padding:12px; border-radius:10px; font-weight:600; cursor:pointer; border:none; transition:0.2s;">
+                    Return to Command Center
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODULES -->
+    <script src="js/ui-controls.js"></script>
+    <script src="js/room-manager.js"></script>
+    <script src="js/audio-video.js"></script>
+    <script src="js/screen-share.js"></script>
+    <script src="js/chat.js"></script>
+    <script src="js/whiteboard.js"></script>
+    <script src="js/transcription-ai.js"></script>
+
+    <script>
+        // Init LiveKit when scripts are loaded
+        window.addEventListener('DOMContentLoaded', () => {
+            // Init UI components
+            const mainTitle = document.querySelector('header h1').innerText;
+            if (document.getElementById('modalMeetingTitle')) document.getElementById('modalMeetingTitle').innerText = mainTitle;
+            if (window.innerWidth <= 768 && document.getElementById('mobSidebarHeader')) {
+                document.getElementById('mobSidebarHeader').style.display = 'flex';
             }
-        }
-        
-        if (type === 'video') {
-            const isVideoEnabled = room.localParticipant.isCameraEnabled;
-            await room.localParticipant.setCameraEnabled(!isVideoEnabled);
-            
-            const tileMe = document.getElementById('tile-me');
-            const avatar = tileMe.querySelector('.tile-avatar');
-            
-            if (!isVideoEnabled) { // Turning ON
-                // Get track
-                const track = room.localParticipant.getTrack(Track.Source.Camera);
-                if (track && track.videoTrack) {
-                    const params = tileMe.querySelector('.live-video');
-                    if(params) params.remove();
 
-                    const element = track.videoTrack.attach();
-                    element.className = 'live-video';
-                    tileMe.insertBefore(element, tileMe.firstChild);
-                }
-                
-                avatar.style.display = 'none';
-                btn.classList.add('active');
-                btn.querySelector('i').className = 'ph-fill ph-video-camera';
-                showToast('Camera Active');
-            } else { // Turning OFF
-                const vid = tileMe.querySelector('video');
-                if (vid) vid.remove();
-                avatar.style.display = 'flex';
-                btn.classList.remove('active');
-                btn.querySelector('i').className = 'ph-fill ph-video-camera-slash';
-                showToast('Camera Off');
-            }
-        }
-    }
+            // Timer
+            let seconds = 0;
+            setInterval(() => {
+                seconds++;
+                const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+                const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+                const s = (seconds % 60).toString().padStart(2, '0');
+                const timer = document.getElementById('timer');
+                if (timer) timer.innerText = `${h}:${m}:${s}`;
+            }, 1000);
 
-    // Start LiveKit on Page Load
-    window.addEventListener('DOMContentLoaded', initLiveKit);
-
-    // --- UI HELPERS & RESTORED FUNCTIONS ---
-
-    function showToast(msg) {
-        const t = document.getElementById('toast');
-        document.getElementById('toastMsg').innerText = msg;
-        t.classList.add('show');
-        setTimeout(() => t.classList.remove('show'), 3000);
-    }
-
-    function switchTab(tabName) {
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.sidebar-content').forEach(c => {
-            c.style.display = 'none';
-            c.classList.remove('active');
+            // Connect
+            if (typeof initLiveKit === 'function') initLiveKit();
         });
-        event.target.classList.add('active');
-        const content = document.getElementById(`tab-${tabName}`);
-        content.style.display = tabName === 'chat' ? 'flex' : 'block';
-        setTimeout(() => content.classList.add('active'), 10);
-    }
+    </script>
 
-    function toggleCheck(el) {
-        const box = el.querySelector('.chk-box');
-        const text = el.querySelector('.agenda-text');
-        if(box.classList.contains('checked')) {
-            box.classList.remove('checked'); text.classList.remove('done');
-        } else {
-            box.classList.add('checked'); text.classList.add('done');
-        }
-    }
-
-    function toggleSidebar() {
-        const sb = document.getElementById('sidebar');
-        if(window.innerWidth <= 768) {
-            sb.classList.toggle('mobile-active');
-        } else {
-            sb.classList.toggle('collapsed');
-        }
-    }
-
-    function toggleHand(btn) {
-        if(btn) btn.classList.toggle('active');
-        const badge = document.getElementById('myHand');
-        if (badge.classList.contains('active')) {
-            badge.classList.remove('active');
-        } else {
-            badge.classList.add('active');
-            showToast('You raised your hand');
-        }
-        document.getElementById('moreMenuOverlay').classList.remove('active');
-    }
-
-    function toggleReactionMenu() {
-        document.getElementById('moreMenuOverlay').classList.remove('active');
-        const overlay = document.getElementById('reactionOverlay');
-        overlay.classList.toggle('active');
-    }
-
-    function toggleMoreMenu() {
-        document.getElementById('reactionOverlay').classList.remove('active');
-        const overlay = document.getElementById('moreMenuOverlay');
-        overlay.classList.toggle('active');
-    }
-
-    function openMeetingInfo() {
-        document.getElementById('moreMenuOverlay').classList.remove('active');
-        const modal = document.getElementById('meetingInfoModal');
-        modal.classList.toggle('active');
-    }
-
-    function copyMeetingLink() {
-        const text = "https://meet.kairos.ai/town-hall-2026";
-        const textArea = document.createElement("textarea");
-        textArea.value = text;
-        document.body.appendChild(textArea);
-        textArea.select();
-        try {
-            document.execCommand('copy');
-            showToast("Link copied to clipboard");
-        } catch (err) {
-            console.error('Fallback: Oops, unable to copy', err);
-            showToast("Failed to copy link");
-        }
-        document.body.removeChild(textArea);
-        openMeetingInfo(); 
-    }
-    
-    function openAiPrivacy() {
-        const modal = document.getElementById('aiPrivacyModal');
-        modal.classList.add('visible');
-        modal.style.display = 'flex';
-    }
-
-    function closeAiPrivacy() {
-        const modal = document.getElementById('aiPrivacyModal');
-        modal.classList.remove('visible');
-        setTimeout(() => modal.style.display = 'none', 300);
-    }
-    
-    function toggleAiCompanion(btn) {
-        const badge = document.getElementById('smartRecBadge');
-        const isActive = btn.classList.contains('active');
-
-        if (!isActive) {
-             // Turn ON
-             btn.classList.add('active');
-             btn.style.backgroundColor = 'var(--accent)';
-             btn.style.color = 'black';
-             btn.innerHTML = '<i class="ph-bold ph-toggle-left"></i> <span>AI Companion On</span>';
-             
-             badge.style.display = 'flex';
-             setTimeout(() => badge.classList.add('active'), 10);
-             showToast('AI Companion Enabled');
-        } else {
-             // Turn OFF
-             btn.classList.remove('active');
-             btn.style.backgroundColor = 'var(--surface-hover)';
-             btn.style.color = 'var(--text-secondary)';
-             btn.innerHTML = '<i class="ph-bold ph-toggle-right"></i> <span>AI Companion Off</span>';
-             
-             badge.classList.remove('active');
-             setTimeout(() => badge.style.display = 'none', 300); 
-             showToast('AI Companion Disabled');
-        }
-    }
-    
-    function sendReaction(emoji) {
-        const layer = document.getElementById('tile-me'); 
-        const el = document.createElement('div');
-        el.className = 'floating-emoji';
-        el.innerText = emoji;
-        el.style.left = Math.random() * 60 + 20 + '%'; 
-        
-        layer.appendChild(el);
-        
-        setTimeout(() => el.remove(), 2000);
-        document.getElementById('reactionOverlay').classList.remove('active');
-        showToast(`Reacted with ${emoji}`);
-    }
-
-    function vote(opt, percent) {
-        const parent = opt.parentElement;
-        parent.querySelectorAll('.poll-option').forEach(o => o.classList.remove('selected'));
-        parent.querySelectorAll('.poll-bar-fill').forEach(b => b.style.width = '0%');
-        opt.classList.add('selected');
-        const bar = opt.nextElementSibling.querySelector('.poll-bar-fill');
-        bar.style.width = percent + '%';
-        opt.querySelector('span:last-child').innerText = '1 vote';
-    }
-
-    function toggleCaptions() {
-        const cap = document.getElementById('captionsOverlay');
-        cap.classList.toggle('active');
-        const isActive = cap.classList.contains('active');
-        showToast(isActive ? 'Captions Enabled (Translating)' : 'Captions Disabled');
-        
-        document.getElementById('settingsModal').classList.remove('visible');
-        document.getElementById('moreMenuOverlay').classList.remove('active');
-        setTimeout(() => document.getElementById('settingsModal').style.display = 'none', 300);
-    }
-
-    function openSettings() {
-        toggleMoreMenu(); 
-        const modal = document.getElementById('settingsModal');
-        modal.style.display = 'flex';
-        setTimeout(() => modal.classList.add('visible'), 10);
-    }
-
-    function closeSettings() {
-        const modal = document.getElementById('settingsModal');
-        modal.classList.remove('visible');
-        setTimeout(() => modal.style.display = 'none', 300);
-    }
-    
-    /* --- PARTICIPANTS LIST LOGIC --- */
-    const allParticipants = [
-        { name: "Benedict (Host)", role: "Host", avatar: "Me" },
-        { name: "Alice Design", role: "Guest", avatar: "A" },
-        { name: "John Dev", role: "Member", avatar: "J" },
-        { name: "Sarah", role: "Guest", avatar: "S" },
-        { name: "Mike", role: "Member", avatar: "M" },
-        { name: "David", role: "Guest", avatar: "D" }
-    ];
-
-    let allMuted = false;
-
-    function openParticipantList() {
-        const modal = document.getElementById('participantsModal');
-        const list = document.getElementById('fullParticipantList');
-        document.getElementById('pCount').innerText = allParticipants.length;
-        
-        list.innerHTML = ''; // clear
-        
-        allParticipants.forEach(p => {
-            const el = document.createElement('div');
-            el.className = 'p-item';
-            const isMuted = allMuted || Math.random() > 0.7; 
-            const micIcon = isMuted ? 'ph-microphone-slash' : 'ph-microphone';
-            
-            el.innerHTML = `
-                <div class="p-info">
-                    <div class="p-avatar" style="background:#333;">${p.avatar}</div> 
-                    ${p.name}
-                </div>
-                <div class="p-controls">
-                    <i class="ph-fill ${micIcon}"></i> 
-                    <i class="ph-fill ph-video-camera${Math.random() > 0.5 ? '-slash' : ''}"></i>
-                </div>
-            `;
-            list.appendChild(el);
-        });
-
-        modal.style.display = 'flex';
-        setTimeout(() => modal.classList.add('visible'), 10);
-    }
-    
-    function closeParticipantList() {
-        const modal = document.getElementById('participantsModal');
-        modal.classList.remove('visible');
-        setTimeout(() => modal.style.display = 'none', 300);
-    }
-
-    function toggleMuteAll() {
-        const btn = document.getElementById('muteAllBtn');
-        const list = document.getElementById('fullParticipantList');
-        
-        allMuted = !allMuted;
-        
-        if(allMuted) {
-            btn.innerHTML = '<i class="ph-bold ph-microphone"></i> Unmute All';
-            btn.style.color = 'var(--accent)';
-            btn.style.background = 'rgba(16,185,129,0.1)';
-            btn.style.borderColor = 'var(--accent)';
-            showToast('All participants muted');
-        } else {
-            btn.innerHTML = '<i class="ph-bold ph-microphone-slash"></i> Mute All';
-            btn.style.color = 'var(--danger)';
-            btn.style.background = 'rgba(239,68,68,0.1)';
-            btn.style.borderColor = 'var(--danger)';
-            showToast('All participants unmuted');
-        }
-        
-        const icons = list.querySelectorAll('.ph-microphone, .ph-microphone-slash');
-        icons.forEach(i => {
-            i.className = allMuted ? 'ph-fill ph-microphone-slash' : 'ph-fill ph-microphone';
-        });
-    }
-
-    /* --- WHITEBOARD --- */
-    let isWhiteboardOpen = false;
-    const canvas = document.getElementById('wbCanvas');
-    const ctx = canvas.getContext('2d');
-    let isDrawing = false;
-    let currentTool = 'pen';
-    
-    function resizeCanvas() {
-        const container = document.getElementById('canvasArea');
-        canvas.width = container.offsetWidth;
-        canvas.height = container.offsetHeight;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = '#000';
-    }
-
-    function toggleWhiteboard() {
-        const wb = document.getElementById('whiteboardContainer');
-        const grid = document.getElementById('grid');
-        const pip = document.getElementById('pipWindow');
-        const btn = document.getElementById('wbBtn');
-        
-        isWhiteboardOpen = !isWhiteboardOpen;
-        
-        if(isWhiteboardOpen) {
-            wb.classList.add('active');
-            grid.classList.add('hidden');
-            pip.classList.add('active');
-            btn.classList.add('active');
-            resizeCanvas();
-        } else {
-            wb.classList.remove('active');
-            grid.classList.remove('hidden');
-            pip.classList.remove('active');
-            btn.classList.remove('active');
-        }
-    }
-    
-    function selectTool(tool) {
-        currentTool = tool;
-        document.querySelectorAll('.wb-btn').forEach(b => b.classList.remove('active'));
-        if(tool === 'pen') {
-            document.querySelector('.wb-btn:nth-child(1)').classList.add('active');
-            ctx.globalCompositeOperation = 'source-over';
-            ctx.lineWidth = 3;
-        } else if(tool === 'eraser') {
-            document.querySelector('.wb-btn:nth-child(2)').classList.add('active');
-            ctx.globalCompositeOperation = 'destination-out';
-            ctx.lineWidth = 20;
-        }
-    }
-    
-    function clearBoard() {
-        ctx.clearRect(0,0, canvas.width, canvas.height);
-    }
-    
-    // Drawing Logic
-    canvas.addEventListener('mousedown', startDraw);
-    canvas.addEventListener('mousemove', draw);
-    canvas.addEventListener('mouseup', stopDraw);
-    canvas.addEventListener('mouseout', stopDraw);
-    
-    function startDraw(e) {
-        isDrawing = true;
-        draw(e);
-    }
-    function draw(e) {
-        if(!isDrawing) return;
-        const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        
-        ctx.lineTo(x, y);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-    }
-    function stopDraw() {
-        isDrawing = false;
-        ctx.beginPath();
-    }
-    
-    /* --- MAXIMIZE TILE --- */
-    function toggleMaximize(tile) {
-        if(tile.classList.contains('maximized')) {
-            tile.classList.remove('maximized');
-        } else {
-            document.querySelectorAll('.video-tile').forEach(t => t.classList.remove('maximized'));
-            tile.classList.add('maximized');
-        }
-    }
-
-    function endCall() {
-        if (typeof room !== 'undefined' && room) room.disconnect(); // Disconnect LiveKit
-        
-        const modal = document.getElementById('endModal');
-        modal.style.display = 'flex';
-        setTimeout(() => modal.classList.add('visible'), 10);
-
-        setTimeout(() => {
-            document.getElementById('processingState').style.display = 'none';
-            document.getElementById('summaryState').style.display = 'block';
-        }, 2000);
-    }
-</script>
 </body>
+
 </html>
