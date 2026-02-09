@@ -1,66 +1,46 @@
-const express = require("express");
-const cors = require("cors");
-const { AccessToken } = require("livekit-server-sdk");
 
-// Only load dotenv locally
-if (process.env.NODE_ENV !== "production") {
-  require("dotenv").config();
-}
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const { AccessToken } = require('livekit-server-sdk');
 
 const app = express();
+const port = process.env.PORT || 10000;
 
-/* ---------------- MIDDLEWARE ---------------- */
 app.use(cors());
 app.use(express.json());
 
-/* ---------------- HEALTH CHECK ---------------- */
-app.get("/", (req, res) => {
-  res.status(200).send("KAIROS Token Server is live and healthy.");
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
 });
 
-/* ---------------- TOKEN ENDPOINT ---------------- */
-app.get("/get-token", async (req, res) => {
-  const { room, user } = req.query;
+app.get('/get-token', async (req, res) => {
+  const room = req.query.room;
+  const user = req.query.user;
 
   if (!room || !user) {
-    return res.status(400).json({
-      error: "room and user parameters are required",
-    });
+    return res.status(400).json({ error: 'Missing "room" or "user" query parameter' });
   }
 
   const apiKey = process.env.LIVEKIT_API_KEY;
   const apiSecret = process.env.LIVEKIT_API_SECRET;
 
   if (!apiKey || !apiSecret) {
-    return res.status(500).json({
-      error: "LiveKit credentials not configured on server",
-    });
+    return res.status(500).json({ error: 'Server misconfigured: Missing API keys' });
   }
 
   try {
-    const at = new AccessToken(apiKey, apiSecret, {
-      identity: user,
-    });
-
-    at.addGrant({
-      roomJoin: true,
-      room,
-      canPublish: true,
-      canSubscribe: true,
-      canPublishData: true,
-    });
+    const at = new AccessToken(apiKey, apiSecret, { identity: user });
+    at.addGrant({ roomJoin: true, room, canPublish: true, canSubscribe: true, canPublishData: true });
 
     const token = await at.toJwt();
     res.json({ token });
-  } catch (err) {
-    console.error("Token Generation Error:", err);
-    res.status(500).json({ error: "Failed to generate token" });
+  } catch (error) {
+    console.error('Error generating token:', error);
+    res.status(500).json({ error: 'Failed to generate token' });
   }
 });
 
-/* ---------------- START SERVER ---------------- */
-const PORT = process.env.PORT || 10000;
-
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 KAIROS Token Server running on port ${PORT}`);
+app.listen(port, () => {
+  console.log(`Token server listening on port ${port}`);
 });
