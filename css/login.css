@@ -1,0 +1,472 @@
+/* --- VARIABLES & THEME --- */
+:root {
+    /* Default (Dark Mode) */
+    --bg-main: #000000;
+    /* True Black as requested/implied for deep contrast */
+    --bg-panel: #0a0a0a;
+    --border: rgba(255, 255, 255, 0.1);
+    --text-primary: #ffffff;
+    --text-secondary: #a1a1aa;
+    --surface-hover: rgba(255, 255, 255, 0.08);
+    --accent: #10b981;
+    /* Kairos Green */
+    --accent-glow: rgba(16, 185, 129, 0.2);
+    --danger: #ef4444;
+}
+
+:root[data-theme="light"] {
+    --bg-main: #ffffff;
+    --bg-panel: #f4f4f5;
+    --border: rgba(0, 0, 0, 0.1);
+    --text-primary: #18181b;
+    --text-secondary: #71717a;
+    --surface-hover: rgba(0, 0, 0, 0.05);
+    --accent: #059669;
+    --accent-glow: rgba(5, 150, 105, 0.15);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', sans-serif;
+}
+
+body {
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    font-size: 14px;
+    /* Base size moderate */
+    transition: background-color 0.3s ease, color 0.3s ease;
+    overflow-x: hidden;
+}
+
+/* Background Texture - Subtle */
+body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* --- LAYOUT GRID --- */
+.login-container {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+    min-height: 100vh;
+    position: relative;
+    z-index: 1;
+}
+
+@media (min-width: 1024px) {
+    .login-container {
+        grid-template-columns: 1fr 1fr;
+        /* Split Layout */
+    }
+}
+
+/* --- LEFT PANEL: Branding --- */
+.left-panel {
+    display: none;
+    /* Hidden on mobile */
+    flex-direction: column;
+    justify-content: center;
+    padding: 60px 80px;
+    background: radial-gradient(circle at top left, rgba(16, 185, 129, 0.05), transparent 40%);
+}
+
+@media (min-width: 1024px) {
+    .left-panel {
+        display: flex;
+    }
+}
+
+.brand-wrapper {
+    max-width: 480px;
+}
+
+.brand-icon-lg {
+    width: 160px;
+    height: 160px;
+    margin-bottom: 40px;
+}
+
+.brand-icon-lg svg {
+    width: 100%;
+    height: 100%;
+    fill: var(--text-primary);
+}
+
+.brand-headline {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 42px;
+    /* Moderate size, not huge */
+    font-weight: 700;
+    line-height: 1.1;
+    margin-bottom: 20px;
+    letter-spacing: -0.02em;
+}
+
+.brand-headline span {
+    color: var(--accent);
+}
+
+.brand-sub {
+    font-size: 16px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 40px;
+}
+
+/* Avatars / Social Proof */
+.social-proof {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.avatars {
+    display: flex;
+}
+
+.avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 3px solid var(--bg-main);
+    background-size: cover;
+    margin-left: -10px;
+    background-color: var(--surface-hover);
+}
+
+.avatar:first-child {
+    margin-left: 0;
+}
+
+.proof-text {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.proof-text strong {
+    color: var(--accent);
+}
+
+/* --- RIGHT PANEL: Form --- */
+.right-panel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: var(--bg-main);
+    /* Match main bg for seamless interaction or slight contrast? Sticking to main */
+}
+
+.login-card {
+    width: 100%;
+    max-width: 420px;
+    padding: 40px;
+    /* Optional: Card look on desktop, or flat? Ref image looked clean. adding subtle border/bg */
+    background: var(--bg-panel);
+    /* Very subtle contrast */
+    border: 1px solid var(--border);
+    border-radius: 24px;
+}
+
+/* Role Tabs */
+.role-tabs {
+    display: flex;
+    padding: 4px;
+    background: var(--surface-hover);
+    border-radius: 12px;
+    margin-bottom: 24px;
+}
+
+.role-tab {
+    flex: 1;
+    text-align: center;
+    padding: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: 8px;
+    transition: 0.2s;
+}
+
+.role-tab.active {
+    background: var(--bg-main);
+    color: var(--text-primary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Header */
+.form-header {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.form-header h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.form-header p {
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+/* Inputs */
+.form-group {
+    margin-bottom: 16px;
+}
+
+.input-box input {
+    width: 100%;
+    padding: 14px 16px;
+    background: var(--bg-main);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-size: 14px;
+    color: var(--text-primary);
+    outline: none;
+    transition: 0.2s;
+}
+
+.input-box input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.input-row {
+    display: flex;
+    gap: 12px;
+}
+
+.btn-primary {
+    width: 100%;
+    padding: 14px;
+    background: var(--accent);
+    color: #fff;
+    /* Always white on accent */
+    border: none;
+    border-radius: 100px;
+    /* Pill shape for main CTA? Or rounded rect? Image showed rounded rect. Sticking to 12px or pill. Let's do 12px to match inputs */
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    transition: 0.2s;
+    margin-top: 12px;
+}
+
+.btn-primary:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+}
+
+/* Social Buttons */
+.separator {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 24px 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+    gap: 12px;
+}
+
+.separator::before,
+.separator::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid var(--border);
+}
+
+.social-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.social-btn {
+    width: 100%;
+    padding: 12px;
+    border-radius: 100px;
+    /* Pill Shape */
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+.social-btn:hover {
+    transform: scale(1.02);
+}
+
+/* Apple Specific */
+.btn-apple {
+    background: #000000;
+    color: #ffffff;
+    border-color: #333;
+}
+
+:root[data-theme="light"] .btn-apple {
+    background: #000;
+    color: #fff;
+}
+
+/* Google Specific */
+.btn-google {
+    background: #ffffff;
+    color: #1f1f1f;
+    border-color: #e5e7eb;
+}
+
+.btn-google:hover {
+    background: #f8f9fa;
+}
+
+/* Google in Dark Mode: usually white/light grey or dark grey with bright logo. 
+   User image showed "Sign in with Google" pill with colored logo. 
+   Often Google buttons are White/Light even in dark mode for brand recognition, OR dark grey. 
+   I'll default to White for high contrast pop as requested by "similar to image".
+*/
+
+/* Link */
+.auth-link {
+    text-align: center;
+    margin-top: 24px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.auth-link span {
+    color: var(--text-primary);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* --- THEME TOGGLE --- */
+.theme-toggle-fixed {
+    position: absolute;
+    top: 32px;
+    right: 32px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 100;
+    color: var(--text-primary);
+    transition: 0.2s;
+}
+
+.theme-toggle-fixed:hover {
+    background: var(--surface-hover);
+}
+
+/* --- MODAL (Profile Setup) --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    z-index: 1000;
+    display: none;
+    /* Hidden by default */
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.modal-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    width: 100%;
+    max-width: 480px;
+    padding: 32px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    animation: modalSlide 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalSlide {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-header h3 {
+    font-family: 'Space Grotesk';
+    font-size: 20px;
+    margin-bottom: 8px;
+}
+
+.modal-header p {
+    color: var(--text-secondary);
+    font-size: 13px;
+    margin-bottom: 24px;
+}
+
+.avatar-upload {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.avatar-preview {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: var(--surface-hover);
+    border: 2px dashed var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    font-size: 24px;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.avatar-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+/* Force Green Toggle */
+#authSwitchBtn { color: var(--accent) !important; font-weight: 600; }
