@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to KAIROS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="css/onboarding.css">
+    <script>
+        // Apply Theme immediately to prevent flash
+        const savedTheme = localStorage.getItem('kairosTheme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+
+        // Update Logo based on theme
+        document.addEventListener('DOMContentLoaded', () => {
+            const logo = document.querySelector('.header-icon img');
+            if (logo) {
+                logo.src = savedTheme === 'dark' ? 'icons/new-Kairos-Logo-white.png' : 'icons/new-Kairos-Logo-black.png';
+            }
+        });
+    </script>
+</head>
+
+<body>
+
+    <div class="onboarding-container">
+
+        <!-- STEP 1: WELCOME -->
+        <div class="step active" id="step1">
+            <div class="header-icon">
+                <img src="icons/new-Kairos-Logo-white.png" alt="Kairos"
+                    style="width:64px; height:64px; object-fit:contain;">
+            </div>
+            <h1>Welcome to KAIROS</h1>
+            <p class="subtitle">Secure, intelligent collaboration for professionals.</p>
+
+            <div class="feature-list">
+                <div class="feature-item">
+                    <div class="f-icon"><i class="ph-fill ph-chat-circle-text"></i></div>
+                    <div class="f-text">
+                        <h3>Secure Comms</h3>
+                        <p>End-to-end encrypted chat and calls for your team.</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="f-icon"><i class="ph-fill ph-video-camera"></i></div>
+                    <div class="f-text">
+                        <h3>HD Video Meetings</h3>
+                        <p>Connect with anyone, anywhere, in crystal clear quality.</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="f-icon"><i class="ph-fill ph-shield-check"></i></div>
+                    <div class="f-text">
+                        <h3>Privacy First</h3>
+                        <p>We will never sell or share your data. Your vault is yours.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 2: PROFILE -->
+        <div class="step" id="step2">
+            <div class="nav-back" onclick="goToStep(1)"><i class="ph-bold ph-arrow-left"></i></div>
+
+            <h1>Your profile at a glance</h1>
+            <p class="subtitle">This is how you'll appear to others.</p>
+
+            <div class="profile-preview">
+                <div class="profile-row">
+                    <!-- Avatar Left -->
+                    <div class="avatar-container" onclick="document.getElementById('avatarInput').click()">
+                        <div class="avatar-circle" id="previewAvatar">
+                            <span id="previewInitials">BA</span>
+                            <img id="avatarImg" src="" style="display:none;">
+                        </div>
+                        <div class="edit-badge"><i class="ph-light ph-camera"></i></div>
+                        <input type="file" id="avatarInput" accept="image/*" style="display:none;"
+                            onchange="handleAvatarUpload(this)">
+                    </div>
+
+                    <!-- Details Right -->
+                    <div class="profile-details">
+                        <h3 id="previewName">Benedict Adurosakin</h3>
+                        <p id="previewEmail">benedict@kairos.app</p>
+                        <div class="input-underline-group">
+                            <input type="text" id="roleInput" placeholder="Add your Job Title" value="Professional">
+                            <i class="ph-light ph-briefcase"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <p class="disclaimer">Visit Settings later to add more details.</p>
+        </div>
+
+        <!-- STEP 3: SYNC -->
+        <div class="step" id="step3">
+            <div class="nav-back" onclick="goToStep(2)"><i class="ph-bold ph-arrow-left"></i></div>
+
+            <h1>Find people you know</h1>
+            <p class="subtitle">Sync your contacts to easily find colleagues.</p>
+
+            <div class="sync-visual">
+                <!-- Abstract visual resembling the reference -->
+                <div class="orb orb-1"></div>
+                <div class="orb orb-2"></div>
+                <div class="orb orb-3"></div>
+                <div class="glass-card">
+                    <div class="toggle-row">
+                        <span>Sync Contacts</span>
+                        <div class="toggle-switch active" onclick="this.classList.toggle('active')">
+                            <div class="toggle-knob"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <p class="disclaimer">
+                Sync and store your device contacts. You can turn this off at any time.
+                <br><a href="#">Learn more</a>
+            </p>
+
+            <div class="checkbox-row">
+                <div class="custom-checkbox checked" onclick="this.classList.toggle('checked')"><i
+                        class="ph-bold ph-check"></i></div>
+                <span>Yes! Sync my contacts on all devices.</span>
+            </div>
+        </div>
+
+        <!-- BOTTOM ACTION -->
+        <div class="bottom-action">
+            <button class="btn-primary" onclick="nextStep()" id="actionBtn">Get started</button>
+        </div>
+
+    </div>
+
+    <script>
+        let currentStep = 1;
+        const totalSteps = 3;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const name = localStorage.getItem('kairos_user') || 'User';
+            const email = localStorage.getItem('kairos_email') || 'user@example.com';
+            const job = localStorage.getItem('kairos_job_title') || '';
+            const avatar = localStorage.getItem('kairos_avatar');
+
+            document.getElementById('previewName').innerText = name;
+            document.getElementById('previewEmail').innerText = email;
+            document.getElementById('previewInitials').innerText = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+            if (job) document.getElementById('roleInput').value = job;
+
+            if (avatar) {
+                const img = document.getElementById('avatarImg');
+                const initials = document.getElementById('previewInitials');
+                if (img) {
+                    img.src = avatar;
+                    img.style.display = 'block';
+                }
+                if (initials) initials.style.display = 'none';
+            }
+        });
+
+        function goToStep(step) {
+            document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+            document.getElementById(`step${step}`).classList.add('active');
+            currentStep = step;
+            updateBtn();
+        }
+
+        function nextStep() {
+            if (currentStep < totalSteps) {
+                if (currentStep === 2) {
+                    // Save Role update
+                    localStorage.setItem('kairos_job_title', document.getElementById('roleInput').value);
+                }
+                goToStep(currentStep + 1);
+            } else {
+                // Finish
+                localStorage.setItem('kairos_onboarded', 'true');
+                window.location.href = 'index.html';
+            }
+        }
+
+        function updateBtn() {
+            const btn = document.getElementById('actionBtn');
+            if (currentStep === 1) btn.innerText = "Get started";
+            else if (currentStep === 2) btn.innerText = "Continue";
+            else btn.innerText = "Continue";
+        }
+
+        function handleAvatarUpload(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const base64 = e.target.result;
+                    // Save to local storage
+                    localStorage.setItem('kairos_avatar', base64);
+
+                    // Update Preview in Onboarding
+                    const img = document.getElementById('avatarImg');
+                    const initials = document.getElementById('previewInitials');
+                    if (img) {
+                        img.src = base64;
+                        img.style.display = 'block';
+                    }
+                    if (initials) {
+                        initials.style.display = 'none';
+                    }
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+    </script>
+</body>
+
+</html>

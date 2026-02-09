@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <script src="js/auth-guard.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KAIROS | Secure Logical Access</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="css/login.css">
+    <style>
+        /* Force Green Toggle Link */
+        #authSwitchBtn {
+            color: var(--accent) !important;
+            font-weight: 600;
+            cursor: pointer;
+        }
+    </style>
+    <script>
+        // Init Theme
+        const savedTheme = localStorage.getItem('kairosTheme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    </script>
+</head>
+
+<body>
+
+    <!-- Fixed Theme Toggle -->
+    <div class="theme-toggle-fixed" onclick="toggleLoginTheme()">
+        <i class="ph-bold ph-moon" id="themeIcon"></i>
+    </div>
+
+    <!-- MAIN CONTAINER -->
+    <div class="login-container">
+
+        <!-- LEFT PANEL: BRANDING -->
+        <div class="left-panel">
+            <div class="brand-wrapper">
+                <div class="brand-icon-lg">
+                    <!-- KAIROS LOGO IMAGE -->
+                    <img src="icons/new-Kairos-Logo-white.png" alt="Kairos Logo" id="brandLogo"
+                        style="width:100%; height:100%; object-fit:contain;">
+                </div>
+
+                <h1 class="brand-headline">
+                    Unlock your<br>
+                    <span>potential.</span>
+                </h1>
+
+                <p class="brand-sub">
+                    Secure, intelligent, and seamless access to your KAIROS workspace.
+                    Manage your data and collaborative sessions with ease.
+                </p>
+
+                <div class="social-proof">
+                    <div class="avatars">
+                        <img src="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=100&q=80"
+                            class="avatar" alt="Doctor" style="object-fit:cover;">
+                        <img src="https://images.unsplash.com/photo-1590611936760-eeb9bc598548?auto=format&fit=crop&w=100&q=80"
+                            class="avatar" alt="Nurse" style="object-fit:cover;">
+                        <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=100&q=80"
+                            class="avatar" alt="Engineer" style="object-fit:cover;">
+                        <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80"
+                            class="avatar" alt="Pilot" style="object-fit:cover;">
+                    </div>
+                    <div class="proof-text">
+                        <strong>50k+</strong> innovators trust KAIROS.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT PANEL: FORM -->
+        <div class="right-panel">
+            <div class="login-card">
+
+                <!-- Role Tabs Removed -->
+
+                <div class="form-header">
+                    <h2 id="formTitle">Create Account</h2>
+                    <p id="formSub">Enter your details below to get started.</p>
+                </div>
+
+                <!-- Forms -->
+                <div id="authForm">
+                    <div id="signupFields">
+                        <div class="input-row">
+                            <div class="form-group" style="flex:1">
+                                <div class="input-box">
+                                    <input type="text" placeholder="First Name" id="fname">
+                                </div>
+                            </div>
+                            <div class="form-group" style="flex:1">
+                                <div class="input-box">
+                                    <input type="text" placeholder="Last Name" id="lname">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="input-box">
+                            <input type="email" placeholder="name@company.com" id="email">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="input-box">
+                            <input type="password" placeholder="Create Password" id="password">
+                        </div>
+                    </div>
+
+                    <button class="btn-primary" onclick="handleAuthAction()" id="authBtn">Sign Up</button>
+
+                    <div class="separator">Or continue with</div>
+
+                    <div class="social-stack">
+                        <!-- Google Pill -->
+                        <button class="social-btn btn-google" onclick="simulateSocial('Google')">
+                            <svg width="20" height="20" viewBox="0 0 24 24">
+                                <path
+                                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                                    fill="#4285F4" />
+                                <path
+                                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                                    fill="#34A853" />
+                                <path
+                                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.29.81-.55z"
+                                    fill="#FBBC05" />
+                                <path
+                                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                                    fill="#EA4335" />
+                            </svg>
+                            Sign in with Google
+                        </button>
+
+                        <!-- Apple Pill -->
+                        <button class="social-btn btn-apple" onclick="simulateSocial('Apple')">
+                            <i class="ph-fill ph-apple-logo" style="font-size: 20px;"></i>
+                            Sign in with Apple
+                        </button>
+                    </div>
+
+                    <div class="auth-link">
+                        <span id="authSwitchText">Already have an account?</span> <span onclick="toggleAuthMode()"
+                            id="authSwitchBtn">Log in</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- PROFILE COMPLETION MODAL -->
+    <div class="modal-overlay" id="profileModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Check your details</h3>
+                <p>Please double check your information and complete your profile to proceed.</p>
+            </div>
+
+            <div class="avatar-upload" onclick="document.getElementById('p_avatar_input').click()">
+                <div class="avatar-preview" id="profileAvatar"
+                    style="overflow:hidden; display:flex; align-items:center; justify-content:center;">
+                    <i class="ph-bold ph-camera" id="p_cam_icon"></i>
+                    <img id="p_avatar_img" src="" style="width:100%; height:100%; object-fit:cover; display:none;">
+                </div>
+                <div style="font-size:12px; color:var(--text-secondary); margin-top:8px;">Upload Photo</div>
+                <input type="file" id="p_avatar_input" accept="image/*" style="display:none;"
+                    onchange="handleLoginAvatar(this)">
+            </div>
+
+            <div class="form-group">
+                <label style="font-size:12px; margin-bottom:6px; display:block; color:var(--text-secondary);">Full
+                    Name</label>
+                <div class="input-box">
+                    <input type="text" id="p_name">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label style="font-size:12px; margin-bottom:6px; display:block; color:var(--text-secondary);">Email
+                    Address</label>
+                <div class="input-box">
+                    <input type="email" id="p_email" readonly style="opacity:0.6; cursor:not-allowed;">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label style="font-size:12px; margin-bottom:6px; display:block; color:var(--text-secondary);">Job Title
+                    / Profession</label>
+                <div class="input-box">
+                    <input type="text" id="p_jobtitle" placeholder="e.g. Cardiologist, Software Engineer, Designer">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label style="font-size:12px; margin-bottom:6px; display:block; color:var(--text-secondary);">Bio /
+                    Notes</label>
+                <div class="input-box">
+                    <input type="text" id="p_bio" placeholder="Short description...">
+                </div>
+            </div>
+
+            <button class="btn-primary" onclick="saveProfile()">Continue to Workspace</button>
+        </div>
+    </div>
+
+    <script>
+        // --- THEMING ---
+        // Default to Dark if not set
+        if (!localStorage.getItem('kairosTheme')) {
+            localStorage.setItem('kairosTheme', 'dark');
+        }
+        document.documentElement.setAttribute('data-theme', localStorage.getItem('kairosTheme'));
+        updateThemeIcon();
+
+        function toggleLoginTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const target = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', target);
+            localStorage.setItem('kairosTheme', target);
+            updateThemeIcon();
+        }
+
+        function updateThemeIcon() {
+            const theme = document.documentElement.getAttribute('data-theme');
+            const icon = document.getElementById('themeIcon');
+            icon.className = theme === 'dark' ? 'ph-bold ph-sun' : 'ph-bold ph-moon';
+
+            // Update Logo
+            const logo = document.getElementById('brandLogo');
+            if (logo) {
+                // If Dark theme -> White Logo. If Light theme -> Black Logo.
+                logo.src = theme === 'dark' ? 'icons/new-Kairos-Logo-white.png' : 'icons/new-Kairos-Logo-black.png';
+            }
+        }
+
+        // --- AUTH & PROFILE LOGIC ---
+        function setRole(role, el) {
+            document.querySelectorAll('.role-tab').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+            // Store for context if needed
+        }
+
+        let isSignup = true;
+
+        function toggleAuthMode() {
+            isSignup = !isSignup;
+            const title = document.getElementById('formTitle');
+            const sub = document.getElementById('formSub');
+            const fields = document.getElementById('signupFields');
+            const btn = document.getElementById('authBtn');
+            const switchText = document.getElementById('authSwitchText');
+            const switchBtn = document.getElementById('authSwitchBtn');
+
+            if (isSignup) {
+                title.innerText = "Create Account";
+                sub.innerText = "Enter your details below to get started.";
+                fields.style.display = "block";
+                btn.innerText = "Sign Up";
+                switchText.innerText = "Already have an account?";
+                switchBtn.innerText = "Log in";
+            } else {
+                title.innerText = "Welcome Back";
+                sub.innerText = "Enter your credentials to access your workspace.";
+                fields.style.display = "none";
+                btn.innerText = "Log In";
+                switchText.innerText = "Don't have an account?";
+                switchBtn.innerText = "Sign up";
+            }
+        }
+
+        function handleAuthAction() {
+            if (isSignup) {
+                handleDirectSignup();
+            } else {
+                handleLogin();
+            }
+        }
+
+        function handleLogin() {
+            const email = document.getElementById('email').value;
+            // Simple validation simulation
+            const storedEmail = localStorage.getItem('kairos_email');
+
+            if (!email) { alert("Please enter your email."); return; }
+
+            // If we have a stored user matching this email (or just allow any valid email in demo if no match found but data exists)
+            // For demo robustness:
+            if (storedEmail && email.toLowerCase() === storedEmail.toLowerCase()) {
+                window.location.href = 'onboarding.html';
+            } else if (localStorage.getItem('kairos_user')) {
+                // Permissive login if session exists
+                window.location.href = 'onboarding.html';
+            } else {
+                alert("User not found. Please Sign Up first.");
+                toggleAuthMode();
+            }
+        }
+
+        function handleDirectSignup() {
+            // Simple direct flow
+            const fname = document.getElementById('fname').value;
+            const lname = document.getElementById('lname').value;
+            const email = document.getElementById('email').value;
+
+            if (!fname || !email) {
+                alert("Please fill in required fields");
+                return;
+            }
+
+            // Simulate "Profile Completion" with these details
+            openProfileModal({
+                name: fname + " " + lname,
+                email: email,
+                avatar: null
+            });
+        }
+
+        function simulateSocial(provider) {
+            const width = 500;
+            const height = 600;
+            const left = (window.innerWidth - width) / 2;
+            const top = (window.innerHeight - height) / 2;
+
+            // Generate Mock User Data based on Provider
+            const mockUser = {
+                name: provider === 'Google' ? 'Alex Mercer' : 'Jordan Lee',
+                email: provider === 'Google' ? 'alex.m@gmail.com' : 'jordan.lee@icloud.com',
+                avatar: null // Could add a placeholder URL
+            };
+
+            const popup = window.open("", "Social Login", `width=${width},height=${height},top=${top},left=${left}`);
+
+            // Custom Popup Content
+            popup.document.write(`
+                <html>
+                <head>
+                    <title>Sign in with ${provider}</title>
+                    <style>
+                        body { font-family: system-ui, -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #fff; color: #111; }
+                        .logo { width: 60px; height: 60px; margin-bottom: 20px; }
+                        h2 { margin: 0 0 10px 0; font-size: 24px; }
+                        p { margin: 0 0 30px 0; color: #666; font-size: 14px; text-align: center; max-width: 80%; }
+                        .btn { background: #1a73e8; color: #fff; border: none; padding: 10px 24px; border-radius: 4px; font-weight: 500; cursor: pointer; font-size: 14px; }
+                        .btn:hover { background: #1557b0; }
+                    </style>
+                </head>
+                <body>
+                    <div class="logo">
+                        ${provider === 'Google' ?
+                    '<svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.79l7.97-6.2z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>' :
+                    '<svg viewBox="0 0 384 512"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.9-65.2-19.5-89.4-67-89.4-119.8-1.5-35.3 17.8-63.5 17.8-63.5zM209 130c23.2-19 36.3-51.1 36.3-51.1-23.3-17.5-60-20.2-60-20.2 11.2 30.4 1.4 68.3 1.4 68.3 22.3 3 22.3 3 22.3 3z"/></svg>'}
+                    </div>
+                    <h2>Choose an account</h2>
+                    <p>to continue to <b>KAIROS</b></p>
+                    <div style="border:1px solid #ddd; padding:10px; border-radius:8px; width:80%; margin-bottom:20px; display:flex; align-items:center; gap:10px; cursor:pointer; background:#f5f7f9;">
+                        <div style="width:32px; height:32px; background:${provider === 'Google' ? '#EA4335' : '#000'}; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:14px;">${mockUser.name.charAt(0)}</div>
+                        <div style="text-align:left;">
+                            <div style="font-weight:600; font-size:14px;">${mockUser.name}</div>
+                            <div style="color:#666; font-size:12px;">${mockUser.email}</div>
+                        </div>
+                    </div>
+                    <button class="btn" onclick="sendAuth()">Continue as ${mockUser.name.split(' ')[0]}</button>
+                    <script>
+                        function sendAuth() {
+                            window.opener.postMessage({
+                                type: 'SOCIAL_AUTH_SUCCESS', 
+                                provider: '${provider}',
+                                user: ${JSON.stringify(mockUser)}
+                            }, '*');
+                            window.close();
+                        }
+                    <\/script>
+                </body>
+                </html>
+            `);
+
+            window.addEventListener('message', function (event) {
+                if (event.data.type === 'SOCIAL_AUTH_SUCCESS') {
+                    // console.log("Auth Success", event.data.user);
+                    openProfileModal(event.data.user);
+                }
+            }, { once: true });
+        }
+
+        function openProfileModal(userData) {
+            const modal = document.getElementById('profileModal');
+            document.getElementById('p_name').value = userData.name || '';
+            document.getElementById('p_email').value = userData.email || '';
+
+            modal.style.display = 'flex';
+        }
+
+        function saveProfile() {
+            const name = document.getElementById('p_name').value;
+            const email = document.getElementById('p_email').value;
+            const job = document.getElementById('p_jobtitle').value;
+            const bio = document.getElementById('p_bio').value;
+
+            if (!name) { alert("Name is required"); return; }
+            if (!job) { alert("Job Title is required"); return; }
+
+            // SAVE DATA
+            localStorage.setItem('kairos_user', name);
+            localStorage.setItem('kairos_email', email);
+            localStorage.setItem('kairos_job_title', job);
+            localStorage.setItem('kairos_bio', bio);
+            localStorage.setItem('kairos_auth', 'true');
+
+            localStorage.setItem('kairos_auth', 'true');
+
+            // Redirect
+            window.location.href = 'onboarding.html';
+        }
+
+        function handleLoginAvatar(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const base64 = e.target.result;
+                    // Preview
+                    const img = document.getElementById('p_avatar_img');
+                    const icon = document.getElementById('p_cam_icon');
+                    img.src = base64;
+                    img.style.display = 'block';
+                    icon.style.display = 'none';
+
+                    // Save
+                    localStorage.setItem('kairos_avatar', base64);
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+    </script>
+</body>
+
+</html>

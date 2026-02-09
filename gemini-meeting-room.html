@@ -1,0 +1,582 @@
+﻿<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <script src="js/auth-guard.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KAIROS | Live Session</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://unpkg.com/livekit-client/dist/livekit-client.umd.min.js"></script>
+
+    <link rel="stylesheet" href="css/vault.css"> <!-- Reusing Vault CSS for consistency -->
+    <script src="js/components.js"></script>
+    <script>
+        const savedTheme = localStorage.getItem('kairosTheme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+
+        // Data Persistence Init
+        window.addEventListener('DOMContentLoaded', () => {
+            renderSidebar('meeting');
+
+            const user = localStorage.getItem('kairos_user') || 'Guest';
+            // ... (keep existing init)
+            const job = localStorage.getItem('kairos_job_title') || 'Professional';
+
+            // Update "Me" tile
+            const nametags = document.querySelectorAll('.user-nametag');
+            nametags.forEach(tag => {
+                if (tag.innerText.includes('Benedict') || tag.innerText.includes('Host')) {
+                    tag.innerText = `${user} (Host)`;
+                }
+            });
+
+            // Update Meeting Info Modal
+            const infoRows = document.querySelectorAll('.info-val');
+            infoRows.forEach(row => {
+                if (row.innerText.includes('Benedict')) {
+                    row.innerText = user;
+                }
+            });
+
+            // Update Privacy Modal (Benedict's Notetaker)
+            const privacyLines = document.querySelectorAll('.privacy-header div');
+            privacyLines.forEach(div => {
+                if (div.innerText.includes("Benedict's Notetaker")) {
+                    div.innerText = `${user}'s Notetaker (Kairos.ai) (guest)`;
+                }
+            });
+
+        });
+    </script>
+    <style>
+        /* Meeting Specific Overrides */
+        body {
+            background: var(--bg-main);
+            overflow: hidden;
+            display: flex;
+            /* Ensure flex for sidebar */
+        }
+
+        /* Adjust meeting layout to take remaining space */
+        .stage-container {
+            flex: 1;
+            position: relative;
+            /* Existing Header is fixed? */
+        }
+
+        /* Header needs to offset if sidebar is present */
+        header {
+            left: 0;
+            /* Will depend on flex order, but it might overlap sidebar if fixed. components.js sidebar is relative in flex flow */
+            /* Actually components.js puts sidebar as first child of body. Flex direction row. */
+            /* We need to wrap meeting content? */
+            /* Let's try to just let flex handle it. Header might need position:relative or width adjustment if it was fixed full width */
+            position: relative;
+            width: 100%;
+        }
+
+        #main-meeting-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="sidebar-container"></div>
+
+    <div id="main-meeting-content">
+        <!-- Toast, Captions, Header, Stage, Control Bar moved here -->
+
+        <div id="toast">
+            <img src="https://ui-avatars.com/api/?name=Alice&background=2563eb&color=fff" alt="">
+            <span id="toastMsg">Alice raised hand</span>
+        </div>
+
+        <div id="captionsOverlay">
+            <div style="font-size:10px; opacity:0.7; margin-bottom:4px;" id="captionSpeaker">Alice (Translated to
+                English)
+            </div>
+            <span id="captionText">We really need to approve the budget by tomorrow.</span>
+        </div>
+
+        <header>
+            <div class="meeting-info" onclick="openMeetingInfo()">
+                <h1>Q1 Product Roadmap Review <i class="ph-bold ph-caret-down"
+                        style="font-size:12px; color:var(--text-secondary)"></i></h1>
+                <div class="meeting-meta">
+                    <span id="timer">00:00:00</span>
+                    <span>•</span>
+                    <span style="color:var(--accent)">Live</span>
+                </div>
+            </div>
+            <div class="rec-badge active" id="smartRecBadge" title="AI Companion Active" onclick="openAiPrivacy()">
+                <div class="rec-dot"><i class="ph-fill ph-sparkle"></i></div>
+                <span>Smart REC</span>
+            </div>
+        </header>
+
+        <div class="stage-container">
+            <!-- PiP Window -->
+            <div id="pipWindow">
+                <div class="pip-avatar">J</div>
+                <div
+                    style="position: absolute; bottom: 8px; left: 8px; font-size: 10px; font-weight: 600; color: #fff;">
+                    John Dev</div>
+            </div>
+
+            <!-- Whiteboard -->
+            <div id="whiteboardContainer">
+                <div class="wb-toolbar">
+                    <div class="wb-btn active" onclick="selectTool('pen')"><i class="ph-bold ph-pencil-simple"></i>
+                    </div>
+                    <div class="wb-btn" onclick="selectTool('eraser')"><i class="ph-bold ph-eraser"></i></div>
+                    <div style="width:1px; height:20px; background:#ccc; margin:0 5px;"></div>
+                    <div class="wb-btn" onclick="clearBoard()"><i class="ph-bold ph-trash"></i></div>
+                    <div style="flex:1"></div>
+                    <button onclick="toggleWhiteboard()"
+                        style="padding: 6px 12px; background: #000; color: #fff; border-radius: 6px; border: none; cursor: pointer; font-size: 12px;">Close</button>
+                </div>
+                <div class="wb-canvas-area" id="canvasArea">
+                    <canvas id="wbCanvas"></canvas>
+                    <div
+                        style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#ccc; pointer-events:none; font-family:'Space Grotesk'; font-size:24px; opacity:0.5;">
+                        Start Drawing...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Video Grid -->
+            <div class="video-grid" id="grid">
+                <div class="video-tile" id="tile-me">
+                    <div class="tile-top-overlay">
+                        <div class="status-badge" id="myHand"><i class="ph-bold ph-hand-waving"></i></div>
+                        <div class="tile-btn" onclick="toggleMaximize(this.parentElement.parentElement)"><i
+                                class="ph-bold ph-arrows-out-simple"></i></div>
+                    </div>
+                    <div class="tile-avatar">Me</div>
+                    <div class="tile-overlay">
+                        <div class="user-nametag">Benedict (Host)</div>
+                    </div>
+                </div>
+
+                <!-- Participants with Attention Metrics & Maximize Btn -->
+                <!-- These will be largely managed dynamically, but keeping mock data for initial layout -->
+
+                <!-- Overflow Tile -->
+                <div class="video-tile overflow-tile" onclick="openParticipantList()">
+                    <span>+<span id="pCountPreview">0</span></span>
+                    <span style="font-size:10px; font-weight:500;">Others</span>
+                </div>
+
+                <div class="video-tile ai-tile">
+                    <div class="tile-overlay"
+                        style="top:0; bottom:0; flex-direction: column; align-items: center; justify-content: center; gap:10px;">
+                        <div class="ai-visualizer">
+                            <div class="ai-bar" style="height: 40px;"></div>
+                            <div class="ai-bar" style="height: 60px;"></div>
+                            <div class="ai-bar" style="height: 30px;"></div>
+                            <div class="ai-bar" style="height: 70px;"></div>
+                            <div class="ai-bar" style="height: 40px;"></div>
+                        </div>
+                        <div class="user-nametag"
+                            style="border: 1px solid var(--accent); color: var(--accent); background: rgba(16,185,129,0.1);">
+                            <i class="ph-bold ph-sparkle"></i> KAIROS AI
+                        </div>
+                        <div style="font-size: 10px; color: var(--accent); margin-top: 4px;">Capturing decisions...
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="sidebar" id="sidebar">
+                <div class="sidebar-header-mobile" style="display:none;" id="mobSidebarHeader">
+                    <h3 style="font-family:'Space Grotesk'; font-size:16px;">Meeting Details</h3>
+                    <button onclick="toggleSidebar()"
+                        style="background:none; border:none; color:var(--text-primary); font-size:24px;"><i
+                            class="ph-bold ph-x"></i></button>
+                </div>
+
+                <div class="sidebar-tabs">
+                    <div class="tab-btn active" onclick="switchTab('notes')">AI Notes</div>
+                    <div class="tab-btn" onclick="switchTab('agenda')">Agenda</div>
+                    <div class="tab-btn" onclick="switchTab('polls')">Polls</div>
+                    <div class="tab-btn" onclick="switchTab('chat')">Chat</div>
+                </div>
+
+                <div id="tab-notes" class="sidebar-content active">
+                    <div style="font-size:10px; color:var(--text-secondary); margin-bottom:10px; text-align:center;">
+                        LIVE
+                        TRANSCRIPT & INSIGHTS</div>
+                    <div id="transcript-feed"></div>
+                </div>
+
+                <div id="tab-agenda" class="sidebar-content">
+                    <div class="agenda-item" onclick="toggleCheck(this)">
+                        <div class="chk-box checked"><i class="ph-bold ph-check"></i></div>
+                        <div class="agenda-text done">Review Q4 metrics</div>
+                    </div>
+                    <div class="agenda-item" onclick="toggleCheck(this)">
+                        <div class="chk-box"><i class="ph-bold ph-check"></i></div>
+                        <div class="agenda-text">Confirm tech stack migration</div>
+                    </div>
+                    <div class="agenda-item" onclick="toggleCheck(this)">
+                        <div class="chk-box"><i class="ph-bold ph-check"></i></div>
+                        <div class="agenda-text">Budget approval for Sparky Solutions</div>
+                    </div>
+                </div>
+
+                <div id="tab-polls" class="sidebar-content">
+                    <div class="poll-card">
+                        <div class="poll-question">Vote: Primary JS Framework</div>
+                        <div class="poll-option" onclick="vote(this, 60)">
+                            <span style="font-size:12px;">Next.js 14</span>
+                            <span style="font-size:10px; color:var(--text-secondary);">0 votes</span>
+                        </div>
+                        <!-- <div class="poll-bar-bg"><div class="poll-bar-fill"></div></div> -->
+
+                        <div class="poll-option" style="margin-top:10px;" onclick="vote(this, 30)">
+                            <span style="font-size:12px;">Vue 3</span>
+                            <span style="font-size:10px; color:var(--text-secondary);">0 votes</span>
+                        </div>
+                        <!-- <div class="poll-bar-bg"><div class="poll-bar-fill"></div></div> -->
+                    </div>
+                    <button
+                        style="width:100%; padding:10px; border:1px dashed var(--text-secondary); color:var(--text-secondary); border-radius:8px; font-size:12px; cursor:pointer;">+
+                        Create New Poll</button>
+                </div>
+
+                <div id="tab-chat" class="sidebar-content" style="display:none; flex-direction:column; height:100%;">
+                    <div style="flex:1; overflow-y:auto;" id="chat-feed">
+                        <!-- Chat messages will appear here -->
+                    </div>
+                    <div class="chat-input-area">
+                        <input type="text" placeholder="Type a message..." class="input-field"
+                            style="flex:1; background:var(--bg-main); border:1px solid var(--border); padding:10px; border-radius:20px; color:var(--text-primary);"
+                            id="chatInput" onkeypress="handleChat(event)">
+                        <button style="color:var(--accent); background:none; border:none; font-size:18px;"
+                            onclick="sendChat()"><i class="ph-fill ph-paper-plane-right"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="control-bar">
+            <div class="ctrl-btn danger" onclick="toggleState(this, 'mute')" id="muteBtn">
+                <i class="ph-fill ph-microphone-slash"></i>
+                <div class="tooltip">Unmute</div>
+            </div>
+            <div class="ctrl-btn" onclick="toggleState(this, 'video')" id="videoBtn">
+                <i class="ph-fill ph-video-camera-slash"></i>
+                <div class="tooltip">Start Video</div>
+            </div>
+
+            <div class="ctrl-btn warn" onclick="toggleHand(this)" id="handBtnMain">
+                <i class="ph-bold ph-hand-waving"></i>
+                <div class="tooltip">Raise Hand</div>
+            </div>
+
+            <!-- Screen Share Added to Main Bar -->
+            <div class="ctrl-btn" onclick="toggleScreenShare(this)" id="shareBtn">
+                <i class="ph-bold ph-screencast"></i>
+                <div class="tooltip">Share Screen</div>
+            </div>
+
+            <div class="ctrl-btn" onclick="toggleReactionMenu()">
+                <i class="ph-bold ph-smiley"></i>
+                <div class="tooltip">React</div>
+            </div>
+
+            <div class="ctrl-btn" onclick="toggleWhiteboard()" id="wbBtn">
+                <i class="ph-bold ph-chalkboard-teacher"></i>
+                <div class="tooltip">Whiteboard</div>
+            </div>
+
+            <div style="width:1px; height:24px; background:var(--text-secondary); opacity:0.3; margin:0 4px;"></div>
+
+            <div class="ctrl-btn active" onclick="toggleSidebar()">
+                <i class="ph-bold ph-chats-circle"></i>
+                <div class="tooltip">Sidebar</div>
+            </div>
+
+            <div class="ctrl-btn" onclick="toggleMoreMenu()">
+                <i class="ph-bold ph-dots-three"></i>
+                <div class="tooltip">More</div>
+            </div>
+
+            <div class="ctrl-btn danger" onclick="endCall()">
+                <i class="ph-bold ph-phone-disconnect"></i>
+                <div class="tooltip">End</div>
+            </div>
+        </div>
+
+        <div class="sheet-overlay" id="reactionOverlay" onclick="toggleReactionMenu()">
+            <div class="bottom-sheet" style="height:auto;" onclick="event.stopPropagation()">
+                <div class="sheet-handle"></div>
+                <div class="sheet-reaction-row" style="padding-bottom:20px;">
+                    <div class="sheet-reaction" onclick="sendReaction('👍')">👍</div>
+                    <div class="sheet-reaction" onclick="sendReaction('❤️')">❤️</div>
+                    <div class="sheet-reaction" onclick="sendReaction('👏')">👏</div>
+                    <div class="sheet-reaction" onclick="sendReaction('🎉')">🎉</div>
+                    <div class="sheet-reaction" onclick="sendReaction('😂')">😂</div>
+                    <div class="sheet-reaction" onclick="sendReaction('😮')">😮</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="sheet-overlay" id="moreMenuOverlay" onclick="toggleMoreMenu()">
+            <div class="bottom-sheet" onclick="event.stopPropagation()">
+                <div class="sheet-handle"></div>
+                <div class="sheet-grid">
+                    <div class="sheet-opt" onclick="showToast('Recording Started')">
+                        <div class="sheet-opt-icon"><i class="ph-bold ph-record"></i></div>
+                        <span>Record</span>
+                    </div>
+                    <div class="sheet-opt" onclick="toggleCaptions()">
+                        <div class="sheet-opt-icon"><i class="ph-bold ph-closed-captioning"></i></div>
+                        <span>Show CC</span>
+                    </div>
+                    <!-- Duplicated share here for access, calling same function -->
+                    <div class="sheet-opt" onclick="toggleScreenShare(document.getElementById('shareBtn'))">
+                        <div class="sheet-opt-icon"><i class="ph-bold ph-share-network"></i></div>
+                        <span>Share</span>
+                    </div>
+                    <div class="sheet-opt" onclick="toggleSidebar(); toggleMoreMenu();">
+                        <div class="sheet-opt-icon"><i class="ph-bold ph-notepad"></i></div>
+                        <span>Notes</span>
+                    </div>
+                    <div class="sheet-opt" onclick="showToast('No apps installed')">
+                        <div class="sheet-opt-icon"><i class="ph-bold ph-squares-four"></i></div>
+                        <span>Apps</span>
+                    </div>
+                    <div class="sheet-opt" onclick="endCall()">
+                        <div class="sheet-opt-icon"><i class="ph-bold ph-plugs"></i></div>
+                        <span>Disconnect</span>
+                    </div>
+                    <div class="sheet-opt" onclick="openSettings()">
+                        <div class="sheet-opt-icon"><i class="ph-bold ph-gear"></i></div>
+                        <span>Settings</span>
+                    </div>
+                    <div class="sheet-opt" onclick="openMeetingInfo()">
+                        <div class="sheet-opt-icon"><i class="ph-bold ph-info"></i></div>
+                        <span>Meeting Info</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-modal" id="meetingInfoModal">
+            <div class="info-header">
+                <span id="modalMeetingTitle">Town Hall Meeting</span>
+                <i class="ph-bold ph-x" style="cursor:pointer;" onclick="openMeetingInfo()"></i>
+            </div>
+
+            <button class="copy-btn-large" onclick="copyMeetingLink()">
+                Copy meeting link
+            </button>
+
+            <div class="info-row">
+                <span class="info-label">Meeting ID</span>
+                <span class="info-val">994 1873 8045</span>
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">Passcode</span>
+                <span class="info-val">813668</span>
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">Host</span>
+                <span class="info-val">Benedict Adurosakin</span>
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">Participant ID</span>
+                <span class="info-val">4600689</span>
+            </div>
+
+            <div
+                style="font-size:10px; color:var(--accent); display:flex; align-items:center; gap:6px; margin-top:20px;">
+                <i class="ph-fill ph-shield-check"></i> Encryption: Enhanced
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="participantsModal">
+            <div class="modal-box list-mode">
+                <div class="info-header">
+                    <span>Participants (<span id="pCount">16</span>)</span>
+                    <i class="ph-bold ph-x" style="cursor:pointer;" onclick="closeParticipantList()"></i>
+                </div>
+
+                <button id="muteAllBtn" class="copy-btn-large"
+                    style="margin-bottom:12px; background:rgba(239,68,68,0.1); color:var(--danger); border-color:var(--danger); display:flex; align-items:center; justify-content:center; gap:8px;"
+                    onclick="toggleMuteAll()">
+                    <i class="ph-bold ph-microphone-slash"></i> Mute All
+                </button>
+
+                <div class="participant-list" id="fullParticipantList">
+                    <!-- Dynamic list -->
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="settingsModal">
+            <div class="modal-box list-mode">
+                <div class="info-header">
+                    <span>Settings</span>
+                    <i class="ph-bold ph-x" style="cursor:pointer;" onclick="closeSettings()"></i>
+                </div>
+                <div class="settings-list-container">
+                    <div class="setting-item" onclick="showToast('Meeting Settings Opened')">
+                        <span><i class="ph-bold ph-sliders-horizontal" style="margin-right:8px;"></i> Meeting
+                            settings</span>
+                        <i class="ph-bold ph-caret-right"></i>
+                    </div>
+                    <div class="setting-item" onclick="showToast('Backgrounds Gallery')">
+                        <span><i class="ph-bold ph-image" style="margin-right:8px;"></i> Virtual background</span>
+                        <i class="ph-bold ph-caret-right"></i>
+                    </div>
+                    <div class="setting-item" onclick="showToast('Filters Applied')">
+                        <span><i class="ph-bold ph-magic-wand" style="margin-right:8px;"></i> Video filters</span>
+                        <i class="ph-bold ph-caret-right"></i>
+                    </div>
+                    <div class="setting-item" onclick="showToast('Avatars Loading...')">
+                        <span><i class="ph-bold ph-user-circle" style="margin-right:8px;"></i> Avatars</span>
+                        <i class="ph-bold ph-caret-right"></i>
+                    </div>
+                    <div class="setting-item" onclick="showToast('Audio Devices')">
+                        <span><i class="ph-bold ph-headphones" style="margin-right:8px;"></i> Audio</span>
+                        <i class="ph-bold ph-caret-right"></i>
+                    </div>
+                    <div class="setting-item" onclick="toggleCaptions()">
+                        <span><i class="ph-bold ph-closed-captioning" style="margin-right:8px;"></i> Captions and
+                            translation</span>
+                        <i class="ph-bold ph-caret-right"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="aiPrivacyModal">
+            <div class="modal-box list-mode" style="border-left: 3px solid var(--accent);">
+                <div class="info-header">
+                    <span style="font-size:16px;">Apps that access meeting content</span>
+                    <i class="ph-bold ph-x" style="cursor:pointer;" onclick="closeAiPrivacy()"></i>
+                </div>
+
+                <div class="privacy-header">
+                    <div class="privacy-icon"><i class="ph-bold ph-sparkle"></i></div>
+                    <div>
+                        <div style="font-size:13px; font-weight:700; color:var(--text-primary); margin-bottom:2px;">
+                            KAIROS -
+                            AI Meeting Agent</div>
+                        <div style="font-size:11px; color:var(--text-secondary); margin-bottom:2px;">Benedict's
+                            Notetaker
+                            (Kairos.ai) (guest)</div>
+                        <div style="font-size:10px; color:#888;">Accesses: Audio, Video, Chat, Files</div>
+                    </div>
+                </div>
+
+                <p class="privacy-disclaimer">
+                    Kairos AI features have been enabled in this meeting. Below you can see the content accessed by
+                    features
+                    in this meeting.
+                    <br><br>
+                    <a href="#" style="color:var(--ai-blue); text-decoration:none;">Learn more about how your data is
+                        handled.</a>
+                </p>
+
+                <!-- Centered Enable AI Companion Button -->
+                <div
+                    style="display:flex; justify-content:center; margin-top: 20px; border-top: 1px solid var(--border); padding-top: 20px;">
+                    <button id="aiToggleBtn" class="active" onclick="toggleAiCompanion(this)"
+                        style="background:var(--accent); color:black; font-weight:600; padding:10px 20px; border-radius:30px; border:none; cursor:pointer; font-family:'Inter'; display:flex; align-items:center; gap:8px; transition:0.3s;">
+                        <i class="ph-bold ph-toggle-left"></i> <span>AI Companion On</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="endModal">
+            <div class="modal-box">
+                <div id="processingState" class="processing-view">
+                    <div class="spinner"></div>
+                    <h3 style="font-family:'Space Grotesk'; font-size:16px;">KAIROS is organizing memory...</h3>
+                    <p style="font-size:12px; color:var(--text-secondary);">Analyzing decision points and actions.</p>
+                </div>
+
+                <div id="summaryState" style="display:none;">
+                    <i class="ph-duotone ph-check-circle"
+                        style="font-size: 48px; color: var(--accent); margin-bottom: 16px;"></i>
+                    <h2 style="font-family:'Space Grotesk'; margin-bottom:8px;">Meeting Ended</h2>
+
+                    <div class="summary-preview" style="display:block;">
+                        <div style="font-weight:700; margin-bottom:6px; color:var(--text-primary);">AI Summary:</div>
+                        • Tech stack migration ratified (Next.js 14).<br>
+                        • Action Item: Benedict to email Sparky Solutions.<br>
+                        • Alice to update Figma by EOD.
+                    </div>
+
+                    <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:20px;">
+                        <i class="ph-bold ph-envelope-simple" style="color:var(--text-secondary)"></i>
+                        <span style="font-size:12px; color:var(--text-secondary);">Sending recap to all
+                            participants...</span>
+                    </div>
+
+                    <button onclick="window.location.href='index.html'"
+                        style="background:var(--text-primary); color:var(--bg-main); width:100%; padding:12px; border-radius:10px; font-weight:600; cursor:pointer; border:none; transition:0.2s;">
+                        Return to Command Center
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODULES -->
+        <script src="js/ui-controls.js"></script>
+        <script src="js/room-manager.js"></script>
+        <script src="js/audio-video.js"></script>
+        <script src="js/screen-share.js"></script>
+        <script src="js/chat.js"></script>
+        <script src="js/whiteboard.js"></script>
+        <script src="js/transcription-ai.js"></script>
+
+        <script>
+            // Init LiveKit when scripts are loaded
+            window.addEventListener('DOMContentLoaded', () => {
+                // Init UI components
+                const mainTitle = document.querySelector('header h1').innerText;
+                if (document.getElementById('modalMeetingTitle')) document.getElementById('modalMeetingTitle').innerText = mainTitle;
+                if (window.innerWidth <= 768 && document.getElementById('mobSidebarHeader')) {
+                    document.getElementById('mobSidebarHeader').style.display = 'flex';
+                }
+
+                // Timer
+                let seconds = 0;
+                setInterval(() => {
+                    seconds++;
+                    const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+                    const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+                    const s = (seconds % 60).toString().padStart(2, '0');
+                    const timer = document.getElementById('timer');
+                    if (timer) timer.innerText = `${h}:${m}:${s}`;
+                }, 1000);
+
+                // Connect
+                if (typeof initLiveKit === 'function') initLiveKit();
+            });
+        </script>
+
+    </div><!-- End main-meeting-content -->
+</body>
+
+</html>

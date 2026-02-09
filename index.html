@@ -1,1491 +1,857 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>KAIROS | Command Center</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="js/auth-guard.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>KAIROS | Command Center</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="css/dashboard.css">
 
-<script>
-    const savedTheme = localStorage.getItem('kairosTheme') || 'dark';
-    document.documentElement.setAttribute('data-theme', savedTheme);
-</script>
+    <script src="js/components.js"></script>
+    <script>
+        const savedTheme = localStorage.getItem('kairosTheme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
 
-<style>
-    /* --- SHARED VARIABLES --- */
-    :root[data-theme="dark"] {
-        --bg-main: #050505;
-        --bg-panel: #0a0a0a;
-        --border: rgba(255, 255, 255, 0.08);
-        --text-primary: #ffffff;
-        --text-secondary: #888888;
-        --surface-hover: rgba(255, 255, 255, 0.05);
-        --cal-today-bg: rgba(255,255,255,0.1);
-        --accent: #10b981;
-        --accent-glow: rgba(16, 185, 129, 0.1);
-        --danger: #ef4444;
-        --shadow: 0 20px 40px -10px rgba(0,0,0,0.5);
-        --msg-in: #1a1a1a;
-        --msg-out: #10b981;
-    }
+        // Data Persistence Init
+        window.addEventListener('DOMContentLoaded', () => {
+            renderSidebar('dashboard');
 
-    :root[data-theme="light"] {
-        --bg-main: #f0f2f5;
-        --bg-panel: #ffffff;
-        --border: rgba(0, 0, 0, 0.08);
-        --text-primary: #111827;
-        --text-secondary: #6b7280;
-        --surface-hover: rgba(0, 0, 0, 0.04);
-        --cal-today-bg: rgba(0,0,0,0.08);
-        --accent: #059669;
-        --accent-glow: rgba(5, 150, 105, 0.1);
-        --danger: #dc2626;
-        --shadow: 0 20px 40px -10px rgba(0,0,0,0.1);
-        --msg-in: #f3f4f6;
-        --msg-out: #059669;
-    }
+            const user = localStorage.getItem('kairos_user') || 'Guest';
+            const job = localStorage.getItem('kairos_job_title') || 'Professional';
+            const email = localStorage.getItem('kairos_email') || 'guest@kairos.ai';
+            const bio = localStorage.getItem('kairos_bio') || 'User';
 
-    * { box-sizing: border-box; margin: 0; padding: 0; outline: none; -webkit-tap-highlight-color: transparent; }
-     
-    html { overflow: hidden; height: 100%; width: 100%; }
-     
-    body {
-        background-color: var(--bg-main);
-        color: var(--text-primary);
-        font-family: 'Inter', sans-serif;
-        display: flex; padding: 12px; gap: 12px;
-        transition: background-color 0.4s ease, color 0.4s ease;
-        height: 100dvh;
-        width: 100vw;
-        overflow: hidden;
-    }
+            // Extended Fields
+            const role = localStorage.getItem('kairos_role_desc') || job;
+            const loc = localStorage.getItem('kairos_location') || 'Lagos, Nigeria';
+            const proj = localStorage.getItem('kairos_project') || '';
+            const phone = localStorage.getItem('kairos_phone') || '';
+            const links = localStorage.getItem('kairos_links') || '';
+            const alias = localStorage.getItem('kairos_alias') || '';
+            const reminders = localStorage.getItem('kairos_reminders') || '15 mins';
+            const notify = localStorage.getItem('kairos_notify') === 'false' ? false : true;
 
-    /* Background Texture */
-    body::before {
-        content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
-        pointer-events: none; z-index: -1;
-    }
+            // Update Sidebar Dock
+            const dockName = document.getElementById('dockName');
+            if (dockName) dockName.innerText = user;
 
-    button { border: none; background: none; cursor: pointer; color: inherit; font-family: inherit; }
-    .mobile-menu-btn { display: none; }
+            const dockAvatar = document.getElementById('dockAvatar');
+            const savedAvatar = localStorage.getItem('kairos_avatar');
+            if (dockAvatar) {
+                if (savedAvatar) {
+                    dockAvatar.innerHTML = `<img src="${savedAvatar}" style="width:100%; height:100%; object-fit:cover;">`;
+                } else {
+                    const initials = user.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                    dockAvatar.innerHTML = `<span>${initials}</span>`;
+                }
+            }
 
-    /* --- SIDEBAR --- */
-    #sidebar {
-        width: 240px; background: var(--bg-panel); border: 1px solid var(--border);
-        border-radius: 20px; padding: 20px; display: flex; flex-direction: column;
-        flex-shrink: 0; z-index: 100; box-shadow: var(--shadow);
-        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
+            // Update Profile Modal Inputs
+            if (document.getElementById('displayProfName')) document.getElementById('displayProfName').value = user;
+            if (document.getElementById('displayJobTitle')) document.getElementById('displayJobTitle').value = job;
+            if (document.getElementById('profileInitials')) document.getElementById('profileInitials').innerText = user.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
 
-    .brand-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
-    .brand {
-        font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700;
-        color: var(--text-primary); display: flex; align-items: center; gap: 10px; cursor: pointer; position: relative;
-    }
-    .brand-icon {
-        width: 28px; height: 28px; background: var(--text-primary); color: var(--bg-main);
-        border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 16px;
-    }
-    .theme-toggle {
-        width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border);
-        display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-primary);
-    }
-    .theme-toggle:hover { background: var(--surface-hover); }
+            if (document.getElementById('pf_role')) document.getElementById('pf_role').value = role;
+            if (document.getElementById('pf_loc')) document.getElementById('pf_loc').value = loc;
+            if (document.getElementById('pf_proj')) document.getElementById('pf_proj').value = proj;
 
-    .nav-btn {
-        padding: 10px 12px; border-radius: 10px; color: var(--text-secondary); cursor: pointer;
-        font-weight: 500; font-size: 13px; display: flex; align-items: center; gap: 10px; transition: 0.2s;
-        text-decoration: none; margin-bottom: 4px; border: 1px solid transparent;
-    }
-    .nav-btn:hover { background: var(--surface-hover); color: var(--text-primary); }
-    .nav-btn.active { 
-        background: var(--surface-hover); 
-        color: var(--text-primary); 
-        font-weight: 600; 
-        border: 1px solid var(--border);
-    }
+            if (document.getElementById('pf_email')) document.getElementById('pf_email').value = email;
+            if (document.getElementById('pf_phone')) document.getElementById('pf_phone').value = phone;
+            if (document.getElementById('pf_links')) document.getElementById('pf_links').value = links;
+            if (document.getElementById('pf_alias')) document.getElementById('pf_alias').value = alias;
 
-    /* Context Dropdown */
-    #contextDropdown {
-        display:none; position:absolute; top:40px; left:0; width:200px; 
-        background:var(--bg-panel); border:1px solid var(--border); 
-        border-radius:12px; padding:8px; box-shadow:var(--shadow); z-index:999;
-    }
-    #contextDropdown .nav-btn { background: transparent; border: none; font-weight: 500; color: var(--text-secondary); }
-    #contextDropdown .nav-btn:hover { color: var(--text-primary); }
+            if (document.getElementById('pf_reminders')) document.getElementById('pf_reminders').value = reminders;
 
-    .nav-divider { height: 1px; background: var(--border); margin: 20px 0; }
-    .nav-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 10px; padding-left: 10px; }
+            // Notification State
+            if (document.getElementById('set_notify_icon')) {
+                updateNotifyUI(notify);
+            }
 
-    .bottom-dock { 
-        margin-top: auto; display: flex; align-items: center; gap: 10px; 
-        padding: 8px; border-radius: 12px; transition: 0.2s; cursor: pointer;
-    }
-    .bottom-dock:hover { background: var(--surface-hover); }
-    .user-avatar { width: 32px; height: 32px; background: #e5e7eb; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #111; font-size: 12px; overflow: hidden; }
-    .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+            // Logo Init
+            updateLogoTheme();
+        });
 
-    /* --- MAIN DASHBOARD --- */
-    #main {
-        flex: 1; background: var(--bg-panel); border: 1px solid var(--border);
-        border-radius: 20px; position: relative; overflow: hidden; display: flex; flex-direction: column;
-        box-shadow: var(--shadow);
-    }
-    .view-section { display: none; flex: 1; flex-direction: column; height: 100%; }
-    .view-section.active { display: flex; }
-
-    .dashboard-content { flex: 1; padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
-
-    .time-header { display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 20px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-    .main-clock { font-family: 'Space Grotesk', sans-serif; font-size: 48px; font-weight: 700; line-height: 1; letter-spacing: -2px; }
-    .date-display { font-size: 13px; color: var(--text-secondary); margin-top: 6px; font-weight: 500; }
-    .world-clocks { display: flex; gap: 24px; }
-    .wc-item { text-align: right; }
-    .wc-city { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); }
-    .wc-time { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 500; }
-
-    /* Grid Layout */
-    .grid-layout { display: grid; grid-template-columns: 2.2fr 1fr; gap: 20px; flex: 1; min-height: 0; }
-     
-    .card { background: var(--surface-hover); border: 1px solid var(--border); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; overflow: hidden; }
-    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-shrink: 0; }
-    .card-title { font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-
-    /* Calendar */
-    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; overflow-y: auto; align-content: start; }
-    .day-name { text-align: center; font-size: 11px; font-weight: 600; color: var(--text-secondary); padding-bottom: 8px; }
-    .day-cell { border-radius: 8px; min-height: 60px; background: rgba(125,125,125,0.03); border: 1px solid transparent; padding: 6px; color: var(--text-secondary); font-size: 12px; font-weight: 500; cursor: pointer; transition: 0.2s; }
-    .day-cell:hover { background: rgba(125,125,125,0.08); }
-    .day-cell.today { background: var(--cal-today-bg); border-color: var(--text-primary); color: var(--text-primary); font-weight: 700; }
-    .day-cell.faded { opacity: 0.2; }
-    .event-chip { margin-top: 4px; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
-
-    /* Agenda Feed */
-    .agenda-feed { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; flex: 1; padding-right: 4px; min-height: 0; }
-    .agenda-item { display: flex; gap: 12px; padding: 10px 12px; border-radius: 12px; background: var(--bg-main); border: 1px solid var(--border); align-items: center; transition: 0.2s; cursor: pointer; flex-shrink: 0; }
-    .agenda-item:hover { transform: translateX(2px); border-color: var(--text-secondary); }
-    .agenda-time { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-secondary); width: 36px; flex-shrink: 0; }
-    .agenda-details h4 { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
-    .agenda-details p { font-size: 11px; color: var(--text-secondary); line-height: 1.3; }
-
-    .btn-primary { width: 100%; padding: 12px; border-radius: 10px; background: var(--text-primary); color: var(--bg-main); font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform 0.2s; margin-top: 12px; flex-shrink: 0; }
-    .btn-primary:hover { transform: translateY(-1px); }
-
-    /* --- VIEW SPECIFIC STYLES --- */
-    .view-header {
-        padding: 16px 20px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        border-bottom: 1px solid var(--border);
-    }
-    .view-title { font-family: 'Space Grotesk'; font-size: 18px; font-weight: 700; }
-     
-    .pill-nav-container { padding: 10px 20px; overflow-x: auto; display: flex; gap: 8px; flex-shrink: 0; -webkit-overflow-scrolling: touch;}
-    .pill-nav {
-        padding: 6px 14px;
-        background: var(--surface-hover);
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 600;
-        color: var(--text-secondary);
-        cursor: pointer;
-        transition: 0.2s;
-        white-space: nowrap;
-    }
-    .pill-nav.active { background: var(--accent); color: #000; }
-    .pill-nav.accent-pill { background: var(--accent-glow); color: var(--accent); }
-     
-    .content-list { padding: 0 20px; flex: 1; overflow-y: auto; }
-     
-    .docs-empty {
-        display: flex; flex-direction: column; align-items: center; justify-content: center;
-        height: 100%; color: var(--text-secondary); gap: 16px;
-    }
-    .docs-icon { font-size: 48px; opacity: 0.5; }
-    
-    .doc-item {
-        display: flex; align-items: center; justify-content: space-between;
-        padding: 12px; border-bottom: 1px solid var(--border);
-        cursor: pointer; transition: 0.2s; border-radius: 8px;
-        margin-top: 4px;
-    }
-    .doc-item:hover { background: var(--surface-hover); }
-    .doc-info { display: flex; align-items: center; gap: 12px; }
-    .doc-icon { width: 32px; height: 32px; background: var(--accent-glow); color: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
-
-
-    .chat-item {
-        display: flex; align-items: center; gap: 12px;
-        padding: 12px 0; border-bottom: 1px solid var(--border);
-        cursor: pointer; position: relative;
-    }
-    .chat-avatar { width: 40px; height: 40px; border-radius: 12px; background: #333; overflow: hidden; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; }
-    .vault-link-btn {
-        margin-left: auto;
-        width: 32px; height: 32px; border-radius: 50%;
-        background: var(--surface-hover); color: var(--text-secondary);
-        display: flex; align-items: center; justify-content: center;
-        transition: 0.2s;
-    }
-    .vault-link-btn:hover { background: var(--accent-glow); color: var(--accent); }
-
-     
-    /* --- MODALS --- */
-    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); z-index: 2500; opacity: 0; pointer-events: none; transition: 0.3s; display: flex; align-items: center; justify-content: center; }
-    .modal-overlay.active { opacity: 1; pointer-events: all; }
-    .modal-card { background: #111; color: #fff; width: 100%; max-width: 400px; border-radius: 24px; padding: 24px; border: 1px solid rgba(255,255,255,0.1); transform: scale(0.95); transition: 0.3s; box-shadow: 0 30px 60px rgba(0,0,0,0.5); display: flex; flex-direction: column; max-height: 90vh; overflow-y: auto; }
-    .modal-overlay.active .modal-card { transform: scale(1); }
-
-    .meeting-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px; }
-    .meeting-opt { background: transparent; border: none; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 24px 10px; border-radius: 20px; cursor: pointer; transition: 0.2s; }
-    .meeting-opt:hover { background: rgba(255,255,255,0.08); }
-    .meeting-icon { width: 60px; height: 60px; border-radius: 20px; background: #1a1a1a; display: flex; align-items: center; justify-content: center; font-size: 28px; color: #fff; border: 1px solid rgba(255,255,255,0.1); }
-    .meeting-label { font-size: 13px; font-weight: 600; color: #fff; }
-
-    /* Forms */
-    .form-group { margin-bottom: 16px; }
-    .form-label { font-size: 12px; color: #888; margin-bottom: 8px; display: block; }
-    .input-field { width: 100%; background: #1a1a1a; border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 12px; color: #fff; font-family: 'Inter', sans-serif; font-size: 14px; }
-    .input-field:focus { border-color: #fff; }
-    .date-row { display: flex; gap: 12px; }
-     
-    /* --- SWIPEABLE PROFILE --- */
-    .profile-swipe-container {
-        display: flex;
-        overflow-x: auto;
-        scroll-snap-type: x mandatory;
-        gap: 16px;
-        padding-bottom: 10px;
-        -webkit-overflow-scrolling: touch;
-    }
-    .profile-swipe-container::-webkit-scrollbar { display: none; }
-    
-    .profile-card-page {
-        min-width: 100%;
-        scroll-snap-align: center;
-        background: #1a1a1a;
-        border-radius: 20px;
-        padding: 20px;
-        border: 1px solid rgba(255,255,255,0.05);
-        display: flex;
-        flex-direction: column;
-    }
-
-    .profile-list-item {
-        display: flex; justify-content: space-between; align-items: center;
-        padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.1);
-        cursor: pointer;
-    }
-    .profile-label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
-    .profile-val { font-size: 13px; color: #fff; font-weight: 500; display: flex; align-items: center; gap: 8px; text-align: right;}
-
-    /* Phone & Links */
-    .call-link-box { background: #1a1a1a; padding: 4px; border-radius: 12px; display: flex; align-items: center; border: 1px solid rgba(255,255,255,0.1); margin: 16px 0; }
-    .link-text { flex: 1; padding: 10px; font-size: 12px; color: #888; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .copy-btn { padding: 8px; color: #fff; border-radius: 8px; }
-    .av-toggle { display: flex; background: #1a1a1a; border-radius: 8px; padding: 4px; gap: 4px; margin-bottom: 12px; width: fit-content; }
-    .av-btn { padding: 6px 12px; font-size: 11px; font-weight: 600; color: #888; border-radius: 6px; cursor: pointer; transition: 0.2s; display: flex; gap: 6px; align-items: center; }
-    .av-btn.active { background: #064e3b; color: #10b981; }
-
-    .dial-display { font-size: 24px; text-align: center; margin-bottom: 24px; font-family: 'Space Grotesk'; letter-spacing: 2px; min-height: 30px; }
-    .dial-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; justify-items: center; }
-    .dial-key { width: 50px; height: 50px; border-radius: 50%; background: #1a1a1a; color: #fff; font-size: 18px; font-weight: 600; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.1s; }
-    .dial-key:active { background: #333; transform: scale(0.95); }
-    .dial-action { background: #10b981; color: #000; font-size: 20px; margin-top: 10px; }
-
-    .team-list { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
-    .team-member { display: flex; align-items: center; justify-content: space-between; padding: 10px; background: #1a1a1a; border-radius: 12px; }
-    .member-info { display: flex; gap: 10px; align-items: center; }
-    .member-avatar { width: 30px; height: 30px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 10px; }
-     
-    .call-type-row { display: flex; gap: 16px; justify-content: center; margin: 20px 0; }
-    .call-type-btn { display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; padding: 16px; border-radius: 16px; background: #1a1a1a; width: 100px; transition: 0.2s; }
-    .call-type-btn:hover { background: #333; }
-    .call-type-icon { font-size: 32px; color: #10b981; }
-
-    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-    .close-btn { font-size: 20px; color: #888; cursor: pointer; }
-    .close-btn:hover { color: #fff; }
-
-    #toast { position: fixed; top: 24px; left: 50%; transform: translateX(-50%) translateY(-100px); background: var(--text-primary); color: var(--bg-main); padding: 10px 20px; border-radius: 50px; font-weight: 600; font-size: 12px; opacity: 0; transition: 0.5s; z-index: 3000; display: flex; align-items: center; gap: 8px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); pointer-events: none; }
-    #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
-
-    /* LOADER FOR PRE-CALL */
-    .spinner-large { width: 50px; height: 50px; border: 4px solid rgba(16,185,129,0.1); border-top: 4px solid #10b981; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto; }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-    /* WIZARD STYLES */
-    .wizard-step { display: none; animation: fadeIn 0.3s ease; }
-    .wizard-step.active { display: block; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-    .step-indicator { display: flex; gap: 6px; justify-content: center; margin-bottom: 20px; }
-    .step-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); transition: 0.3s; }
-    .step-dot.active { background: var(--accent); }
-    
-    /* FAB Elevated */
-    .fab-container { position: absolute; bottom: 80px; right: 20px; z-index: 50; }
-    /* RAISED DOCS FAB */
-    .fab-docs-raised { position: absolute; bottom: 90px; right: 20px; }
-
-    /* CHAT DETAILS STYLES */
-    .chat-bubble-row { display: flex; gap: 12px; margin-bottom: 16px; }
-    .chat-bubble-row.me { flex-direction: row-reverse; }
-    .chat-bubble { max-width: 70%; padding: 12px 16px; border-radius: 16px; font-size: 13px; line-height: 1.4; position: relative; }
-    .chat-bubble.them { background: var(--msg-in); color: var(--text-primary); border-top-left-radius: 4px; }
-    .chat-bubble.me { background: var(--msg-out); color: #000; border-top-right-radius: 4px; font-weight: 500; }
-    .msg-meta { font-size: 10px; color: var(--text-secondary); margin-top: 4px; text-align: right; }
-    .chat-input-area { margin-top: auto; padding-top: 16px; display: flex; gap: 10px; border-top: 1px solid var(--border); }
-
-
-    /* --- MOBILE RESPONSIVE --- */
-    @media (max-width: 768px) {
-        body { padding: 0; display: block; overflow: hidden; }
-        #sidebar { 
-            position: fixed; top: 0; left: 0; height: 100%; width: 100%; 
-            border-radius: 0; border: none; padding-top: 60px; z-index: 1000;
-            transform: translateX(-100%);
+        function updateLogoTheme() {
+            const theme = document.documentElement.getAttribute('data-theme');
+            const logo = document.getElementById('dashLogo');
+            if (logo) {
+                logo.src = theme === 'dark' ? 'icons/new-Kairos-Logo-white.png' : 'icons/new-Kairos-Logo-black.png';
+            }
         }
-        #sidebar.active { transform: translateX(0); }
-        #main { border-radius: 0; border: none; height: 100dvh; display: block; position: relative; }
-        .dashboard-content, .view-section { 
-            padding: 16px; padding-top: 70px; gap: 16px; 
-            overflow-y: auto; -webkit-overflow-scrolling: touch; 
-            height: 100%;
+
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const newTheme = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('kairosTheme', newTheme);
+            document.getElementById('themeIcon').className = newTheme === 'dark' ? 'ph-bold ph-moon' : 'ph-bold ph-sun';
+            updateLogoTheme();
         }
-        .grid-layout { 
-            grid-template-columns: 1fr; 
-            display: flex; flex-direction: column; 
-            overflow: visible; height: auto; padding-bottom: 100px;
+
+        function saveDashboardProfile() {
+            const name = document.getElementById('displayProfName').value;
+            const job = document.getElementById('displayJobTitle').value;
+            const role = document.getElementById('pf_role').value;
+            const loc = document.getElementById('pf_loc').value;
+            const proj = document.getElementById('pf_proj').value;
+            const email = document.getElementById('pf_email').value;
+            const phone = document.getElementById('pf_phone').value;
+            const links = document.getElementById('pf_links').value;
+            const alias = document.getElementById('pf_alias').value;
+
+            localStorage.setItem('kairos_user', name);
+            localStorage.setItem('kairos_job_title', job);
+            localStorage.setItem('kairos_role_desc', role);
+            localStorage.setItem('kairos_location', loc);
+            localStorage.setItem('kairos_project', proj);
+            localStorage.setItem('kairos_email', email);
+            localStorage.setItem('kairos_phone', phone);
+            localStorage.setItem('kairos_links', links);
+            localStorage.setItem('kairos_alias', alias);
+
+            showToast('Profile Updated');
+            // Refresh visuals
+            document.getElementById('dockName').innerText = name;
+            document.getElementById('profileInitials').innerText = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
         }
-        .card { height: auto; flex-shrink: 0; overflow: visible; border-radius: 12px; }
-        .agenda-feed { 
-            max-height: 400px; min-height: 150px; flex: none; height: auto; 
+
+        function saveSetting(key, val) {
+            localStorage.setItem('kairos_' + key, val);
+            showToast('Setting Saved');
         }
-        .main-clock { font-size: 32px; }
-        .time-header { flex-direction: row; align-items: flex-end; padding-bottom: 16px; }
-        .world-clocks { display: none; }
-        .mobile-menu-btn { display: block; position: absolute; top: 16px; right: 16px; z-index: 2000; background: var(--surface-hover); border: none; padding: 8px; border-radius: 8px; color: var(--text-primary); font-size: 20px; }
-        .modal-card { width: 90%; }
-        .input-field { font-size: 16px; }
-    }
-</style>
+
+        function toggleSetting(key) {
+            const current = localStorage.getItem('kairos_' + key) === 'false' ? false : true;
+            const newVal = !current;
+            localStorage.setItem('kairos_' + key, newVal);
+            if (key === 'notify') updateNotifyUI(newVal);
+        }
+
+        function updateNotifyUI(isOn) {
+            const icon = document.getElementById('set_notify_icon');
+            const text = document.getElementById('set_notify_text');
+            if (isOn) {
+                icon.className = "ph-bold ph-toggle-right";
+                icon.style.color = "#10b981";
+                text.innerText = "On";
+            } else {
+                icon.className = "ph-bold ph-toggle-left";
+                icon.style.color = "#666";
+                text.innerText = "Off";
+            }
+        }
+
+        function signOut() {
+            localStorage.setItem('kairos_auth', 'false');
+            window.location.href = 'login.html';
+        }
+    </script>
 </head>
+
 <body>
 
-<div id="toast"><i class="ph-bold ph-check-circle"></i> <span id="toastMsg">Action Complete</span></div>
+    <div id="toast"><i class="ph-bold ph-check-circle"></i> <span id="toastMsg">Action Complete</span></div>
 
-<button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('active')"><i class="ph-bold ph-list"></i></button>
 
-<nav id="sidebar">
-    <div class="brand-row">
-        <div class="brand" style="cursor: pointer; position: relative;" onclick="toggleContextDropdown()">
-            <div class="brand-icon"><i class="ph-bold ph-sparkle"></i></div>
-            <div>
-                <div style="font-size:16px; line-height:1;">KAIROS</div>
-                <div style="font-size:10px; color:var(--text-secondary); font-weight:500; margin-top:2px;" id="currentContext">Personal Workspace</div>
-            </div>
-            <i class="ph-bold ph-caret-down" style="font-size:12px; margin-left:8px; color:var(--text-secondary);"></i>
-            
-            <div id="contextDropdown">
-                <div class="nav-btn" onclick="setContext('Personal Workspace')">Personal</div>
-                <div class="nav-btn" onclick="setContext('Design Team')">Design Team</div>
-                <div class="nav-btn" onclick="setContext('Engineering')">Engineering</div>
-                <div style="height:1px; background:var(--border); margin:8px 0;" id="teamDivider"></div>
-                <div class="nav-btn" style="color:#10b981;" onclick="openNewTeamWizard()"><i class="ph-bold ph-plus"></i> New Team</div>
-            </div>
-        </div>
+    <div id="sidebar-container"></div>
 
-        <button class="theme-toggle" onclick="toggleTheme()">
-            <i class="ph-bold ph-moon" id="themeIcon"></i>
-        </button>
-    </div>
-     
-    <div class="nav-btn" id="nav-dashboard" onclick="switchView('dashboard')"><i class="ph-duotone ph-squares-four"></i> Dashboard</div>
-    <div class="nav-btn" id="nav-teamchat" onclick="switchView('teamchat')"><i class="ph-duotone ph-chat-circle-dots"></i> Team Chat</div>
-    <div class="nav-btn" id="nav-docs" onclick="switchView('docs')"><i class="ph-duotone ph-file-text"></i> Docs</div>
-    <div class="nav-btn" id="nav-teamsync" onclick="openTeamModal()"><i class="ph-duotone ph-users"></i> Team Sync</div>
-     
-    <div class="nav-divider"></div>
-    <div class="nav-label">External</div>
-     
-    <div onclick="initCalendarAuth()" class="nav-btn">
-        <i class="ph-bold ph-google-logo"></i> Google Calendar
-    </div>
-    <a href="memory_vault.html" class="nav-btn" style="text-decoration:none;">
-        <i class="ph-bold ph-brain"></i> Memory Vault
-    </a>
-    <div onclick="openMeetingHub()" class="nav-btn">
-        <i class="ph-bold ph-video-camera"></i> Meetings
-    </div>
-
-    <div class="bottom-dock" onclick="openProfileModal()">
-        <div class="user-avatar" id="dockAvatar">
-            <span>BA</span>
-        </div>
-        <div>
-            <div style="font-size:12px; font-weight:600; color:var(--text-primary)" id="dockName">Benedict</div>
-            <div style="font-size:10px; color:var(--text-secondary)">Settings & Profile</div>
-        </div>
-    </div>
-</nav>
-
-<main id="main">
-    <div id="view-dashboard" class="view-section active">
-        <div class="dashboard-content">
-            <header class="time-header">
-                <div>
-                    <div class="main-clock" id="clock">00:00</div>
-                    <div class="date-display" id="date">Loading...</div>
-                </div>
-                <div class="world-clocks">
-                    <div class="wc-item">
-                        <div class="wc-city">Lagos</div>
-                        <div class="wc-time" id="time-lagos">--:--</div>
+    <main id="main">
+        <div id="view-dashboard" class="view-section active">
+            <div class="dashboard-content">
+                <header class="time-header">
+                    <div>
+                        <div class="main-clock" id="clock">00:00</div>
+                        <div class="date-display" id="date">Loading...</div>
                     </div>
-                    <div class="wc-item">
-                        <div class="wc-city">London</div>
-                        <div class="wc-time" id="time-ldn">--:--</div>
-                    </div>
-                </div>
-            </header>
-
-            <div class="grid-layout">
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title"><i class="ph-duotone ph-calendar-blank"></i> <span id="calMonth">January</span></div>
-                        <div style="display:flex; gap:4px;">
-                            <button class="theme-toggle" style="width:24px; height:24px;" onclick="changeMonth(-1)"><i class="ph-bold ph-caret-left"></i></button>
-                            <button class="theme-toggle" style="width:24px; height:24px;" onclick="changeMonth(1)"><i class="ph-bold ph-caret-right"></i></button>
+                    <div class="world-clocks">
+                        <div class="wc-item">
+                            <div class="wc-city">Lagos</div>
+                            <div class="wc-time" id="time-lagos">--:--</div>
+                        </div>
+                        <div class="wc-item">
+                            <div class="wc-city">London</div>
+                            <div class="wc-time" id="time-ldn">--:--</div>
                         </div>
                     </div>
-                    <div class="cal-grid" id="calendarGrid"></div>
-                </div>
+                </header>
 
-                <div class="card" style="padding:0; gap:0;">
-                    <div style="padding:20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
-                        <div class="card-title"><i class="ph-duotone ph-lightning"></i> Action Center</div>
-                        <div style="font-size:10px; background:rgba(255,255,255,0.1); padding:2px 8px; border-radius:12px;">2 Pending</div>
-                    </div>
-
-                    <div style="padding:16px; background:rgba(16, 185, 129, 0.03); border-bottom:1px solid var(--border);">
-                        <div style="font-size:10px; font-weight:700; text-transform:uppercase; color:#10b981; margin-bottom:8px;">AI Draft • Needs Approval</div>
-                        <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom:8px;">
-                            <div style="font-size:12px; font-weight:600; margin-bottom:4px;">Email to Sparky Solutions</div>
-                            <p style="font-size:11px; color:var(--text-secondary); margin-bottom:8px;">"Requesting quote for office wiring based on Tues meeting..."</p>
-                            <div style="display:flex; gap:8px;">
-                                <button style="flex:1; background:#10b981; color:#000; font-size:10px; font-weight:700; padding:6px; border-radius:6px;" onclick="showToast('Email Sent')">Approve</button>
-                                <button style="flex:1; background:var(--surface-hover); color:var(--text-primary); font-size:10px; font-weight:600; padding:6px; border-radius:6px;">Edit</button>
+                <div class="grid-layout">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title"><i class="ph-duotone ph-calendar-blank"></i> <span
+                                    id="calMonth">January</span></div>
+                            <div style="display:flex; gap:4px;">
+                                <button class="theme-toggle" style="width:24px; height:24px;" title="Sync from Device"
+                                    onclick="initCalendarAuth()">
+                                    <i class="ph-bold ph-arrows-clockwise"></i>
+                                </button>
+                                <button class="theme-toggle" style="width:24px; height:24px;"
+                                    onclick="changeMonth(-1)"><i class="ph-bold ph-caret-left"></i></button>
+                                <button class="theme-toggle" style="width:24px; height:24px;"
+                                    onclick="changeMonth(1)"><i class="ph-bold ph-caret-right"></i></button>
                             </div>
                         </div>
+                        <div class="cal-grid" id="calendarGrid"></div>
                     </div>
 
-                    <div class="agenda-feed" id="agendaList" style="padding:16px;"></div>
-                    <div style="padding:16px; border-top:1px solid var(--border);">
-                        <button class="btn-primary" onclick="openScheduleModal()" style="margin:0;">
-                            <i class="ph-bold ph-plus"></i> New Event
-                        </button>
+                    <div class="card" style="padding:0; gap:0;">
+                        <div
+                            style="padding:20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+                            <div class="card-title"><i class="ph-duotone ph-lightning"></i> Action Center</div>
+                            <div
+                                style="font-size:10px; background:rgba(255,255,255,0.1); padding:2px 8px; border-radius:12px;">
+                                2 Pending</div>
+                        </div>
+
+                        <div
+                            style="padding:16px; background:rgba(16, 185, 129, 0.03); border-bottom:1px solid var(--border);">
+                            <div
+                                style="font-size:10px; font-weight:700; text-transform:uppercase; color:#10b981; margin-bottom:8px;">
+                                AI Draft • Needs Approval</div>
+                            <div
+                                style="background:var(--bg-main); border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom:8px;">
+                                <div style="font-size:12px; font-weight:600; margin-bottom:4px;">Email to Sparky
+                                    Solutions</div>
+                                <p style="font-size:11px; color:var(--text-secondary); margin-bottom:8px;">"Requesting
+                                    quote for office wiring based on Tues meeting..."</p>
+                                <div style="display:flex; gap:8px;">
+                                    <button
+                                        style="flex:1; background:#10b981; color:#000; font-size:10px; font-weight:700; padding:6px; border-radius:6px;"
+                                        onclick="showToast('Email Sent')">Approve</button>
+                                    <button
+                                        style="flex:1; background:var(--surface-hover); color:var(--text-primary); font-size:10px; font-weight:600; padding:6px; border-radius:6px;">Edit</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="agenda-feed" id="agendaList" style="padding:16px;"></div>
+                        <div style="padding:16px; border-top:1px solid var(--border);">
+                            <button class="btn-primary" onclick="openScheduleModal()" style="margin:0;">
+                                <i class="ph-bold ph-plus"></i> New Event
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div id="view-teamchat" class="view-section">
-        <div class="view-header">
-            <div class="view-title">Team Chat</div>
-            <div style="display:flex; gap:12px;">
-                 <button class="theme-toggle"><i class="ph-bold ph-magnifying-glass"></i></button>
-                 <button class="theme-toggle"><i class="ph-bold ph-dots-three"></i></button>
-            </div>
-        </div>
-        <div class="pill-nav-container">
-            <div class="pill-nav active">All</div>
-            <div class="pill-nav">Mentions</div>
-            <div class="pill-nav">Chats</div>
-            <div class="pill-nav">Channels</div>
-            <div class="pill-nav">Meeting chat</div>
-        </div>
-        <div class="content-list" id="chatListContainer"></div>
-        <div class="fab-container">
-             <button class="btn-primary" onclick="openNewTeamWizard()" style="width:56px; height:56px; border-radius:50%; box-shadow:0 10px 30px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center;">
-                 <i class="ph-bold ph-plus" style="font-size:24px;"></i>
-             </button>
-        </div>
-    </div>
-
-    <div id="view-chat-detail" class="view-section">
-        <div class="view-header">
-            <div style="display:flex; align-items:center; gap:12px;">
-                <button class="theme-toggle" onclick="closeChatDetail()"><i class="ph-bold ph-arrow-left"></i></button>
-                <div>
-                    <div class="view-title" id="chatDetailTitle" style="font-size:16px;">Chat Name</div>
-                    <div style="font-size:11px; color:var(--text-secondary);">Online</div>
+        <div id="view-teamchat" class="view-section">
+            <div class="view-header">
+                <div class="view-title">Team Chat</div>
+                <div style="display:flex; gap:12px;">
+                    <button class="theme-toggle"><i class="ph-bold ph-magnifying-glass"></i></button>
+                    <button class="theme-toggle"><i class="ph-bold ph-dots-three"></i></button>
                 </div>
             </div>
-            <button class="theme-toggle"><i class="ph-bold ph-video-camera"></i></button>
-        </div>
-        <div class="content-list" id="chatDetailMessages" style="display:flex; flex-direction:column; padding-top:20px;">
+            <div class="pill-nav-container">
+                <div class="pill-nav active">All</div>
+                <div class="pill-nav">Mentions</div>
+                <div class="pill-nav">Chats</div>
+                <div class="pill-nav">Channels</div>
+                <div class="pill-nav">Meeting chat</div>
             </div>
-        <div style="padding:16px; background:var(--bg-panel); border-top:1px solid var(--border);">
-            <div style="display:flex; gap:8px;">
-                 <input type="text" class="input-field" placeholder="Type a message..." style="border-radius:20px;">
-                 <button class="btn-primary" style="width:46px; margin:0; border-radius:50%;"><i class="ph-bold ph-paper-plane-right"></i></button>
-            </div>
-        </div>
-    </div>
-
-    <div id="view-docs" class="view-section">
-        <div class="view-header">
-            <div class="view-title">Docs</div>
-            <div style="display:flex; gap:12px;">
-                 <button class="theme-toggle"><i class="ph-bold ph-magnifying-glass"></i></button>
-                 <button class="theme-toggle"><i class="ph-bold ph-bell"></i></button>
+            <div class="content-list" id="chatListContainer"></div>
+            <div class="fab-container">
+                <button class="btn-primary" onclick="openNewTeamWizard()"
+                    style="width:56px; height:56px; border-radius:50%; box-shadow:0 10px 30px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center;">
+                    <i class="ph-bold ph-plus" style="font-size:24px;"></i>
+                </button>
             </div>
         </div>
-        <div class="pill-nav-container">
-            <div class="pill-nav active accent-pill" onclick="filterDocs('all', this)">All</div>
-            <div class="pill-nav" onclick="filterDocs('recent', this)">Recent</div>
-            <div class="pill-nav" onclick="filterDocs('starred', this)">Starred</div>
-            <div class="pill-nav" onclick="filterDocs('shared', this)">Shared</div>
-        </div>
-        <div class="content-list" style="position:relative;" id="docsList"></div>
-        <div class="fab-docs-raised">
-             <button class="btn-primary" onclick="createNewDoc()" style="width:56px; height:56px; border-radius:50%; box-shadow:0 10px 30px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center; background:#10b981;">
-                 <i class="ph-bold ph-plus" style="font-size:24px; color:#000;"></i>
-             </button>
-        </div>
-    </div>
-</main>
 
-<div id="newDocModal" class="modal-overlay">
-    <div class="modal-card">
-        <div class="modal-header">
-            <h3>Create New Document</h3>
-            <div class="close-btn" onclick="closeModals()"><i class="ph-bold ph-x"></i></div>
-        </div>
-        <div class="form-group">
-            <label class="form-label">Document Name</label>
-            <input type="text" id="newDocInput" class="input-field" placeholder="e.g. Q1 Marketing Plan" autofocus>
-        </div>
-        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
-            <button class="theme-toggle" style="width:auto; padding:0 16px; border:none;" onclick="closeModals()">Cancel</button>
-            <button class="btn-primary" style="width:auto; margin:0;" onclick="saveNewDoc()">Create</button>
-        </div>
-    </div>
-</div>
-
-<div id="meetingHub" class="modal-overlay">
-    <div class="modal-card">
-        <div style="background:var(--bg-main); padding:12px; border-radius:12px; display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border:1px solid var(--border);">
-            <div style="display:flex; align-items:center; gap:10px;">
-                <div style="width:32px; height:32px; background:rgba(16,185,129,0.1); color:#10b981; border-radius:8px; display:flex; align-items:center; justify-content:center;"><i class="ph-bold ph-brain"></i></div>
-                <div>
-                    <div style="font-size:13px; font-weight:600;">Org Memory</div>
-                    <div style="font-size:10px; color:var(--text-secondary);">Record & extract decisions</div>
+        <div id="view-chat-detail" class="view-section">
+            <div class="view-header">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <button class="theme-toggle" onclick="closeChatDetail()"><i
+                            class="ph-bold ph-arrow-left"></i></button>
+                    <div>
+                        <div class="view-title" id="chatDetailTitle" style="font-size:16px;">Chat Name</div>
+                        <div style="font-size:11px; color:var(--text-secondary);">Online</div>
+                    </div>
+                </div>
+                <button class="theme-toggle"><i class="ph-bold ph-video-camera"></i></button>
+            </div>
+            <div class="content-list" id="chatDetailMessages"
+                style="display:flex; flex-direction:column; padding-top:20px;">
+            </div>
+            <div style="padding:16px; background:var(--bg-panel); border-top:1px solid var(--border);">
+                <div style="display:flex; gap:8px;">
+                    <input type="text" class="input-field" placeholder="Type a message..." style="border-radius:20px;">
+                    <button class="btn-primary" style="width:46px; margin:0; border-radius:50%;"><i
+                            class="ph-bold ph-paper-plane-right"></i></button>
                 </div>
             </div>
-            <label style="position: relative; display: inline-block; width: 40px; height: 20px;">
-                <input type="checkbox" checked style="opacity: 0; width: 0; height: 0;">
-                <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 34px;" onclick="this.style.backgroundColor = this.style.backgroundColor === 'rgb(16, 185, 129)' ? '#333' : '#10b981'">
-                    <span style="position: absolute; content: ''; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; transform: translateX(18px);"></span>
-                </span>
-            </label>
         </div>
-        <div class="meeting-grid">
-            <button class="meeting-opt" onclick="openStartCallModal()">
-                <div class="meeting-icon"><i class="ph-fill ph-video-camera"></i></div>
-                <span class="meeting-label">Start meeting</span>
-            </button>
-            <button class="meeting-opt" onclick="openLinkModal()">
-                <div class="meeting-icon"><i class="ph-bold ph-link"></i></div>
-                <span class="meeting-label">New meeting link</span>
-            </button>
-            <button class="meeting-opt" onclick="openDialPad()">
-                <div class="meeting-icon"><i class="ph-bold ph-phone"></i></div>
-                <span class="meeting-label">Call a number</span>
-            </button>
-            <button class="meeting-opt" onclick="openScheduleModal()">
-                <div class="meeting-icon"><i class="ph-bold ph-calendar-plus"></i></div>
-                <span class="meeting-label">Schedule meeting</span>
-            </button>
-        </div>
-        <button onclick="closeModals()" style="width:100%; margin-top:20px; padding:12px; color:#888;">Close</button>
-    </div>
-</div>
 
-<div id="startCallModal" class="modal-overlay">
-    <div class="modal-card" style="text-align:center;">
-        <div id="startCallContent">
+        <div id="view-docs" class="view-section">
+            <div class="view-header">
+                <div class="view-title">Docs</div>
+                <div style="display:flex; gap:12px;">
+                    <button class="theme-toggle"><i class="ph-bold ph-magnifying-glass"></i></button>
+                    <button class="theme-toggle"><i class="ph-bold ph-bell"></i></button>
+                </div>
+            </div>
+            <div class="pill-nav-container">
+                <div class="pill-nav active accent-pill" onclick="filterDocs('all', this)">All</div>
+                <div class="pill-nav" onclick="filterDocs('recent', this)">Recent</div>
+                <div class="pill-nav" onclick="filterDocs('starred', this)">Starred</div>
+                <div class="pill-nav" onclick="filterDocs('shared', this)">Shared</div>
+            </div>
+            <div class="content-list" style="position:relative;" id="docsList"></div>
+            <div class="fab-docs-raised">
+                <button class="btn-primary" onclick="createNewDoc()"
+                    style="width:56px; height:56px; border-radius:50%; box-shadow:0 10px 30px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center; background:#10b981;">
+                    <i class="ph-bold ph-plus" style="font-size:24px; color:#000;"></i>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <div id="newDocModal" class="modal-overlay">
+        <div class="modal-card">
             <div class="modal-header">
-                <h3>Start Meeting</h3>
+                <h3>Create New Document</h3>
                 <div class="close-btn" onclick="closeModals()"><i class="ph-bold ph-x"></i></div>
             </div>
-            <p style="color:#888; font-size:13px; margin-bottom:20px;">Choose meeting type</p>
-            <div class="call-type-row">
-                <div class="call-type-btn" onclick="initiateCall('Audio')">
-                    <i class="ph-fill ph-phone call-type-icon"></i>
-                    <span style="font-size:12px; font-weight:600;">Audio</span>
-                </div>
-                <div class="call-type-btn" onclick="initiateCall('Video')">
-                    <i class="ph-fill ph-video-camera call-type-icon"></i>
-                    <span style="font-size:12px; font-weight:600;">Video</span>
-                </div>
+            <div class="form-group">
+                <label class="form-label">Document Name</label>
+                <input type="text" id="newDocInput" class="input-field" placeholder="e.g. Q1 Marketing Plan" autofocus>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+                <button class="theme-toggle" style="width:auto; padding:0 16px; border:none;"
+                    onclick="closeModals()">Cancel</button>
+                <button class="btn-primary" style="width:auto; margin:0;" onclick="saveNewDoc()">Create</button>
             </div>
         </div>
-        <div id="preCallLoader" style="display:none; padding:20px 0;">
-            <div class="spinner-large"></div>
-            <h3 style="margin-top:20px; font-family:'Space Grotesk'">Connecting...</h3>
-            <p style="color:var(--text-secondary); font-size:13px; margin-top:8px;" id="connText">Establishing secure link</p>
-            <p style="color:var(--text-secondary); font-size:11px; margin-top:4px;">Waiting for participants to join...</p>
-        </div>
     </div>
-</div>
 
-<div id="scheduleModal" class="modal-overlay">
-    <div class="modal-card">
-        <div class="modal-header">
-            <h3 id="schedModalTitle">Schedule meeting</h3>
-            <div class="close-btn" onclick="closeModals()"><i class="ph-bold ph-x"></i></div>
-        </div>
-        <div class="form-group">
-            <label class="form-label">Meeting name</label>
-            <input type="text" id="schedName" class="input-field" value="KAIROS Sync" style="border-bottom: 2px solid #10b981; border-radius: 4px 4px 0 0;">
-        </div>
-        <div class="form-group">
-            <input type="text" id="schedDesc" class="input-field" placeholder="Description (optional)">
-        </div>
-        <div class="form-group">
-            <label class="form-label">Start date and time</label>
-            <div class="date-row">
-                <input type="date" id="schedStartDate" class="input-field">
-                <input type="time" id="schedStartTime" class="input-field">
-            </div>
-        </div>
-        <div class="form-group">
-            <label class="form-label">End date and time</label>
-            <div class="date-row">
-                <input type="date" id="schedEndDate" class="input-field">
-                <input type="time" id="schedEndTime" class="input-field">
-            </div>
-        </div>
-        <div style="margin-top:24px; display:flex; justify-content:flex-end;">
-            <button class="btn-primary" style="width:auto; border-radius:30px; margin:0;" onclick="saveEvent()">
-                <span id="schedBtnText">Schedule</span> <i class="ph-bold ph-paper-plane-right"></i>
-            </button>
-        </div>
-    </div>
-</div>
-
-<div id="linkModal" class="modal-overlay">
-    <div class="modal-card">
-        <div class="modal-header">
-            <h3>New meeting link</h3>
-            <div class="close-btn" onclick="closeModals()"><i class="ph-bold ph-x"></i></div>
-        </div>
-        <div class="av-toggle">
-            <div class="av-btn active" id="btnVideo" onclick="toggleLinkType('video')"><i class="ph-fill ph-video-camera"></i> Video</div>
-            <div class="av-btn" id="btnAudio" onclick="toggleLinkType('audio')"><i class="ph-fill ph-microphone"></i> Audio</div>
-        </div>
-        <div class="call-link-box">
-            <div class="link-text" id="callLink">https://call.kairos.ai/video/bSecFu...</div>
-            <button class="copy-btn" onclick="copyLink()"><i class="ph-bold ph-copy"></i></button>
-        </div>
-        <p style="font-size:12px; color:#888; line-height:1.4; margin-bottom:20px;">
-            Anyone with WhatsApp can use this link to join this meeting. Only share it with people you trust.
-        </p>
-        <div style="display:flex; gap:12px; align-items:center;">
-            <button class="btn-primary" style="margin:0; background:#fff; color:#000; flex:1;" onclick="sendToWhatsapp()">
-                <i class="ph-bold ph-whatsapp-logo"></i> Send link
-            </button>
-        </div>
-    </div>
-</div>
-
-<div id="dialPadModal" class="modal-overlay">
-    <div class="modal-card" style="width:320px;">
-        <div class="modal-header">
-            <h3>Phone</h3>
-            <div class="close-btn" onclick="closeModals()"><i class="ph-bold ph-x"></i></div>
-        </div>
-        <div class="dial-display" id="dialDisplay"></div>
-        <div class="dial-grid">
-            <div class="dial-key" onclick="pressKey('1')">1</div>
-            <div class="dial-key" onclick="pressKey('2')">2</div>
-            <div class="dial-key" onclick="pressKey('3')">3</div>
-            <div class="dial-key" onclick="pressKey('4')">4</div>
-            <div class="dial-key" onclick="pressKey('5')">5</div>
-            <div class="dial-key" onclick="pressKey('6')">6</div>
-            <div class="dial-key" onclick="pressKey('7')">7</div>
-            <div class="dial-key" onclick="pressKey('8')">8</div>
-            <div class="dial-key" onclick="pressKey('9')">9</div>
-            <div class="dial-key" onclick="pressKey('*')">*</div>
-            <div class="dial-key" onclick="pressKey('0')">0</div>
-            <div class="dial-key" onclick="pressKey('#')">#</div>
-            <div class="dial-key" style="background:transparent;"></div>
-            <div class="dial-key dial-action" onclick="showToast('Calling number...')"><i class="ph-fill ph-phone-call"></i></div>
-            <div class="dial-key" style="background:transparent; font-size:24px;" onclick="pressKey('del')"><i class="ph-fill ph-backspace"></i></div>
-        </div>
-    </div>
-</div>
-
-<div id="teamModal" class="modal-overlay">
-    <div class="modal-card">
-        <div class="modal-header">
-            <h3>Team Sync</h3>
-            <div class="close-btn" onclick="closeModals()"><i class="ph-bold ph-x"></i></div>
-        </div>
-        <div class="form-group">
-            <label class="form-label">Add Member</label>
-            <input type="text" id="newMemberInput" class="input-field" placeholder="Email or Phone Number">
-        </div>
-        <div class="form-group">
-            <label class="form-label">Assign to Team</label>
-            <div style="display:flex; gap:8px;">
-                <select id="teamSelector" class="input-field" style="appearance:none; cursor:pointer;">
-                    <option value="" disabled selected>Select Team...</option>
-                </select>
-                <button class="btn-primary" style="width:auto; margin:0;" onclick="addMember()">Add</button>
-            </div>
-        </div>
-        <div class="team-list" id="teamList">
-            <div class="team-member">
-                <div class="member-info">
-                    <div class="member-avatar">A</div>
+    <div id="meetingHub" class="modal-overlay">
+        <div class="modal-card">
+            <div
+                style="background:var(--bg-main); padding:12px; border-radius:12px; display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border:1px solid var(--border);">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div
+                        style="width:32px; height:32px; background:rgba(16,185,129,0.1); color:#10b981; border-radius:8px; display:flex; align-items:center; justify-content:center;">
+                        <i class="ph-bold ph-brain"></i>
+                    </div>
                     <div>
-                        <span style="font-size:13px; font-weight:600; display:block;">Alice Design</span>
-                        <span style="font-size:10px; color:var(--text-secondary);">Design Team</span>
+                        <div style="font-size:13px; font-weight:600;">Org Memory</div>
+                        <div style="font-size:10px; color:var(--text-secondary);">Record & extract decisions</div>
                     </div>
                 </div>
-                <div style="font-size:10px; color:#10b981;">Online</div>
+                <label style="position: relative; display: inline-block; width: 40px; height: 20px;">
+                    <input type="checkbox" checked style="opacity: 0; width: 0; height: 0;">
+                    <span
+                        style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 34px;"
+                        onclick="this.style.backgroundColor = this.style.backgroundColor === 'rgb(16, 185, 129)' ? '#333' : '#10b981'">
+                        <span
+                            style="position: absolute; content: ''; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; transform: translateX(18px);"></span>
+                    </span>
+                </label>
+            </div>
+            <div class="meeting-grid">
+                <button class="meeting-opt" onclick="openStartCallModal()">
+                    <div class="meeting-icon"><i class="ph-fill ph-video-camera"></i></div>
+                    <span class="meeting-label">Start meeting</span>
+                </button>
+                <button class="meeting-opt" onclick="openLinkModal()">
+                    <div class="meeting-icon"><i class="ph-bold ph-link"></i></div>
+                    <span class="meeting-label">New meeting link</span>
+                </button>
+                <button class="meeting-opt" onclick="openDialPad()">
+                    <div class="meeting-icon"><i class="ph-bold ph-phone"></i></div>
+                    <span class="meeting-label">Call a number</span>
+                </button>
+                <button class="meeting-opt" onclick="openScheduleModal()">
+                    <div class="meeting-icon"><i class="ph-bold ph-calendar-plus"></i></div>
+                    <span class="meeting-label">Schedule meeting</span>
+                </button>
+            </div>
+            <button onclick="closeModals()"
+                style="width:100%; margin-top:20px; padding:12px; color:#888;">Close</button>
+        </div>
+    </div>
+
+    <div id="startCallModal" class="modal-overlay">
+        <div class="modal-card" style="text-align:center;">
+            <div id="startCallContent">
+                <div class="modal-header">
+                    <h3>Start Meeting</h3>
+                    <div class="close-btn" onclick="closeModals()"><i class="ph-bold ph-x"></i></div>
+                </div>
+
+                <div class="form-group" style="text-align:left; margin-bottom: 20px;">
+                    <label class="form-label">Meeting Name</label>
+                    <input type="text" id="dashboardMeetingName" class="input-field" placeholder="e.g. Daily Standup"
+                        value="New Meeting">
+                </div>
+
+                <p style="color:#888; font-size:13px; margin-bottom:10px;">Choose mode to start</p>
+                <div class="call-type-row">
+                    <div class="call-type-btn" onclick="initiateCall('Audio')">
+                        <i class="ph-fill ph-phone call-type-icon"></i>
+                        <span style="font-size:12px; font-weight:600;">Audio</span>
+                    </div>
+                    <div class="call-type-btn" onclick="initiateCall('Video')">
+                        <i class="ph-fill ph-video-camera call-type-icon"></i>
+                        <span style="font-size:12px; font-weight:600;">Video</span>
+                    </div>
+                </div>
+            </div>
+            <div id="preCallLoader" style="display:none; padding:20px 0;">
+                <div class="spinner-large"></div>
+                <h3 style="margin-top:20px; font-family:'Space Grotesk'">Connecting...</h3>
+                <p style="color:var(--text-secondary); font-size:13px; margin-top:8px;" id="connText">Establishing
+                    secure link</p>
+                <p style="color:var(--text-secondary); font-size:11px; margin-top:4px;">Waiting for participants to
+                    join...</p>
             </div>
         </div>
     </div>
-</div>
 
-<div id="newTeamWizard" class="modal-overlay">
-    <div class="modal-card">
-        <div class="modal-header">
-            <h3 id="wizTitle">Create New Team</h3>
-            <div class="close-btn" onclick="closeModals()"><i class="ph-bold ph-x"></i></div>
-        </div>
-        <div class="step-indicator">
-            <div class="step-dot active" id="dot1"></div>
-            <div class="step-dot" id="dot2"></div>
-            <div class="step-dot" id="dot3"></div>
-        </div>
-        <div id="wizStep1" class="wizard-step active">
-            <div style="text-align:center; margin-bottom:20px;">
-                <div style="width:60px; height:60px; background:rgba(16,185,129,0.1); border-radius:50%; margin:0 auto 10px; display:flex; align-items:center; justify-content:center; color:#10b981; font-size:24px;"><i class="ph-bold ph-users-three"></i></div>
-                <h4 style="margin-bottom:4px;">Who's in?</h4>
-                <p style="font-size:12px; color:#888;">Add members by email or phone.</p>
+    <div id="scheduleModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="schedModalTitle">Schedule meeting</h3>
+                <div class="close-btn" onclick="closeModals()"><i class="ph-bold ph-x"></i></div>
             </div>
             <div class="form-group">
-                <input type="text" id="wizMemberInput" class="input-field" placeholder="colleague@kairos.ai">
-            </div>
-            <div class="team-list" id="wizMemberList" style="max-height:100px; overflow-y:auto; margin-bottom:16px;"></div>
-            <button class="btn-primary" onclick="wizAddMember()" style="background:var(--surface-hover); color:var(--text-primary); margin-bottom:12px;">+ Add to list</button>
-            <button class="btn-primary" onclick="nextWizardStep(2)">Next: Team Details</button>
-        </div>
-        <div id="wizStep2" class="wizard-step">
-            <div style="text-align:center; margin-bottom:20px;">
-                <div style="width:60px; height:60px; background:rgba(16,185,129,0.1); border-radius:50%; margin:0 auto 10px; display:flex; align-items:center; justify-content:center; color:#10b981; font-size:24px;"><i class="ph-bold ph-identification-card"></i></div>
-                <h4 style="margin-bottom:4px;">Identity</h4>
-                <p style="font-size:12px; color:#888;">Name your squad.</p>
+                <label class="form-label">Meeting name</label>
+                <input type="text" id="schedName" class="input-field" value="KAIROS Sync"
+                    style="border-bottom: 2px solid #10b981; border-radius: 4px 4px 0 0;">
             </div>
             <div class="form-group">
-                <label class="form-label">Team Name</label>
-                <input type="text" id="wizTeamName" class="input-field" placeholder="e.g. Q1 Marketing">
+                <input type="text" id="schedDesc" class="input-field" placeholder="Description (optional)">
             </div>
             <div class="form-group">
-                <label class="form-label">Description</label>
-                <input type="text" id="wizTeamDesc" class="input-field" placeholder="Project goals...">
-            </div>
-            <button class="btn-primary" onclick="nextWizardStep(3)">Next: Kickoff</button>
-        </div>
-        <div id="wizStep3" class="wizard-step">
-            <div style="text-align:center; margin-bottom:20px;">
-                <div style="width:60px; height:60px; background:rgba(16,185,129,0.1); border-radius:50%; margin:0 auto 10px; display:flex; align-items:center; justify-content:center; color:#10b981; font-size:24px;"><i class="ph-bold ph-rocket-launch"></i></div>
-                <h4 style="margin-bottom:4px;">Launch It</h4>
-                <p style="font-size:12px; color:#888;">Schedule the kickoff meeting.</p>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Kickoff Date</label>
+                <label class="form-label">Start date and time</label>
                 <div class="date-row">
-                    <input type="date" id="wizDate" class="input-field">
-                    <input type="time" id="wizTime" class="input-field" value="09:00">
+                    <input type="date" id="schedStartDate" class="input-field">
+                    <input type="time" id="schedStartTime" class="input-field">
                 </div>
             </div>
-            <button class="btn-primary" onclick="finishWizard()">
-                Create Team & Schedule <i class="ph-bold ph-check"></i>
-            </button>
-        </div>
-    </div>
-</div>
-
-<div id="profileModal" class="modal-overlay">
-    <div class="modal-card">
-        <div class="modal-header">
-            <h3>Benedict Profile</h3>
-            <div class="close-btn" onclick="closeModals()"><i class="ph-bold ph-x"></i></div>
-        </div>
-        <div class="profile-swipe-container">
-            <div class="profile-card-page">
-                <div style="text-align:center; margin-bottom:12px;">
-                    <div id="profilePreview" style="width:80px; height:80px; background:#333; border-radius:24px; margin:0 auto 10px; display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative;">
-                        <span id="profileInitials" style="font-size:24px; font-weight:700; color:#888;">BA</span>
-                        <div style="position:absolute; bottom:0; width:100%; padding:4px; background:rgba(0,0,0,0.5); font-size:9px; color:#fff;">EDIT</div>
-                    </div>
-                    <h2 id="displayProfName" style="font-size:18px; margin-bottom:4px;">Benedict Adurosakin</h2>
-                    <div style="display:flex; align-items:center; justify-content:center; gap:8px;">
-                        <span style="width:8px; height:8px; background:#10b981; border-radius:50%;"></span>
-                        <span style="font-size:12px; color:var(--text-secondary);">Clinical Informatics Nurse</span>
-                    </div>
-                </div>
-                <div class="profile-list-item">
-                     <span class="profile-label">Role</span>
-                     <div class="profile-val">RN, Writer, Content Creator</div>
-                </div>
-                <div class="profile-list-item">
-                     <span class="profile-label">Location</span>
-                     <div class="profile-val">Lagos, Nigeria</div>
-                </div>
-                <div class="profile-list-item" style="border-bottom:none;">
-                     <span class="profile-label">Projects</span>
-                     <div class="profile-val">The Hustle Truth Series</div>
-                </div>
-                <div style="text-align:center; margin-top:auto; color:#888; font-size:10px;">
-                    <i class="ph-bold ph-arrow-right"></i> Swipe for Contact
+            <div class="form-group">
+                <label class="form-label">End date and time</label>
+                <div class="date-row">
+                    <input type="date" id="schedEndDate" class="input-field">
+                    <input type="time" id="schedEndTime" class="input-field">
                 </div>
             </div>
-            <div class="profile-card-page">
-                <div style="font-size:14px; font-weight:700; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:8px;">Contact Details</div>
-                <div class="profile-list-item">
-                    <span class="profile-label">Email</span>
-                    <div class="profile-val" style="font-size:12px;">benedictadurosakin@gmail.com</div>
-                </div>
-                <div class="profile-list-item">
-                    <span class="profile-label">Phone</span>
-                    <div class="profile-val">+234-906-179-0548</div>
-                </div>
-                <div class="profile-list-item">
-                    <span class="profile-label">Links</span>
-                    <div class="profile-val">linktr.ee/Benedictadurosakin</div>
-                </div>
-                <div class="profile-list-item">
-                    <span class="profile-label">Alias</span>
-                    <div class="profile-val">icreate idesign</div>
-                </div>
-                <div style="background:#1a1a1a; padding:12px; border-radius:12px; display:flex; justify-content:space-between; align-items:center; margin-top:16px; border:1px solid var(--border); cursor:pointer;" onclick="showToast('Link Copied')">
-                     <span class="profile-label" style="font-size:11px;">Copy direct chat link</span>
-                     <i class="ph-bold ph-copy" style="color:#888;"></i>
-                </div>
-            </div>
-             <div class="profile-card-page">
-                <div style="font-size:14px; font-weight:700; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:8px;">App Settings</div>
-                <div class="profile-list-item" onclick="toggleTheme()">
-                    <span class="profile-label">Theme</span>
-                    <div class="profile-val">Toggle Mode <i class="ph-bold ph-moon"></i></div>
-                </div>
-                <div class="profile-list-item">
-                    <span class="profile-label">Notifications</span>
-                    <div class="profile-val">On <i class="ph-bold ph-toggle-right" style="color:#10b981; font-size:16px;"></i></div>
-                </div>
-                <div class="profile-list-item">
-                    <span class="profile-label">Meeting Reminders</span>
-                    <div class="profile-val">15 mins before</div>
-                </div>
-                <button style="margin-top:auto; color:#ef4444; font-size:12px; font-weight:600;">Sign Out</button>
+            <div style="margin-top:24px; display:flex; justify-content:flex-end;">
+                <button class="btn-primary" style="width:auto; border-radius:30px; margin:0;" onclick="saveEvent()">
+                    <span id="schedBtnText">Schedule</span> <i class="ph-bold ph-paper-plane-right"></i>
+                </button>
             </div>
         </div>
     </div>
-</div>
 
-<script>
-    // --- CORE DATA ---
-    const TEAMS = ['Personal Workspace', 'Design Team', 'Engineering'];
-    const CHATS = [
-        { id: 1, name: 'Personal Workspace', type: 'Self', msg: 'Draft: Project Alpha', time: '10:02' },
-        { id: 2, name: 'Design Team', type: 'Team', msg: 'Alice: New mockups ready?', time: '09:45' },
-        { id: 3, name: 'Engineering', type: 'Team', msg: 'System update scheduled.', time: 'Yesterday' }
-    ];
-    let DOCS = [
-        { name: "Project Proposal.docx", type: "word", date: "Today", tag: "recent" },
-        { name: "Q1 Budget.xlsx", type: "excel", date: "Yesterday", tag: "starred" },
-        { name: "Meeting Notes.txt", type: "text", date: "2 days ago", tag: "shared" }
-    ];
+    <div id="linkModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>New meeting link</h3>
+                <div class="close-btn" onclick="closeModals()"><i class="ph-bold ph-x"></i></div>
+            </div>
+            <div class="av-toggle">
+                <div class="av-btn active" id="btnVideo" onclick="toggleLinkType('video')"><i
+                        class="ph-fill ph-video-camera"></i> Video</div>
+                <div class="av-btn" id="btnAudio" onclick="toggleLinkType('audio')"><i
+                        class="ph-fill ph-microphone"></i> Audio</div>
+            </div>
+            <div class="call-link-box">
+                <div class="link-text" id="callLink">https://call.kairos.ai/video/bSecFu...</div>
+                <button class="copy-btn" onclick="copyLink()"><i class="ph-bold ph-copy"></i></button>
+            </div>
+            <p style="font-size:12px; color:#888; line-height:1.4; margin-bottom:20px;">
+                Anyone with WhatsApp can use this link to join this meeting. Only share it with people you trust.
+            </p>
+            <div style="display:flex; gap:12px; align-items:center;">
+                <button class="btn-primary" style="margin:0; background:#fff; color:#000; flex:1;"
+                    onclick="sendToWhatsapp()">
+                    <i class="ph-bold ph-whatsapp-logo"></i> Send link
+                </button>
+            </div>
+        </div>
+    </div>
 
-    // MOCK DATA FOR CHAT DETAIL
-    const MOCK_MESSAGES = {
-        1: [
-            { id: 101, text: "Remember to review the Project Alpha draft by noon.", sender: "me", time: "09:30" },
-            { id: 102, text: "Draft: Project Alpha attached.", sender: "me", time: "10:02" }
-        ],
-        2: [
-            { id: 201, text: "Hey team, how's the new UI coming along?", sender: "me", time: "09:00" },
-            { id: 202, text: "New mockups ready? We need them for the client call.", sender: "Alice Design", time: "09:45" }
-        ],
-        3: [
-            { id: 301, text: "Server maintenance at midnight.", sender: "DevOps", time: "Yesterday" },
-            { id: 302, text: "System update scheduled. No downtime expected.", sender: "Engineering", time: "Yesterday" }
-        ]
-    };
+    <div id="dialPadModal" class="modal-overlay">
+        <div class="modal-card" style="width:320px;">
+            <div class="modal-header">
+                <h3>Phone</h3>
+                <div class="close-btn" onclick="closeModals()"><i class="ph-bold ph-x"></i></div>
+            </div>
+            <div class="dial-display" id="dialDisplay"></div>
+            <div class="dial-grid">
+                <div class="dial-key" onclick="pressKey('1')">1</div>
+                <div class="dial-key" onclick="pressKey('2')">2</div>
+                <div class="dial-key" onclick="pressKey('3')">3</div>
+                <div class="dial-key" onclick="pressKey('4')">4</div>
+                <div class="dial-key" onclick="pressKey('5')">5</div>
+                <div class="dial-key" onclick="pressKey('6')">6</div>
+                <div class="dial-key" onclick="pressKey('7')">7</div>
+                <div class="dial-key" onclick="pressKey('8')">8</div>
+                <div class="dial-key" onclick="pressKey('9')">9</div>
+                <div class="dial-key" onclick="pressKey('*')">*</div>
+                <div class="dial-key" onclick="pressKey('0')">0</div>
+                <div class="dial-key" onclick="pressKey('#')">#</div>
+                <div class="dial-key" style="background:transparent;"></div>
+                <div class="dial-key dial-action" onclick="showToast('Calling number...')"><i
+                        class="ph-fill ph-phone-call"></i></div>
+                <div class="dial-key" style="background:transparent; font-size:24px;" onclick="pressKey('del')"><i
+                        class="ph-fill ph-backspace"></i></div>
+            </div>
+        </div>
+    </div>
 
-    const getTodayString = () => {
-        const d = new Date();
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    };
-
-    let events = JSON.parse(localStorage.getItem('kairosEvents')) || [
-        { id: 1, title: "Design Review", start: getTodayString(), startTime: "09:00", end: getTodayString(), endTime: "10:00", type: "Zoom", color: "#3b82f6" },
-        { id: 2, title: "Client Sync", start: getTodayString(), startTime: "13:30", end: getTodayString(), endTime: "14:30", type: "Google Meet", color: "#8b5cf6" }
-    ];
-    let editingEventId = null;
-
-    const savedThemeVal = localStorage.getItem('kairosTheme') || 'dark';
-    document.getElementById('themeIcon').className = savedThemeVal === 'dark' ? 'ph-bold ph-moon' : 'ph-bold ph-sun';
-
-    function toggleTheme() {
-        const current = document.documentElement.getAttribute('data-theme');
-        const newTheme = current === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', newTheme);
-        localStorage.setItem('kairosTheme', newTheme);
-        document.getElementById('themeIcon').className = newTheme === 'dark' ? 'ph-bold ph-moon' : 'ph-bold ph-sun';
-    }
-
-    function showToast(msg) {
-        const t = document.getElementById('toast');
-        document.getElementById('toastMsg').innerText = msg;
-        t.classList.add('show');
-        setTimeout(() => t.classList.remove('show'), 3000);
-    }
-
-    function switchView(viewName) {
-        document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-        const target = document.getElementById('view-' + viewName);
-        if(target) target.classList.add('active');
-        
-        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-        const navBtn = document.getElementById('nav-' + viewName);
-        if(navBtn) navBtn.classList.add('active');
-        if(window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('active');
-    }
-
-    function toggleContextDropdown() {
-        const dd = document.getElementById('contextDropdown');
-        dd.style.display = dd.style.display === 'block' ? 'none' : 'block';
-    }
-
-    function setContext(name) {
-        document.getElementById('currentContext').innerText = name;
-        document.getElementById('contextDropdown').style.display = 'none';
-        const toastMsg = name === 'Personal Workspace' ? 'Switched to Personal' : `Joined ${name} Space`;
-        showToast(toastMsg);
-        const actionIcon = document.querySelector('.card-title .ph-lightning');
-        if(actionIcon) {
-            actionIcon.style.color = name !== 'Personal Workspace' ? '#10b981' : 'inherit';
-        }
-    }
-
-    document.addEventListener('click', function(event) {
-        if (!event.target.closest('.brand')) {
-            const dd = document.getElementById('contextDropdown');
-            if (dd) dd.style.display = 'none';
-        }
-    });
-
-    function openMeetingHub() { document.getElementById('meetingHub').classList.add('active'); }
-    function closeModals() { 
-        document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
-        editingEventId = null;
-        setTimeout(() => {
-            const scContent = document.getElementById('startCallContent');
-            const preLoader = document.getElementById('preCallLoader');
-            if(scContent) scContent.style.display = 'block';
-            if(preLoader) preLoader.style.display = 'none';
-        }, 500);
-    }
-    
-    function openLinkModal() { closeModals(); setTimeout(() => document.getElementById('linkModal').classList.add('active'), 100); }
-    function openDialPad() { closeModals(); setTimeout(() => document.getElementById('dialPadModal').classList.add('active'), 100); }
-    function openProfileModal() { closeModals(); setTimeout(() => document.getElementById('profileModal').classList.add('active'), 100); }
-    function openStartCallModal() { closeModals(); setTimeout(() => document.getElementById('startCallModal').classList.add('active'), 100); }
-    
-    function openTeamModal() { 
-        closeModals(); 
-        const sel = document.getElementById('teamSelector');
-        sel.innerHTML = '<option value="" disabled selected>Select Team...</option>';
-        TEAMS.forEach(t => {
-            const opt = document.createElement('option');
-            opt.value = t; opt.innerText = t;
-            sel.appendChild(opt);
-        });
-        setTimeout(() => document.getElementById('teamModal').classList.add('active'), 100); 
-    }
-
-    function openNewTeamWizard() {
-        document.querySelectorAll('.wizard-step').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('.step-dot').forEach(el => el.classList.remove('active'));
-        document.getElementById('wizStep1').classList.add('active');
-        document.getElementById('dot1').classList.add('active');
-        document.getElementById('wizMemberList').innerHTML = '';
-        document.getElementById('wizMemberInput').value = '';
-        document.getElementById('wizTeamName').value = '';
-        document.getElementById('wizTeamDesc').value = '';
-        document.getElementById('contextDropdown').style.display = 'none';
-        closeModals();
-        setTimeout(() => document.getElementById('newTeamWizard').classList.add('active'), 100);
-    }
-
-    function wizAddMember() {
-        const input = document.getElementById('wizMemberInput');
-        const val = input.value;
-        if(val) {
-            const list = document.getElementById('wizMemberList');
-            const item = document.createElement('div');
-            item.style.padding = '8px';
-            item.style.border = '1px solid var(--border)';
-            item.style.borderRadius = '8px';
-            item.style.marginBottom = '4px';
-            item.style.fontSize = '12px';
-            item.style.display = 'flex';
-            item.style.justifyContent = 'space-between';
-            item.innerHTML = `<span>${val}</span> <i class="ph-bold ph-check" style="color:#10b981"></i>`;
-            list.appendChild(item);
-            input.value = '';
-        }
-    }
-
-    function nextWizardStep(step) {
-        document.querySelectorAll('.wizard-step').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('.step-dot').forEach(el => el.classList.remove('active'));
-        document.getElementById(`wizStep${step}`).classList.add('active');
-        document.getElementById(`dot${step}`).classList.add('active');
-    }
-
-    function finishWizard() {
-        const teamName = document.getElementById('wizTeamName').value || "New Team";
-        TEAMS.push(teamName);
-        CHATS.push({ id: Date.now(), name: teamName, type: 'Team', msg: 'Team created', time: 'Just now' });
-        const dropdown = document.getElementById('contextDropdown');
-        const divider = document.getElementById('teamDivider');
-        const newBtn = document.createElement('div');
-        newBtn.className = 'nav-btn';
-        newBtn.innerText = teamName;
-        newBtn.onclick = function() { setContext(teamName); };
-        dropdown.insertBefore(newBtn, divider);
-        setContext(teamName);
-        renderChatList();
-        closeModals();
-        showToast(`Team "${teamName}" Created`);
-        const kDate = document.getElementById('wizDate').value || getTodayString();
-        const kTime = document.getElementById('wizTime').value || "09:00";
-        events.push({
-            id: Date.now(),
-            title: `${teamName} Kickoff`,
-            start: kDate, startTime: kTime, end: kDate, endTime: "10:00",
-            type: "Team Launch", color: "#10b981"
-        });
-        localStorage.setItem('kairosEvents', JSON.stringify(events));
-        renderAgenda();
-        renderCal();
-    }
-
-    // --- CHAT FUNCTIONS ---
-
-    function renderChatList() {
-        const list = document.getElementById('chatListContainer');
-        list.innerHTML = '';
-        CHATS.forEach(chat => {
-            const initial = chat.name.charAt(0);
-            const el = document.createElement('div');
-            el.className = 'chat-item';
-            // Added onclick to open detail view
-            el.onclick = function() { openChatDetail(chat.id); };
-            el.innerHTML = `
-                <div class="chat-avatar">${initial}</div>
-                <div style="flex:1">
-                    <div style="font-size:14px; font-weight:600; display:flex; justify-content:space-between;">
-                        ${chat.name} <span style="font-size:11px; font-weight:400; color:var(--text-secondary);">${chat.time}</span>
-                    </div>
-                    <div style="font-size:12px; color:var(--text-secondary);">${chat.msg}</div>
+    <div id="teamModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Team Sync</h3>
+                <div class="close-btn" onclick="closeModals()"><i class="ph-bold ph-x"></i></div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Add Member</label>
+                <input type="text" id="newMemberInput" class="input-field" placeholder="Email or Phone Number">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Assign to Team</label>
+                <div style="display:flex; gap:8px;">
+                    <select id="teamSelector" class="input-field" style="appearance:none; cursor:pointer;">
+                        <option value="" disabled selected>Select Team...</option>
+                    </select>
+                    <button class="btn-primary" style="width:auto; margin:0;" onclick="addMember()">Add</button>
                 </div>
-                <a href="memory_vault.html" class="vault-link-btn" title="Open Memory Vault" onclick="event.stopPropagation()">
-                    <i class="ph-bold ph-brain"></i>
-                </a>
-            `;
-            list.appendChild(el);
-        });
-    }
-
-    function openChatDetail(chatId) {
-        // Find chat info
-        const chat = CHATS.find(c => c.id == chatId);
-        if(!chat) return;
-
-        // Set Title
-        document.getElementById('chatDetailTitle').innerText = chat.name;
-
-        // Populate Messages
-        const msgList = document.getElementById('chatDetailMessages');
-        msgList.innerHTML = '';
-        
-        const msgs = MOCK_MESSAGES[chatId] || [];
-        
-        if (msgs.length === 0) {
-            msgList.innerHTML = `<div style="text-align:center; color:var(--text-secondary); font-size:12px; margin-top:20px;">No messages yet</div>`;
-        } else {
-            msgs.forEach(m => {
-                const isMe = m.sender === 'me';
-                const row = document.createElement('div');
-                row.className = `chat-bubble-row ${isMe ? 'me' : ''}`;
-                row.innerHTML = `
-                    <div class="chat-bubble ${isMe ? 'me' : 'them'}">
-                        ${!isMe ? `<div style="font-size:10px; opacity:0.7; margin-bottom:2px;">${m.sender}</div>` : ''}
-                        <div>${m.text}</div>
-                        <div class="msg-meta">${m.time}</div>
+            </div>
+            <div class="team-list" id="teamList">
+                <div class="team-member">
+                    <div class="member-info">
+                        <div class="member-avatar">A</div>
+                        <div>
+                            <span style="font-size:13px; font-weight:600; display:block;">Alice Design</span>
+                            <span style="font-size:10px; color:var(--text-secondary);">Design Team</span>
+                        </div>
                     </div>
-                `;
-                msgList.appendChild(row);
-            });
-        }
+                    <div style="font-size:10px; color:#10b981;">Online</div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-        // Switch View
-        document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-        document.getElementById('view-chat-detail').classList.add('active');
-    }
-
-    function closeChatDetail() {
-        switchView('teamchat');
-    }
-
-    // --- DOCS FUNCTIONS ---
-
-    function renderDocs(filterTag = 'all') {
-        const list = document.getElementById('docsList');
-        list.innerHTML = '';
-        const filtered = filterTag === 'all' ? DOCS : DOCS.filter(d => d.tag === filterTag);
-        if (filtered.length === 0) {
-            list.innerHTML = `
-                <div class="docs-empty">
-                    <div style="width:60px; height:80px; border:2px dashed var(--text-secondary); border-radius:8px; display:flex; align-items:center; justify-content:center;">
-                        <i class="ph-duotone ph-file-text docs-icon" style="font-size:32px; opacity:0.5; background:transparent;"></i>
+    <div id="newTeamWizard" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="wizTitle">Create New Team</h3>
+                <div class="close-btn" onclick="closeModals()"><i class="ph-bold ph-x"></i></div>
+            </div>
+            <div class="step-indicator">
+                <div class="step-dot active" id="dot1"></div>
+                <div class="step-dot" id="dot2"></div>
+                <div class="step-dot" id="dot3"></div>
+            </div>
+            <div id="wizStep1" class="wizard-step active">
+                <div style="text-align:center; margin-bottom:20px;">
+                    <div
+                        style="width:60px; height:60px; background:rgba(16,185,129,0.1); border-radius:50%; margin:0 auto 10px; display:flex; align-items:center; justify-content:center; color:#10b981; font-size:24px;">
+                        <i class="ph-bold ph-users-three"></i>
                     </div>
-                    <div>
-                        <div style="font-weight:600; margin-bottom:4px;">No files found</div>
-                        <div style="font-size:12px;">Create a new document to get started</div>
+                    <h4 style="margin-bottom:4px;">Who's in?</h4>
+                    <p style="font-size:12px; color:#888;">Add members by email or phone.</p>
+                </div>
+                <div class="form-group">
+                    <input type="text" id="wizMemberInput" class="input-field" placeholder="colleague@kairos.ai">
+                </div>
+                <div class="team-list" id="wizMemberList"
+                    style="max-height:100px; overflow-y:auto; margin-bottom:16px;"></div>
+                <button class="btn-primary" onclick="wizAddMember()"
+                    style="background:var(--surface-hover); color:var(--text-primary); margin-bottom:12px;">+ Add to
+                    list</button>
+                <button class="btn-primary" onclick="nextWizardStep(2)">Next: Team Details</button>
+            </div>
+            <div id="wizStep2" class="wizard-step">
+                <div style="text-align:center; margin-bottom:20px;">
+                    <div
+                        style="width:60px; height:60px; background:rgba(16,185,129,0.1); border-radius:50%; margin:0 auto 10px; display:flex; align-items:center; justify-content:center; color:#10b981; font-size:24px;">
+                        <i class="ph-bold ph-identification-card"></i>
                     </div>
-                </div>`;
-            return;
-        }
-        filtered.forEach(doc => {
-            const el = document.createElement('div');
-            el.className = 'doc-item';
-            el.innerHTML = `
-                <div class="doc-info">
-                    <div class="doc-icon"><i class="ph-bold ph-file-text"></i></div>
-                    <div>
-                        <div style="font-size:13px; font-weight:600;">${doc.name}</div>
-                        <div style="font-size:11px; color:var(--text-secondary);">${doc.date}</div>
+                    <h4 style="margin-bottom:4px;">Identity</h4>
+                    <p style="font-size:12px; color:#888;">Name your squad.</p>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Team Name</label>
+                    <input type="text" id="wizTeamName" class="input-field" placeholder="e.g. Q1 Marketing">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <input type="text" id="wizTeamDesc" class="input-field" placeholder="Project goals...">
+                </div>
+                <button class="btn-primary" onclick="nextWizardStep(3)">Next: Kickoff</button>
+            </div>
+            <div id="wizStep3" class="wizard-step">
+                <div style="text-align:center; margin-bottom:20px;">
+                    <div
+                        style="width:60px; height:60px; background:rgba(16,185,129,0.1); border-radius:50%; margin:0 auto 10px; display:flex; align-items:center; justify-content:center; color:#10b981; font-size:24px;">
+                        <i class="ph-bold ph-rocket-launch"></i>
+                    </div>
+                    <h4 style="margin-bottom:4px;">Launch It</h4>
+                    <p style="font-size:12px; color:#888;">Schedule the kickoff meeting.</p>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Kickoff Date</label>
+                    <div class="date-row">
+                        <input type="date" id="wizDate" class="input-field">
+                        <input type="time" id="wizTime" class="input-field" value="09:00">
                     </div>
                 </div>
-                <i class="ph-bold ph-dots-three-vertical" style="color:var(--text-secondary)"></i>
-            `;
-            list.appendChild(el);
-        });
-    }
+                <button class="btn-primary" onclick="finishWizard()">
+                    Create Team & Schedule <i class="ph-bold ph-check"></i>
+                </button>
+            </div>
+        </div>
+    </div>
 
-    function filterDocs(tag, btn) {
-        document.querySelectorAll('#view-docs .pill-nav').forEach(p => p.classList.remove('active', 'accent-pill'));
-        btn.classList.add('active', 'accent-pill');
-        renderDocs(tag);
-    }
+    <div id="profileModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Benedict Profile</h3>
+                <div class="close-btn" onclick="closeModals()"><i class="ph-bold ph-x"></i></div>
+            </div>
+            <div class="profile-swipe-container">
+                <div class="profile-card-page">
+                    <div style="text-align:center; margin-bottom:12px;">
+                        <div id="profilePreview" onclick="document.getElementById('dash_avatar_input').click()"
+                            style="width:80px; height:80px; background:#333; border-radius:24px; margin:0 auto 10px; display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative; cursor:pointer;">
+                            <span id="profileInitials" style="font-size:24px; font-weight:700; color:#888;">BA</span>
+                            <img id="dashAvatarImg" src=""
+                                style="width:100%; height:100%; object-fit:cover; display:none;">
+                            <div
+                                style="position:absolute; bottom:0; width:100%; padding:4px; background:rgba(0,0,0,0.5); font-size:9px; color:#fff;">
+                                EDIT</div>
+                        </div>
+                        <input type="file" id="dash_avatar_input" accept="image/*" style="display:none;"
+                            onchange="handleDashAvatar(this)">
+                        <input type="text" id="displayProfName" value="Benedict Adurosakin"
+                            style="font-size:18px; margin-bottom:4px; background:transparent; border:none; color:var(--text-primary); text-align:center; width:100%; font-weight:700;">
+                        <div style="display:flex; align-items:center; justify-content:center; gap:8px;">
+                            <span style="width:8px; height:8px; background:#10b981; border-radius:50%;"></span>
+                            <input type="text" id="displayJobTitle" value="Clinical Informatics Nurse"
+                                style="font-size:12px; color:var(--text-secondary); background:transparent; border:none; text-align:center; width:200px;">
+                        </div>
+                    </div>
 
-    // NEW FUNCTION: Open the Custom Modal instead of Prompt
-    function createNewDoc() {
-        document.getElementById('newDocInput').value = '';
-        closeModals();
-        setTimeout(() => document.getElementById('newDocModal').classList.add('active'), 100);
-    }
+                    <!-- EDITABLE FIELDS -->
+                    <style>
+                        .prof-input {
+                            width: 100%;
+                            background: transparent;
+                            border: none;
+                            color: var(--text-primary);
+                            text-align: right;
+                            font-size: 13px;
+                            outline: none;
+                            border-bottom: 1px solid transparent;
+                        }
 
-    // NEW FUNCTION: Logic to Save
-    function saveNewDoc() {
-        const name = document.getElementById('newDocInput').value;
-        if(name) {
-            DOCS.unshift({ name: name + (name.includes('.') ? '' : '.txt'), type: "text", date: "Just now", tag: "recent" });
-            renderDocs('recent');
-            document.querySelectorAll('#view-docs .pill-nav').forEach(p => p.classList.remove('active', 'accent-pill'));
-            document.querySelectorAll('#view-docs .pill-nav')[1].classList.add('active', 'accent-pill'); 
-            showToast('Document Created');
-            closeModals();
-        }
-    }
+                        .prof-input:focus {
+                            border-bottom: 1px solid var(--accent);
+                        }
+                    </style>
 
-    function initiateCall(type) {
-        document.getElementById('startCallContent').style.display = 'none';
-        document.getElementById('preCallLoader').style.display = 'block';
-        document.getElementById('connText').innerText = `Securing ${type} channel...`;
-        setTimeout(() => {
-            window.location.href = 'meeting_room.html';
-            closeModals();
-            showToast('Redirecting to call...');
-        }, 2000);
-    }
+                    <div class="profile-list-item">
+                        <span class="profile-label">Role</span>
+                        <!-- This is duplicative of Job Title usually, but let's keep as user requested separate fields or just sync -->
+                        <!-- User asked for Job Title input in Sign Up. Let's map that here as well. -->
+                        <div class="profile-val" style="flex:1;"><input type="text" class="prof-input" id="pf_role"
+                                placeholder="Detailed Role"></div>
+                    </div>
+                    <div class="profile-list-item">
+                        <span class="profile-label">Location</span>
+                        <div class="profile-val" style="flex:1;"><input type="text" class="prof-input" id="pf_loc"
+                                placeholder="City, Country"></div>
+                    </div>
+                    <div class="profile-list-item" style="border-bottom:none;">
+                        <span class="profile-label">Projects</span>
+                        <div class="profile-val" style="flex:1;"><input type="text" class="prof-input" id="pf_proj"
+                                placeholder="Current Projects"></div>
+                    </div>
+                    <div style="text-align:center; margin-top:auto; color:#888; font-size:10px;">
+                        <i class="ph-bold ph-arrow-right"></i> Swipe for Contact
+                    </div>
+                </div>
+                <div class="profile-card-page">
+                    <div
+                        style="font-size:14px; font-weight:700; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:8px;">
+                        Contact Details</div>
+                    <div class="profile-list-item">
+                        <span class="profile-label">Email</span>
+                        <div class="profile-val" style="flex:1;"><input type="text" class="prof-input" id="pf_email">
+                        </div>
+                    </div>
+                    <div class="profile-list-item">
+                        <span class="profile-label">Phone</span>
+                        <div class="profile-val" style="flex:1;"><input type="text" class="prof-input" id="pf_phone"
+                                placeholder="+00-000-000-0000"></div>
+                    </div>
+                    <div class="profile-list-item">
+                        <span class="profile-label">Links</span>
+                        <div class="profile-val" style="flex:1;"><input type="text" class="prof-input" id="pf_links"
+                                placeholder="linktr.ee/..."></div>
+                    </div>
+                    <div class="profile-list-item">
+                        <span class="profile-label">Alias</span>
+                        <div class="profile-val" style="flex:1;"><input type="text" class="prof-input" id="pf_alias"
+                                placeholder="@alias"></div>
+                    </div>
 
-    function openScheduleModal(evtId = null) {
-        closeModals(); 
-        setTimeout(() => {
-            const modal = document.getElementById('scheduleModal');
-            const title = document.getElementById('schedModalTitle');
-            const btn = document.getElementById('schedBtnText');
-            const now = getTodayString();
-            document.getElementById('schedStartDate').value = now;
-            document.getElementById('schedEndDate').value = now;
-            document.getElementById('schedStartTime').value = "10:00";
-            document.getElementById('schedEndTime').value = "11:00";
-            if (evtId) {
-                editingEventId = evtId;
-                const ev = events.find(e => e.id === evtId);
-                if (ev) {
-                    title.innerText = "Edit Event";
-                    btn.innerText = "Update";
-                    document.getElementById('schedName').value = ev.title;
-                    document.getElementById('schedStartDate').value = ev.start;
-                    document.getElementById('schedStartTime').value = ev.startTime;
-                    document.getElementById('schedEndDate').value = ev.end || ev.start;
-                    document.getElementById('schedEndTime').value = ev.endTime || "11:00";
+                    <button class="btn-primary" onclick="saveDashboardProfile()"
+                        style="margin-top:20px; font-size:12px;">Save Changes</button>
+
+                    <div style="background:#1a1a1a; padding:12px; border-radius:12px; display:flex; justify-content:space-between; align-items:center; margin-top:16px; border:1px solid var(--border); cursor:pointer;"
+                        onclick="showToast('Link Copied')">
+                        <span class="profile-label" style="font-size:11px;">Copy direct chat link</span>
+                        <i class="ph-bold ph-copy" style="color:#888;"></i>
+                    </div>
+                </div>
+                <div class="profile-card-page">
+                    <div
+                        style="font-size:14px; font-weight:700; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:8px;">
+                        App Settings</div>
+
+                    <!-- THEME TOGGLE -->
+                    <div class="profile-list-item" onclick="toggleTheme()">
+                        <span class="profile-label">Theme</span>
+                        <div class="profile-val">Toggle <i class="ph-bold ph-moon" id="profThemeIcon"></i></div>
+                    </div>
+
+                    <!-- NOTIFICATIONS -->
+                    <div class="profile-list-item">
+                        <span class="profile-label">Notifications</span>
+                        <div class="profile-val" onclick="toggleSetting('notify')">
+                            <span id="set_notify_text">On</span>
+                            <i class="ph-bold ph-toggle-right" id="set_notify_icon"
+                                style="color:#10b981; font-size:16px; vertical-align:middle; margin-left:4px;"></i>
+                        </div>
+                    </div>
+
+                    <!-- REMINDERS -->
+                    <div class="profile-list-item">
+                        <span class="profile-label">Meeting Reminders</span>
+                        <div class="profile-val">
+                            <select id="pf_reminders" onchange="saveSetting('reminders', this.value)"
+                                style="background:transparent; border:none; color:var(--text-secondary); text-align:right; outline:none;">
+                                <option value="5 mins">5 mins before</option>
+                                <option value="15 mins">15 mins before</option>
+                                <option value="30 mins">30 mins before</option>
+                                <option value="Off">Off</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button style="margin-top:auto; color:#ef4444; font-size:12px; font-weight:600;"
+                        onclick="signOut()">Sign Out</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/dashboard.js"></script>
+
+    <script type="module" defer>
+        import Chatbot from "https://cdn.n8nchatui.com/v1/embed.js";
+
+        Chatbot.init({
+            "n8nChatUrl": "https://ciroma.app.n8n.cloud/webhook/058f5cca-0b25-4ef1-ae1a-6ce8b48d6450/chat",
+            "metadata": {},
+            "theme": {
+                "button": {
+                    "backgroundColor": "#ffffff",
+                    "right": 20,
+                    "bottom": 20,
+                    "size": 56,
+                    "iconColor": "#000000",
+                    "customIconSrc": "https://www.svgrepo.com/show/529481/chat-round-dots.svg",
+                    "customIconSize": 28,
+                    "borderRadius": "50",
+                    "autoWindowOpen": {
+                        "autoOpen": false,
+                        "openDelay": 2
+                    }
+                },
+                "tooltip": {
+                    "showTooltip": true,
+                    "tooltipMessage": "KAIROS AI",
+                    "tooltipBackgroundColor": "#111",
+                    "tooltipTextColor": "#fff",
+                    "tooltipFontSize": 12
+                },
+                "chatWindow": {
+                    "showTitle": true,
+                    "title": "KAIROS AI",
+                    "titleAvatarSrc": "https://www.svgrepo.com/show/529481/chat-round-dots.svg",
+                    "welcomeMessage": "Hello! I can help you schedule meetings or analyze documents.",
+                    "errorMessage": "Connection interrupted.",
+                    "backgroundColor": "#050505",
+                    "height": 600,
+                    "width": 380,
+                    "fontSize": 14,
+                    "renderHTML": true,
+                    "botMessage": {
+                        "backgroundColor": "#262626",
+                        "textColor": "#e5e7eb",
+                        "showAvatar": true,
+                        "avatarSrc": "https://www.svgrepo.com/show/529481/chat-round-dots.svg"
+                    },
+                    "userMessage": {
+                        "backgroundColor": "#ffffff",
+                        "textColor": "#000000",
+                        "showAvatar": false
+                    },
+                    "textInput": {
+                        "placeholder": "Type your command...",
+                        "backgroundColor": "#1a1a1a",
+                        "textColor": "#ffffff",
+                        "sendButtonColor": "#ffffff",
+                        "maxChars": 200,
+                        "borderRadius": 20,
+                        "sendButtonBorderRadius": 20
+                    },
+                    "uploadsConfig": {
+                        "enabled": true,
+                        "maxFiles": 5,
+                        "maxSizeInMB": 10
+                    }
                 }
-            } else {
-                editingEventId = null;
-                title.innerText = "Schedule meeting";
-                btn.innerText = "Schedule";
-                document.getElementById('schedName').value = "";
             }
-            modal.classList.add('active');
-        }, 100);
-    }
-
-    function saveEvent() {
-        const name = document.getElementById('schedName').value || "New Meeting";
-        const startD = document.getElementById('schedStartDate').value;
-        const startT = document.getElementById('schedStartTime').value;
-        const endD = document.getElementById('schedEndDate').value;
-        const endT = document.getElementById('schedEndTime').value;
-        if (editingEventId) {
-            const index = events.findIndex(e => e.id === editingEventId);
-            if (index !== -1) {
-                events[index] = { ...events[index], title: name, start: startD, startTime: startT, end: endD, endTime: endT };
-                showToast('Event Updated');
-            }
-        } else {
-            events.push({
-                id: Date.now(),
-                title: name,
-                start: startD, startTime: startT, end: endD, endTime: endT,
-                type: "Kairos Video", color: "#10b981"
-            });
-            showToast('Event Scheduled');
-        }
-        localStorage.setItem('kairosEvents', JSON.stringify(events));
-        closeModals();
-        renderAgenda();
-        renderCal();
-    }
-
-    function addMember() {
-        const val = document.getElementById('newMemberInput').value;
-        const team = document.getElementById('teamSelector').value;
-        if(!val) { showToast('Please enter details'); return; }
-        if(!team) { showToast('Please select a team'); return; }
-        const list = document.getElementById('teamList');
-        const el = document.createElement('div');
-        el.className = 'team-member';
-        el.innerHTML = `<div class="member-info"><div class="member-avatar">${val.charAt(0).toUpperCase()}</div><div><span style="font-size:13px; font-weight:600; display:block;">${val}</span><span style="font-size:10px; color:var(--text-secondary);">${team}</span></div></div><div style="font-size:10px; color:#10b981;">Invited</div>`;
-        list.appendChild(el);
-        document.getElementById('newMemberInput').value = "";
-        document.getElementById('teamSelector').selectedIndex = 0;
-        showToast(`Invited to ${team}`);
-    }
-
-    function pressKey(key) {
-        const display = document.getElementById('dialDisplay');
-        if(key === 'del') display.innerText = display.innerText.slice(0, -1);
-        else if(display.innerText.length < 12) display.innerText += key;
-    }
-
-    let linkType = 'video';
-    function toggleLinkType(type) {
-        linkType = type;
-        document.getElementById('btnVideo').className = `av-btn ${type === 'video' ? 'active' : ''}`;
-        document.getElementById('btnAudio').className = `av-btn ${type === 'audio' ? 'active' : ''}`;
-        document.getElementById('callLink').innerText = `https://call.kairos.ai/${type}/bSecFu${Math.floor(Math.random()*1000)}`;
-    }
-
-    function copyLink() {
-        navigator.clipboard.writeText(document.getElementById('callLink').innerText);
-        showToast('Link copied to clipboard');
-    }
-
-    function sendToWhatsapp() {
-        const link = document.getElementById('callLink').innerText;
-        const msg = `Join my KAIROS ${linkType} meeting: ${link}`;
-        window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
-    }
-
-    function renderAgenda() {
-        const list = document.getElementById('agendaList');
-        if(!list) return;
-        list.innerHTML = '';
-        const today = getTodayString();
-        const todaysEvents = events.filter(e => e.start === today).sort((a,b) => a.startTime.localeCompare(b.startTime));
-        if(todaysEvents.length === 0) {
-            list.innerHTML = `<div style="text-align:center; color:var(--text-secondary); margin-top:20px; font-size:12px;">No events today</div>`;
-            return;
-        }
-        todaysEvents.forEach(ev => {
-            const el = document.createElement('div');
-            el.className = 'agenda-item';
-            el.onclick = () => openScheduleModal(ev.id);
-            el.innerHTML = `<div class="agenda-time">${ev.startTime}</div><div class="agenda-details"><h4>${ev.title}</h4><p>${ev.type} • Edit</p></div>`;
-            list.appendChild(el);
         });
-    }
-
-    let currentMonth = new Date().getMonth();
-    function renderCal() {
-        const grid = document.getElementById('calendarGrid');
-        grid.innerHTML = '';
-        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-        document.getElementById('calMonth').innerText = monthNames[currentMonth];
-        ['S', 'M', 'T', 'W', 'T', 'F', 'S'].forEach(d => {
-            const el = document.createElement('div'); el.className='day-name'; el.innerText=d; grid.appendChild(el);
-        });
-        const currentYear = new Date().getFullYear();
-        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-        const startDay = new Date(currentYear, currentMonth, 1).getDay();
-        for(let i=0; i<startDay; i++) { const el = document.createElement('div'); el.className='day-cell faded'; grid.appendChild(el); }
-        for(let i=1; i<=daysInMonth; i++) {
-            const el = document.createElement('div');
-            const isToday = (i === new Date().getDate() && currentMonth === new Date().getMonth() && currentYear === new Date().getFullYear());
-            el.className = `day-cell ${isToday ? 'today' : ''}`;
-            el.innerHTML = `<div>${i}</div>`;
-            const dayString = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
-            events.filter(e => e.start === dayString).forEach(ev => {
-                const chip = document.createElement('div');
-                chip.className = 'event-chip';
-                chip.style.backgroundColor = ev.color + '33'; chip.style.color = ev.color;
-                chip.innerText = ev.title; el.appendChild(chip);
-            });
-            grid.appendChild(el);
-        }
-    }
-    function changeMonth(d) { currentMonth += d; if(currentMonth > 11) currentMonth = 0; if(currentMonth < 0) currentMonth = 11; renderCal(); }
-
-    function updateTime() {
-        const now = new Date();
-        document.getElementById('clock').innerText = now.toLocaleTimeString('en-GB', {hour: '2-digit', minute:'2-digit'});
-        document.getElementById('date').innerText = now.toLocaleDateString('en-US', {weekday:'long', day:'numeric', month:'long'});
-        const format = (tz) => new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit' }).format(now);
-        document.getElementById('time-lagos').innerText = format('Africa/Lagos');
-        document.getElementById('time-ldn').innerText = format('Europe/London');
-    }
-    
-    setInterval(updateTime, 1000);
-    updateTime();
-    renderCal();
-    renderAgenda();
-    renderChatList();
-    renderDocs();
-
-    function initCalendarAuth() {
-        const btn = event.currentTarget;
-        if(!localStorage.getItem('googleConnected')) {
-            btn.innerHTML = `<i class="ph-bold ph-spinner ph-spin"></i> Connecting...`;
-            setTimeout(() => {
-                localStorage.setItem('googleConnected', 'true');
-                btn.innerHTML = `<i class="ph-bold ph-check-circle" style="color:#10b981"></i> Connected`;
-                showToast('Google Account Linked');
-            }, 1500);
-        } else {
-            showToast('Account already synced');
-        }
-    }
-</script>
-
-<script type="module" defer>
-  import Chatbot from "https://cdn.n8nchatui.com/v1/embed.js";
-
-  Chatbot.init({
-    "n8nChatUrl": "https://ciroma.app.n8n.cloud/webhook/058f5cca-0b25-4ef1-ae1a-6ce8b48d6450/chat",
-    "metadata": {},
-    "theme": {
-      "button": {
-        "backgroundColor": "#ffffff",
-        "right": 20,
-        "bottom": 20,
-        "size": 56,
-        "iconColor": "#000000",
-        "customIconSrc": "https://www.svgrepo.com/show/529481/chat-round-dots.svg",
-        "customIconSize": 28,
-        "borderRadius": "50",
-        "autoWindowOpen": {
-          "autoOpen": false,
-          "openDelay": 2
-        }
-      },
-      "tooltip": {
-        "showTooltip": true,
-        "tooltipMessage": "KAIROS AI",
-        "tooltipBackgroundColor": "#111",
-        "tooltipTextColor": "#fff",
-        "tooltipFontSize": 12
-      },
-      "chatWindow": {
-        "showTitle": true,
-        "title": "KAIROS AI",
-        "titleAvatarSrc": "https://www.svgrepo.com/show/529481/chat-round-dots.svg",
-        "welcomeMessage": "Hello! I can help you schedule meetings or analyze documents.",
-        "errorMessage": "Connection interrupted.",
-        "backgroundColor": "#050505", 
-        "height": 600,
-        "width": 380,
-        "fontSize": 14,
-        "renderHTML": true,
-        "botMessage": {
-          "backgroundColor": "#262626", 
-          "textColor": "#e5e7eb",
-          "showAvatar": true,
-          "avatarSrc": "https://www.svgrepo.com/show/529481/chat-round-dots.svg"
-        },
-        "userMessage": {
-          "backgroundColor": "#ffffff", 
-          "textColor": "#000000",
-          "showAvatar": false
-        },
-        "textInput": {
-          "placeholder": "Type your command...",
-          "backgroundColor": "#1a1a1a",
-          "textColor": "#ffffff",
-          "sendButtonColor": "#ffffff",
-          "maxChars": 200,
-          "borderRadius": 20, 
-          "sendButtonBorderRadius": 20
-        },
-        "uploadsConfig": {
-          "enabled": true,
-          "maxFiles": 5,
-          "maxSizeInMB": 10
-        }
-      }
-    }
-    });
-</script>
+    </script>
+    <script src="js/dashboard.js"></script>
 </body>
+
 </html>
+<script>
+    function handleDashAvatar(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const base64 = e.target.result;
+                localStorage.setItem('kairos_avatar', base64);
+                const img = document.getElementById('dashAvatarImg');
+                if (img) {
+                    img.src = base64;
+                    img.style.display = 'block';
+                    const ini = document.getElementById('profileInitials');
+                    if (ini) ini.style.display = 'none';
+                }
+                const dock = document.getElementById('dockAvatar');
+                if (dock) dock.innerHTML = `<img src='${base64}' style='width:100%; height:100%; object-fit:cover;'>`;
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+</script>

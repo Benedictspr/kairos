@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <script src="js/auth-guard.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KAIROS | Team Sync</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="css/dashboard.css">
+    <script src="js/components.js"></script>
+    <script>
+        const savedTheme = localStorage.getItem('kairosTheme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderSidebar('teamsync');
+        });
+
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const newTheme = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('kairosTheme', newTheme);
+            updateLogoTheme();
+        }
+    </script>
+    <style>
+        .container-content {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+
+    <div id="sidebar-container"></div>
+
+    <main id="main">
+        <div class="view-section active">
+            <div class="view-header">
+                <div class="view-title">Team Sync</div>
+                <button class="btn-primary" style="width: auto; padding: 8px 16px;">
+                    <i class="ph-bold ph-plus"></i> New Team
+                </button>
+            </div>
+
+            <div class="container-content">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Manage Members</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Add Member</label>
+                        <div style="display:flex; gap:10px;">
+                            <input type="text" id="newMemberInput" class="input-field"
+                                placeholder="Email or Phone Number">
+                            <button class="btn-primary" style="width:auto; margin:0;"
+                                onclick="addMember()">Invite</button>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:20px;">
+                        <label class="form-label">Current Members</label>
+                        <div class="team-list" id="teamList">
+                            <div class="team-member">
+                                <div class="member-info">
+                                    <div class="member-avatar">A</div>
+                                    <div>
+                                        <span style="font-size:13px; font-weight:600; display:block;">Alice
+                                            Design</span>
+                                        <span style="font-size:10px; color:var(--text-secondary);">Design Team •
+                                            Admin</span>
+                                    </div>
+                                </div>
+                                <div style="font-size:10px; color:#10b981;">Online</div>
+                            </div>
+                            <div class="team-member">
+                                <div class="member-info">
+                                    <div class="member-avatar" style="background: #3b82f6;">B</div>
+                                    <div>
+                                        <span style="font-size:13px; font-weight:600; display:block;">Bob
+                                            Engineer</span>
+                                        <span style="font-size:10px; color:var(--text-secondary);">Engineering</span>
+                                    </div>
+                                </div>
+                                <div style="font-size:10px; color:var(--text-secondary);">Offline</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top:20px;">
+                    <div class="card-header">
+                        <div class="card-title">Teams Structure</div>
+                    </div>
+                    <div style="padding:16px;">
+                        <p style="font-size:13px; color:var(--text-secondary);">Organization hierarchy visualisation
+                            coming soon.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function openProfileModal() {
+            window.location.href = 'index.html?openProfile=true';
+        }
+        function addMember() {
+            alert('Invite sent!');
+        }
+    </script>
+</body>
+
+</html>

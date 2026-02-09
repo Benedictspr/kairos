@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile | KAIROS</title>
+    <script>
+        (function () {
+            const saved = localStorage.getItem('kairosTheme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+        })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="css/dashboard.css">
+
+    <style>
+        body {
+            /* display: flex; REMOVED to allow sidebar to stretch naturally */
+            /* align-items: center; REMOVED */
+            /* justify-content: center; REMOVED */
+            height: 100vh;
+            overflow: hidden;
+            /* Prevent body scroll */
+            background-color: var(--bg-main);
+            /* Ash in Light Mode */
+        }
+
+        /* Overlay REMOVED for clean light mode */
+
+        #main {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            flex: 1;
+            /* Takes up remaining space next to sidebar */
+        }
+
+        .profile-val {
+            color: var(--text-primary);
+            /* Ensure text is visible in Light Mode */
+        }
+
+        /* The Card */
+        .profile-page-card {
+            background: var(--bg-panel);
+            /* White in Light Mode */
+            width: 100%;
+            max-width: 400px;
+            /* Reverted to 400px */
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+            /* Stronger shadow for lift */
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            height: 700px;
+            /* Slightly taller to fit content */
+            max-height: 90vh;
+            position: relative;
+        }
+
+        .modal-header {
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-panel);
+            z-index: 10;
+        }
+
+        .modal-header h3 {
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        /* Swipe Container */
+        .profile-swipe-container {
+            display: flex;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            height: 100%;
+            scrollbar-width: none;
+            flex: 1;
+            /* Take remaining height */
+        }
+
+        .profile-swipe-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        .profile-card-page {
+            min-width: 100%;
+            scroll-snap-align: center;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        /* Avatar Edit Overlay */
+        .avatar-edit-overlay {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            padding: 4px;
+            background: rgba(0, 0, 0, 0.6);
+            font-size: 9px;
+            color: #fff;
+            text-align: center;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        /* Inputs & Lists */
+        .profile-list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .profile-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            /* Text secondary for label */
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .prof-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            text-align: right;
+            font-size: 14px;
+            font-weight: 500;
+            outline: none;
+        }
+
+        .prof-input::placeholder {
+            color: var(--text-secondary);
+            opacity: 0.5;
+        }
+
+        .btn-primary {
+            background: var(--text-primary);
+            /* Contrast button */
+            color: var(--bg-main);
+            padding: 14px;
+            border-radius: 12px;
+            font-weight: 600;
+            margin-top: 16px;
+            text-align: center;
+            cursor: pointer;
+            border: none;
+            width: 100%;
+            font-size: 13px;
+        }
+
+        /* Swipe visual hint */
+        .swipe-hint {
+            text-align: center;
+            margin-top: auto;
+            color: var(--text-secondary);
+            font-size: 11px;
+            padding-top: 24px;
+            opacity: 0.7;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        /* Access Notification Banner */
+        .notification-banner {
+            position: fixed;
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            padding: 16px 24px;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            min-width: 300px;
+        }
+
+        .notif-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--accent-glow);
+            color: var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+    </style>
+    <script src="js/components.js"></script>
+</head>
+
+<body>
+    <div id="sidebar-container"></div>
+
+    <!-- Notification Dropdown -->
+    <div id="notification-banner" class="notification-banner">
+        <div style="display:flex; align-items:center; gap:12px;">
+            <div class="notif-icon"><i class="ph-fill ph-check-circle"></i></div>
+            <div>
+                <div id="notif-title" style="font-weight:600; font-size:14px;">Saved</div>
+                <div id="notif-msg" style="font-size:12px; opacity:0.8;">Changes updated successfully</div>
+            </div>
+        </div>
+    </div>
+
+    <main id="main">
+        <div class="profile-page-card">
+            <!-- Header for context, includes back button -->
+            <div class="modal-header">
+                <h3>Profile</h3>
+                <div class="close-btn" onclick="window.location.href='settings.html'" style="cursor:pointer;">
+                    <i class="ph-bold ph-x" style="font-size:18px; color:var(--text-secondary);"></i>
+                </div>
+            </div>
+
+            <div class="profile-swipe-container">
+                <!-- Page 1: Identity -->
+                <div class="profile-card-page">
+                    <div style="text-align:center; margin-bottom:20px;">
+                        <div id="profilePreview" onclick="document.getElementById('dash_avatar_input').click()"
+                            style="width:96px; height:96px; background:var(--surface-hover); border-radius:28px; margin:0 auto 12px; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; cursor:pointer;">
+                            <span id="profileInitials"
+                                style="font-size:32px; font-weight:700; color:var(--text-secondary);">BA</span>
+                            <img id="dashAvatarImg" src=""
+                                style="width:100%; height:100%; object-fit:cover; display:none;">
+                            <div class="avatar-edit-overlay">EDIT</div>
+                        </div>
+                        <input type="file" id="dash_avatar_input" hidden accept="image/*"
+                            onchange="handleProfileAvatar(this)">
+                        <h3 id="displayProfName" style="margin:0; font-size:20px;">Benedict Adurosakin</h3>
+                        <div style="font-size:13px; color:var(--text-secondary); margin-top:6px; font-weight:500;">
+                            <span
+                                style="display:inline-block; width:8px; height:8px; background:#10b981; border-radius:50%; margin-right:6px;"></span>
+                            <span id="displayJobTitle">Clinical Informatics Nurse</span>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:10px;">
+                        <div class="profile-list-item">
+                            <span class="profile-label">Role</span>
+                            <div class="profile-val" style="flex:1;"><input type="text" class="prof-input" id="pf_role"
+                                    placeholder="Detailed Role"></div>
+                        </div>
+                        <div class="profile-list-item">
+                            <span class="profile-label">Location</span>
+                            <div class="profile-val" style="flex:1;"><input type="text" class="prof-input" id="pf_loc"
+                                    placeholder="City, Country"></div>
+                        </div>
+                        <div class="profile-list-item" style="border-bottom:none;">
+                            <span class="profile-label">Projects</span>
+                            <div class="profile-val" style="flex:1;"><input type="text" class="prof-input" id="pf_proj"
+                                    placeholder="Current Projects"></div>
+                        </div>
+                    </div>
+
+                    <div class="swipe-hint">
+                        <i class="ph-bold ph-arrow-right"></i> Swipe for Contact
+                    </div>
+                </div>
+
+                <!-- Page 2: Contact -->
+                <div class="profile-card-page">
+                    <div
+                        style="font-size:14px; font-weight:700; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:12px; color:var(--text-primary);">
+                        Contact Details
+                    </div>
+
+                    <div class="profile-list-item">
+                        <span class="profile-label">Email</span>
+                        <div class="profile-val" style="flex:1;"><input type="text" class="prof-input"
+                                id="pf_email_input"></div>
+                    </div>
+                    <div class="profile-list-item">
+                        <span class="profile-label">Phone</span>
+                        <div class="profile-val" style="flex:1;"><input type="text" class="prof-input" id="pf_phone"
+                                placeholder="+00-000-000-0000"></div>
+                    </div>
+                    <div class="profile-list-item">
+                        <span class="profile-label">Links</span>
+                        <div class="profile-val" style="flex:1;"><input type="text" class="prof-input" id="pf_links"
+                                placeholder="linktr.ee/..."></div>
+                    </div>
+                    <div class="profile-list-item">
+                        <span class="profile-label">Alias</span>
+                        <div class="profile-val" style="flex:1;"><input type="text" class="prof-input" id="pf_alias"
+                                placeholder="@alias"></div>
+                    </div>
+
+                    <button class="btn-primary" onclick="saveProfile()">Save Changes</button>
+
+                    <div style="background:var(--surface-hover); padding:14px; border-radius:12px; display:flex; justify-content:space-between; align-items:center; margin-top:20px; border:1px solid var(--border); cursor:pointer;"
+                        onclick="showToast('Link Copied')">
+                        <span class="profile-label"
+                            style="font-size:11px; color:var(--text-secondary); border:none;">Copy direct chat
+                            link</span>
+                        <i class="ph-bold ph-copy" style="color:var(--text-secondary);"></i>
+                    </div>
+
+                    <div class="swipe-hint">
+                        <i class="ph-bold ph-arrow-right"></i> Settings
+                    </div>
+                </div>
+
+                <!-- Page 3: App Settings (Restored) -->
+                <div class="profile-card-page">
+                    <div
+                        style="font-size:14px; font-weight:700; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:12px; color:var(--text-primary);">
+                        App Settings
+                    </div>
+
+                    <!-- THEME TOGGLE -->
+                    <div class="profile-list-item" onclick="toggleTheme()">
+                        <span class="profile-label">Theme</span>
+                        <div class="profile-val">Toggle <i class="ph-bold ph-moon" id="profThemeIcon"></i></div>
+                    </div>
+
+                    <!-- NOTIFICATIONS -->
+                    <div class="profile-list-item" onclick="toggleNotifications()" style="cursor:pointer;">
+                        <span class="profile-label">Notifications</span>
+                        <div class="profile-val">
+                            <span id="set_notify_text" style="margin-right:8px;">On</span>
+                            <i id="notify_icon" class="ph-fill ph-toggle-right"
+                                style="color:var(--accent); font-size:24px;"></i>
+                        </div>
+                    </div>
+
+                    <!-- REMINDERS -->
+                    <div class="profile-list-item">
+                        <span class="profile-label">Meeting Reminders</span>
+                        <div class="profile-val">
+                            <select id="pf_reminders"
+                                style="background:transparent; border:none; color:var(--text-secondary); text-align:right; outline:none; font-family:inherit; font-size:13px;">
+                                <option value="5 mins">5 mins before</option>
+                                <option value="15 mins">15 mins before</option>
+                                <option value="30 mins">30 mins before</option>
+                                <option value="Off">Off</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:24px; text-align:center; font-size:13px; color:#ef4444; cursor:pointer; font-weight:600;"
+                        onclick="signOut()">
+                        Sign Out
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <div id="toast"
+        style="position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:var(--text-primary); color:var(--bg-main); padding:10px 20px; border-radius:30px; font-size:13px; font-weight:600; opacity:0; pointer-events:none; transition:0.3s; z-index:100;">
+        Action Completed</div>
+
+    <script src="js/auth-guard.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            renderSidebar('profile');
+            loadProfileData();
+            updateThemeIcon();
+        });
+
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const target = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', target);
+            localStorage.setItem('kairosTheme', target);
+            updateThemeIcon();
+        }
+
+        function updateThemeIcon() {
+            const theme = document.documentElement.getAttribute('data-theme');
+            const icon = document.getElementById('profThemeIcon');
+            if (icon) icon.className = theme === 'dark' ? 'ph-bold ph-sun' : 'ph-bold ph-moon';
+        }
+
+        function loadProfileData() {
+            // Priority: LocalStorage Profile Data -> Login Data -> Defaults
+            const loginUser = localStorage.getItem('kairos_user') || 'Benedict';
+            const loginEmail = localStorage.getItem('kairos_email');
+            const loginJob = localStorage.getItem('kairos_job_title');
+            const loginAvatar = localStorage.getItem('kairos_avatar');
+
+            // 1. Avatar
+            const initials = loginUser.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+            document.getElementById('profileInitials').innerText = initials;
+
+            const avatarImg = document.getElementById('dashAvatarImg');
+            const initialsEl = document.getElementById('profileInitials');
+
+            if (loginAvatar) {
+                avatarImg.src = loginAvatar;
+                avatarImg.style.display = 'block';
+                initialsEl.style.display = 'none';
+            } else {
+                avatarImg.style.display = 'none';
+                initialsEl.style.display = 'block';
+            }
+
+            // 2. Main Name
+            document.getElementById('displayProfName').innerText = loginUser;
+
+            // 3. Load Saved Profile Data (Edits)
+            const data = JSON.parse(localStorage.getItem('kairosProfileData') || '{}');
+
+            // 4. Job Title (Login Data vs Saved Data)
+            document.getElementById('displayJobTitle').innerText = data.role || loginJob || 'Clinical Informatics Nurse';
+            // Also populate the input if it's empty but exists in login
+            if (!data.role && loginJob) document.getElementById('pf_role').value = loginJob;
+            else if (data.role) document.getElementById('pf_role').value = data.role;
+
+
+            // 5. Other Fields
+            if (data.location) document.getElementById('pf_loc').value = data.location;
+            if (data.projects) document.getElementById('pf_proj').value = data.projects;
+            if (data.phone) document.getElementById('pf_phone').value = data.phone;
+            if (data.links) document.getElementById('pf_links').value = data.links;
+            if (data.alias) document.getElementById('pf_alias').value = data.alias;
+
+            // 6. Email (Login Data vs Saved Data)
+            const defaultEmail = (loginUser.toLowerCase().replace(' ', '.') || 'benedict') + '@kairos.ai';
+            document.getElementById('pf_email_input').value = data.email || loginEmail || defaultEmail;
+
+            // 7. Settings
+            if (data.reminders) document.getElementById('pf_reminders').value = data.reminders;
+
+            // Notifications Logic
+            if (data.notifications !== undefined) {
+                const isOn = data.notifications;
+                updateNotificationUI(isOn);
+            }
+        }
+
+        function toggleNotifications() {
+            const textEl = document.getElementById('set_notify_text');
+            const isOn = textEl.innerText === 'On';
+            updateNotificationUI(!isOn);
+        }
+
+        function updateNotificationUI(isOn) {
+            const textEl = document.getElementById('set_notify_text');
+            const iconEl = document.getElementById('notify_icon');
+
+            if (isOn) {
+                textEl.innerText = 'On';
+                iconEl.className = 'ph-fill ph-toggle-right';
+                iconEl.style.color = 'var(--accent)';
+            } else {
+                textEl.innerText = 'Off';
+                iconEl.className = 'ph-fill ph-toggle-left';
+                iconEl.style.color = 'var(--text-secondary)';
+            }
+        }
+
+        function saveProfile() {
+            const data = {
+                role: document.getElementById('pf_role').value,
+                location: document.getElementById('pf_loc').value,
+                projects: document.getElementById('pf_proj').value,
+                phone: document.getElementById('pf_phone').value,
+                links: document.getElementById('pf_links').value,
+                alias: document.getElementById('pf_alias').value,
+                email: document.getElementById('pf_email_input').value,
+                reminders: document.getElementById('pf_reminders').value,
+                notifications: document.getElementById('set_notify_text').innerText === 'On'
+            };
+            localStorage.setItem('kairosProfileData', JSON.stringify(data));
+            showNotification("Saved", "Profile information updated");
+        }
+
+        function handleProfileAvatar(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const base64 = e.target.result;
+                    // Update UI
+                    const img = document.getElementById('dashAvatarImg');
+                    const initials = document.getElementById('profileInitials');
+                    img.src = base64;
+                    img.style.display = 'block';
+                    initials.style.display = 'none';
+
+                    // Save
+                    localStorage.setItem('kairos_avatar', base64);
+
+                    // Update Sidebar Dock immediately if visible
+                    const dockAvatar = document.getElementById('dockAvatar');
+                    if (dockAvatar) dockAvatar.innerHTML = `<img src="${base64}" style="width:100%; height:100%; object-fit:cover;">`;
+
+                    showNotification("Uploaded", "New avatar saved");
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function showNotification(title, msg) {
+            const banner = document.getElementById('notification-banner');
+            document.getElementById('notif-title').innerText = title;
+            document.getElementById('notif-msg').innerText = msg;
+
+            banner.style.top = '30px';
+
+            setTimeout(() => {
+                banner.style.top = '-100px';
+            }, 3000);
+        }
+    </script>
+</body>
+
+</html>

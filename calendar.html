@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <script src="js/auth-guard.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KAIROS | Calendar</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="css/dashboard.css">
+    <script src="js/components.js"></script>
+    <script>
+        const savedTheme = localStorage.getItem('kairosTheme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderSidebar('calendar');
+        });
+
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const newTheme = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('kairosTheme', newTheme);
+            updateLogoTheme();
+        }
+    </script>
+    <style>
+        .calendar-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+
+<body>
+
+
+    <div id="sidebar-container"></div>
+
+    <main id="main">
+        <div class="view-section active">
+            <div class="view-header">
+                <div class="view-title">My Calendar</div>
+                <button class="btn-primary" style="width: auto;" onclick="alert('Syncing...')">
+                    <i class="ph-bold ph-arrows-clockwise"></i> Sync
+                </button>
+            </div>
+
+            <div class="dashboard-content" style="height:calc(100vh - 80px); overflow-y:auto; padding:0;">
+                <div class="grid-layout" style="grid-template-columns: 3fr 1fr; height:100%;">
+                    <!-- Main Calendar -->
+                    <div class="card" style="height:100%;">
+                        <div class="card-header">
+                            <div class="card-title"><i class="ph-duotone ph-calendar-blank"></i> <span
+                                    id="calMonth">January</span></div>
+                            <div style="display:flex; gap:4px;">
+                                <button class="theme-toggle" style="width:24px; height:24px;" title="Sync from Device"
+                                    onclick="initCalendarAuth()">
+                                    <i class="ph-bold ph-arrows-clockwise"></i>
+                                </button>
+                                <button class="theme-toggle" style="width:24px; height:24px;" title="Export to Device"
+                                    onclick="exportCalendarToICS()">
+                                    <i class="ph-bold ph-download-simple"></i>
+                                </button>
+                                <button class="theme-toggle" style="width:24px; height:24px;"
+                                    onclick="changeMonth(-1)"><i class="ph-bold ph-caret-left"></i></button>
+                                <button class="theme-toggle" style="width:24px; height:24px;"
+                                    onclick="changeMonth(1)"><i class="ph-bold ph-caret-right"></i></button>
+                            </div>
+                        </div>
+                        <div class="cal-grid" id="calendarGrid" style="flex:1;"></div>
+                    </div>
+
+                    <!-- Agenda / Events -->
+                    <div class="card" style="padding:0; gap:0; height:100%;">
+                        <div style="padding:20px; border-bottom:1px solid var(--border);">
+                            <div class="card-title">Agenda</div>
+                        </div>
+                        <div class="agenda-feed" id="agendaList" style="padding:16px; flex:1; overflow-y:auto;"></div>
+                        <div style="padding:16px; border-top:1px solid var(--border);">
+                            <button class="btn-primary" onclick="openScheduleModal()" style="margin:0;">
+                                <i class="ph-bold ph-plus"></i> New Event
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modals from Dashboard need to be present or we need to include them. 
+                 Since dashboard.js expects them, we should copy them or include dashboard.html fragments?
+                 MPA architecture makes this harder. 
+                 For now, let's include the Schedule Modal at least.
+            -->
+            <div id="scheduleModal" class="modal-overlay">
+                <div class="modal-card">
+                    <div class="modal-header">
+                        <h3 id="schedModalTitle">Schedule meeting</h3>
+                        <div class="close-btn" onclick="closeModals()"><i class="ph-bold ph-x"></i></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Meeting name</label>
+                        <input type="text" id="schedName" class="input-field" value="KAIROS Sync"
+                            style="border-bottom: 2px solid #10b981; border-radius: 4px 4px 0 0;">
+                    </div>
+                    <div class="form-group">
+                        <input type="text" id="schedDesc" class="input-field" placeholder="Description (optional)">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Start date and time</label>
+                        <div class="date-row">
+                            <input type="date" id="schedStartDate" class="input-field">
+                            <input type="time" id="schedStartTime" class="input-field">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">End date and time</label>
+                        <div class="date-row">
+                            <input type="date" id="schedEndDate" class="input-field">
+                            <input type="time" id="schedEndTime" class="input-field">
+                        </div>
+                    </div>
+                    <div style="margin-top:24px; display:flex; justify-content:flex-end;">
+                        <button class="btn-primary" style="width:auto; border-radius:30px; margin:0;"
+                            onclick="saveEvent()">
+                            <span id="schedBtnText">Schedule</span> <i class="ph-bold ph-paper-plane-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div id="toast"><i class="ph-bold ph-check-circle"></i> <span id="toastMsg">Action Complete</span></div>
+
+            <script src="js/dashboard.js"></script>
+        </div>
+    </main>
+
+    <script>
+        function openProfileModal() {
+            window.location.href = 'index.html?openProfile=true';
+        }
+    </script>
+</body>
+
+</html>

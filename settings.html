@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings | KAIROS</title>
+    <script>
+        (function () {
+            const saved = localStorage.getItem('kairosTheme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+        })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/settings.css">
+    <style>
+        body {
+            /* display: flex; REMOVED */
+            /* align-items: center; REMOVED */
+            /* justify-content: center; REMOVED */
+            height: 100vh;
+            overflow: hidden;
+            background-color: var(--bg-main);
+            /* Ash in Light Mode */
+        }
+
+        /* Overlay REMOVED */
+
+        #main {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            flex: 1;
+        }
+
+        .settings-card-wrapper {
+            background: var(--bg-panel);
+            /* White in Light Mode */
+            width: 100%;
+            max-width: 400px;
+            /* Reverted to 400px */
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            height: 700px;
+            max-height: 90vh;
+            position: relative;
+        }
+
+        .settings-container {
+            flex: 1;
+            /* Takes remaining space */
+            overflow-y: auto;
+            /* Internal Scroll */
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .settings-header {
+            background: var(--bg-panel);
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            display: flex;
+            align-items: center;
+        }
+
+        .settings-header h3 {
+            font-size: 16px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .settings-list {
+            padding: 0 0 24px 0;
+        }
+
+        .setting-item {
+            padding: 14px 24px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .settings-section-title {
+            padding: 0 24px;
+            margin-top: 24px;
+            margin-bottom: 8px;
+            font-size: 12px;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: var(--text-secondary);
+        }
+
+        .back-btn {
+            margin-right: 12px;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .back-btn:hover {
+            background: var(--surface-hover);
+        }
+    </style>
+    <script src="js/components.js"></script>
+</head>
+
+<body>
+    <div id="sidebar-container"></div>
+
+    <main id="main">
+        <div class="settings-card-wrapper">
+
+            <div class="settings-container">
+                <!-- Main Settings List -->
+                <div id="settings-home" class="settings-view active">
+                    <header class="settings-header">
+                        <h3>Settings</h3>
+                    </header>
+
+                    <div class="settings-section-title">General</div>
+                    <div class="settings-list">
+                        <div class="setting-item" onclick="showSettingsView('appearance')">
+                            <i class="ph-bold ph-moon"></i>
+                            <span class="set-label">Appearance</span>
+                            <i class="ph-bold ph-caret-right set-arrow"></i>
+                        </div>
+                        <div class="setting-item" onclick="showSettingsView('notifications')">
+                            <i class="ph-bold ph-bell"></i>
+                            <span class="set-label">Notifications</span>
+                            <i class="ph-bold ph-caret-right set-arrow"></i>
+                        </div>
+                        <div class="setting-item" onclick="showSettingsView('data')">
+                            <i class="ph-bold ph-chart-bar"></i>
+                            <span class="set-label">Data and storage</span>
+                            <i class="ph-bold ph-caret-right set-arrow"></i>
+                        </div>
+                    </div>
+
+                    <div class="settings-section-title" id="settingUserName">User</div>
+                    <div class="settings-list">
+                        <div class="setting-item" onclick="window.location.href='profile.html'">
+                            <i class="ph-bold ph-user"></i>
+                            <span class="set-label">Profile</span>
+                            <i class="ph-bold ph-caret-right set-arrow"></i>
+                        </div>
+                        <div class="setting-item" onclick="showSettingsView('messaging')">
+                            <i class="ph-bold ph-chat-circle-text"></i>
+                            <span class="set-label">Messaging</span>
+                            <i class="ph-bold ph-caret-right set-arrow"></i>
+                        </div>
+                        <div class="setting-item" onclick="showSettingsView('calling')">
+                            <i class="ph-bold ph-phone"></i>
+                            <span class="set-label">Calling</span>
+                            <i class="ph-bold ph-caret-right set-arrow"></i>
+                        </div>
+                        <div class="setting-item" onclick="showSettingsView('people')">
+                            <i class="ph-bold ph-address-book"></i>
+                            <span class="set-label">People</span>
+                            <i class="ph-bold ph-caret-right set-arrow"></i>
+                        </div>
+                        <div class="setting-item" onclick="showSettingsView('insider')">
+                            <i class="ph-bold ph-heart"></i>
+                            <span class="set-label">Teams Insider program</span>
+                            <i class="ph-bold ph-caret-right set-arrow"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Appearance View -->
+                <div id="settings-appearance" class="settings-view">
+                    <header class="settings-header">
+                        <div class="back-btn" onclick="showSettingsView('home')"><i class="ph-bold ph-arrow-left"></i>
+                        </div>
+                        <h3>Appearance</h3>
+                    </header>
+                    <div class="settings-list">
+                        <div class="settings-section-title">Theme</div>
+                        <div class="setting-option" onclick="setAppTheme('light')">
+                            <span>Light</span>
+                            <i class="ph-fill ph-check check-icon" id="check-light"></i>
+                        </div>
+                        <div class="setting-option" onclick="setAppTheme('dark')">
+                            <span>Dark</span>
+                            <i class="ph-fill ph-check check-icon" id="check-dark"></i>
+                        </div>
+                        <div class="setting-option" onclick="setAppTheme('system')">
+                            <span>System default</span>
+                            <i class="ph-fill ph-check check-icon" id="check-system"></i>
+                        </div>
+
+                        <div class="settings-section-title" style="margin-top:20px;">Skin tone</div>
+                        <div class="skin-tone-picker">
+                            <div class="tone-circle" style="background:#FFC933; border:2px solid var(--accent);"></div>
+                            <div class="tone-circle" style="background:#F4CBA6;"></div>
+                            <div class="tone-circle" style="background:#Dcb08F;"></div>
+                            <div class="tone-circle" style="background:#B67C63;"></div>
+                            <div class="tone-circle" style="background:#825C51;"></div>
+                            <div class="tone-circle" style="background:#402E29;"></div>
+                        </div>
+                        <div class="help-text">Reactions and emoji will appear with this skin tone.</div>
+                    </div>
+                </div>
+
+                <!-- Notifications View -->
+                <div id="settings-notifications" class="settings-view">
+                    <header class="settings-header">
+                        <div class="back-btn" onclick="showSettingsView('home')"><i class="ph-bold ph-arrow-left"></i>
+                        </div>
+                        <h3>Notifications</h3>
+                    </header>
+                    <div class="settings-list">
+                        <div class="settings-section-title">Notify me for</div>
+                        <div class="setting-item">
+                            <i class="ph-bold ph-bell-simple"></i>
+                            <div>
+                                <div class="set-label">General activity</div>
+                                <div class="set-sub">Chats, Mentions, Channel replies + 8 more</div>
+                            </div>
+                        </div>
+                        <div class="setting-item">
+                            <i class="ph-bold ph-calendar"></i>
+                            <div>
+                                <div class="set-label">Meetings</div>
+                                <div class="set-sub">Meeting start reminder and meeting chats</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data View -->
+                <div id="settings-data" class="settings-view">
+                    <header class="settings-header">
+                        <div class="back-btn" onclick="showSettingsView('home')"><i class="ph-bold ph-arrow-left"></i>
+                        </div>
+                        <h3>Data and storage</h3>
+                    </header>
+                    <div class="settings-list">
+                        <div class="settings-section-title">Cloud storage</div>
+                        <div class="storage-bar-container">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                                <span style="font-weight:700; font-size:16px;">2.2 GB</span>
+                                <span style="color:var(--accent);">Manage</span>
+                            </div>
+                            <div class="set-sub">of 5 GB (44%)</div>
+                            <div class="progress-bar">
+                                <div class="fill" style="width:44%"></div>
+                            </div>
+                        </div>
+                        <div class="settings-section-title">History</div>
+                        <div class="setting-item">
+                            <div class="set-label">Clear search history</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MESSAGING VIEW (NEW) -->
+                <div id="settings-messaging" class="settings-view">
+                    <header class="settings-header">
+                        <div class="back-btn" onclick="showSettingsView('home')"><i class="ph-bold ph-arrow-left"></i>
+                        </div>
+                        <h3>Messaging</h3>
+                    </header>
+                    <div class="settings-list">
+                        <div class="setting-item">
+                            <div class="set-label">Read receipts</div>
+                            <i class="ph-fill ph-toggle-right" style="color:var(--accent); font-size:24px;"></i>
+                        </div>
+                        <div class="setting-item">
+                            <div class="set-label">Show suggested replies</div>
+                            <i class="ph-fill ph-toggle-right" style="color:var(--accent); font-size:24px;"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CALLING VIEW (NEW) -->
+                <div id="settings-calling" class="settings-view">
+                    <header class="settings-header">
+                        <div class="back-btn" onclick="showSettingsView('home')"><i class="ph-bold ph-arrow-left"></i>
+                        </div>
+                        <h3>Calling</h3>
+                    </header>
+                    <div class="settings-list">
+                        <div class="setting-item">
+                            <div class="set-label">Voicemail</div>
+                            <i class="ph-bold ph-caret-right set-arrow"></i>
+                        </div>
+                        <div class="setting-item">
+                            <div class="set-label">Ringtones</div>
+                            <i class="ph-bold ph-caret-right set-arrow"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PEOPLE VIEW (NEW) -->
+                <div id="settings-people" class="settings-view">
+                    <header class="settings-header">
+                        <div class="back-btn" onclick="showSettingsView('home')"><i class="ph-bold ph-arrow-left"></i>
+                        </div>
+                        <h3>People</h3>
+                    </header>
+                    <div class="settings-list">
+                        <div class="settings-item" style="padding:16px; color:var(--text-secondary); font-size:13px;">
+                            Manage your contacts and blocked users.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- INSIDER VIEW (NEW) -->
+                <div id="settings-insider" class="settings-view">
+                    <header class="settings-header">
+                        <div class="back-btn" onclick="showSettingsView('home')"><i class="ph-bold ph-arrow-left"></i>
+                        </div>
+                        <h3>Teams Insider</h3>
+                    </header>
+                    <div class="settings-list">
+                        <div class="settings-item" style="padding:16px;">
+                            <div class="set-label">Join the Early Access Program</div>
+                            <div class="set-sub">Get access to new features before they are released.</div>
+                        </div>
+                        <div class="setting-item">
+                            <div class="set-label">Status</div>
+                            <span style="color:var(--text-secondary); font-size:13px;">Not Enrolled</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script src="js/auth-guard.js"></script>
+    <script src="js/settings.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            renderSidebar('settings');
+            initSettings();
+        });
+    </script>
+</body>
+
+</html>
