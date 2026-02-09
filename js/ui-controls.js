@@ -23,15 +23,45 @@ function switchTab(tabName) {
     }
 }
 
-function toggleCheck(el) {
+// --- AGENDA MANAGEMENT ---
+async function toggleCheck(el) {
     const box = el.querySelector('.chk-box');
     const text = el.querySelector('.agenda-text');
-    if (box.classList.contains('checked')) {
-        box.classList.remove('checked'); text.classList.remove('done');
-    } else {
-        box.classList.add('checked'); text.classList.add('done');
+    const id = el.dataset.id || text.innerText; // Use ID or text as key
+
+    const isChecked = !box.classList.contains('checked');
+
+    // Optimistic UI Update
+    updateAgendaUI(el, isChecked);
+
+    // Broadcast
+    if (window.room) {
+        const payload = JSON.stringify({ type: 'agenda', id: id, checked: isChecked });
+        const encoder = new TextEncoder();
+        await window.room.localParticipant.publishData(encoder.encode(payload), { reliable: true });
     }
 }
+
+function updateAgendaUI(el, isChecked) {
+    const box = el.querySelector('.chk-box');
+    const text = el.querySelector('.agenda-text');
+    if (isChecked) {
+        box.classList.add('checked'); text.classList.add('done');
+    } else {
+        box.classList.remove('checked'); text.classList.remove('done');
+    }
+}
+
+window.handleAgendaData = function (data) {
+    // Find item by ID or text
+    const items = document.querySelectorAll('.agenda-item');
+    items.forEach(el => {
+        const text = el.querySelector('.agenda-text').innerText;
+        if (text === data.id || el.dataset.id === data.id) {
+            updateAgendaUI(el, data.checked);
+        }
+    });
+};
 
 function toggleSidebar() {
     const sb = document.getElementById('sidebar');
@@ -128,29 +158,72 @@ function toggleAiCompanion(btn) {
     }
 }
 
-function sendReaction(emoji) {
-    const layer = document.getElementById('tile-me');
-    const el = document.createElement('div');
-    el.className = 'floating-emoji';
-    el.innerText = emoji;
-    el.style.left = Math.random() * 60 + 20 + '%';
+// --- REACTIONS ---
+async function sendReaction(emoji) {
+    showReaction(emoji, true); // Show locally
 
-    layer.appendChild(el);
+    if (window.room) {
+        const payload = JSON.stringify({ type: 'reaction', emoji: emoji });
+        const encoder = new TextEncoder();
+        await window.room.localParticipant.publishData(encoder.encode(payload), { reliable: true });
+    }
 
-    setTimeout(() => el.remove(), 2000);
     document.getElementById('reactionOverlay').classList.remove('active');
     showToast(`Reacted with ${emoji}`);
 }
 
-function vote(opt, percent) {
+window.handleReactionData = function (data) {
+    showReaction(data.emoji, false);
+};
+
+function showReaction(emoji, isLocal) {
+    const layer = document.getElementById('tile-me'); // Default to self for now
+    // Ideally find the participant's tile
+    const el = document.createElement('div');
+    el.className = 'floating-emoji';
+    el.innerText = emoji;
+    el.style.left = Math.random() * 60 + 20 + '%';
+    layer.appendChild(el);
+    setTimeout(() => el.remove(), 2000);
+}
+
+
+// --- POLLS ---
+async function vote(opt, percent) {
     const parent = opt.parentElement;
+    const pollId = parent.dataset.pollId || 'default-poll';
+    const optionIdx = Array.from(parent.children).indexOf(opt);
+
+    // Optimistic Update
+    updatePollUI(parent, opt, percent);
+
+    if (window.room) {
+        const payload = JSON.stringify({ type: 'poll', pollId: pollId, optionIdx: optionIdx, percent: percent });
+        const encoder = new TextEncoder();
+        await window.room.localParticipant.publishData(encoder.encode(payload), { reliable: true });
+    }
+}
+
+function updatePollUI(parent, opt, percent) {
     parent.querySelectorAll('.poll-option').forEach(o => o.classList.remove('selected'));
     parent.querySelectorAll('.poll-bar-fill').forEach(b => b.style.width = '0%');
+
     opt.classList.add('selected');
-    const bar = opt.nextElementSibling.querySelector('.poll-bar-fill');
-    bar.style.width = percent + '%';
-    opt.querySelector('span:last-child').innerText = '1 vote';
+    // Simulate bar fill for demo (real app would aggregate votes)
+    // Here we just show highlighting
+    // opt.querySelector('.poll-bar-fill').style.width = percent + '%'; 
 }
+
+window.handlePollData = function (data) {
+    // Find poll
+    // For demo, we just update the first poll found or by ID
+    const pollCard = document.querySelector('.poll-card');
+    if (pollCard) {
+        // Just show a small indicator or log for now as aggregating votes is complex without backend state
+        showToast('Someone voted on the poll');
+    }
+};
+
 
 function openSettings() {
     toggleMoreMenu();
@@ -166,43 +239,44 @@ function closeSettings() {
 }
 
 /* --- PARTICIPANTS LIST LOGIC --- */
-const allParticipants = [
-    { name: "Benedict (Host)", role: "Host", avatar: "Me" },
-    { name: "Alice Design", role: "Guest", avatar: "A" },
-    { name: "John Dev", role: "Member", avatar: "J" },
-    // Add more mock data if needed
-];
-
-let allMuted = false;
-
+// Now handled dynamically by room-manager.js for counts. 
+// List visualization can remain mock or be updated to iterate room.participants
 function openParticipantList() {
     const modal = document.getElementById('participantsModal');
     const list = document.getElementById('fullParticipantList');
-    document.getElementById('pCount').innerText = allParticipants.length;
 
-    list.innerHTML = ''; // clear
+    // Clear list
+    list.innerHTML = '';
 
-    allParticipants.forEach(p => {
-        const el = document.createElement('div');
-        el.className = 'p-item';
-        const isMuted = allMuted || Math.random() > 0.7;
-        const micIcon = isMuted ? 'ph-microphone-slash' : 'ph-microphone';
+    // Add Local
+    addParticipantToList('Me (Host)', true);
 
-        el.innerHTML = `
-            <div class="p-info">
-                <div class="p-avatar" style="background:#333;">${p.avatar}</div> 
-                ${p.name}
-            </div>
-            <div class="p-controls">
-                <i class="ph-fill ${micIcon}"></i> 
-                <i class="ph-fill ph-video-camera${Math.random() > 0.5 ? '-slash' : ''}"></i>
-            </div>
-        `;
-        list.appendChild(el);
-    });
+    // Add Remotes
+    if (window.room) {
+        window.room.participants.forEach(p => {
+            addParticipantToList(p.identity || 'Guest', false);
+        });
+    }
 
     modal.style.display = 'flex';
     setTimeout(() => modal.classList.add('visible'), 10);
+}
+
+function addParticipantToList(name, isLocal) {
+    const list = document.getElementById('fullParticipantList');
+    const el = document.createElement('div');
+    el.className = 'p-item';
+    el.innerHTML = `
+        <div class="p-info">
+            <div class="p-avatar" style="background:#333;">${name.charAt(0)}</div> 
+            ${name}
+        </div>
+        <div class="p-controls">
+            <i class="ph-fill ph-microphone"></i> 
+            <i class="ph-fill ph-video-camera"></i>
+        </div>
+    `;
+    list.appendChild(el);
 }
 
 function closeParticipantList() {
@@ -212,29 +286,8 @@ function closeParticipantList() {
 }
 
 function toggleMuteAll() {
-    const btn = document.getElementById('muteAllBtn');
-    const list = document.getElementById('fullParticipantList');
-
-    allMuted = !allMuted;
-
-    if (allMuted) {
-        btn.innerHTML = '<i class="ph-bold ph-microphone"></i> Unmute All';
-        btn.style.color = 'var(--accent)';
-        btn.style.background = 'rgba(16,185,129,0.1)';
-        btn.style.borderColor = 'var(--accent)';
-        showToast('All participants muted');
-    } else {
-        btn.innerHTML = '<i class="ph-bold ph-microphone-slash"></i> Mute All';
-        btn.style.color = 'var(--danger)';
-        btn.style.background = 'rgba(239,68,68,0.1)';
-        btn.style.borderColor = 'var(--danger)';
-        showToast('All participants unmuted');
-    }
-
-    const icons = list.querySelectorAll('.ph-microphone, .ph-microphone-slash');
-    icons.forEach(i => {
-        i.className = allMuted ? 'ph-fill ph-microphone-slash' : 'ph-fill ph-microphone';
-    });
+    showToast('Mute All requested');
+    // Implement via room.participants loop if admin rights exist
 }
 
 function toggleMaximize(tile) {
